@@ -1,0 +1,13 @@
+[package]
+name = "disguise"
+version = "0.0.0"
+authors = ["Wei Gu <gu_wei_dev@outlook.com>"]
+edition = "2024"
+description = """
+asp.net razor-like view template engine.
+"""
+keywords = ["web"]
+license = "MIT"
+homepage = "https://github.com/gu-wei-x/disguise"
+repository = "https://github.com/gu-wei-x/disguise"
+
