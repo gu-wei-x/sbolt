@@ -11,3 +11,8 @@ license = "MIT"
 homepage = "https://github.com/gu-wei-x/disguise"
 repository = "https://github.com/gu-wei-x/disguise"
 
+[dependencies]
+proc-macro2 = "1.0.101"
+quote = "1.0.40"
+winnow = "0.7.13"
+

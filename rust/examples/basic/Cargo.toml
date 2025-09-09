@@ -1,0 +1,10 @@
+[package]
+name = "basic"
+version = "0.0.0"
+edition = "2024"
+
+[dependencies]
+disguise = { path = "../../core/lib" }
+
+[build-dependencies]
+disguise = { path = "../../core/lib" }
