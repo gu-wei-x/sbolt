@@ -1,7 +1,29 @@
 use std::ffi::OsString;
-use std::fs::{self, metadata, read_link};
+use std::fs::{self, File, metadata, read_link};
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+
+use proc_macro2::TokenStream;
+
+pub(crate) fn generate_code_with_content(
+    file_path: &PathBuf,
+    token_stream: &TokenStream,
+) -> Result<(), String> {
+    let mut generated_file = File::create(&file_path).unwrap();
+    #[cfg(feature = "pretty")]
+    {
+        let syntax_tree = syn::parse_file(&token_stream.to_string()).unwrap();
+        _ = writeln!(generated_file, "{}", prettyplease::unparse(&syntax_tree));
+    }
+
+    #[cfg(not(feature = "pretty"))]
+    {
+        _ = writeln!(generated_file, "{}", token_stream.to_string());
+    }
+
+    Ok(())
+}
 
 pub(crate) fn get_files_with_extension<P: AsRef<Path>>(
     path: P,

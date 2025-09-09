@@ -2,8 +2,6 @@ use crate::utils;
 use quote::format_ident;
 use quote::quote;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::Write;
 use std::path::PathBuf;
 
 pub(crate) fn generate_view_content(
@@ -34,7 +32,5 @@ pub(crate) fn generate_view_content(
         }
     };
 
-    let mut generated_file = File::create(&file_path).unwrap();
-    _ = writeln!(generated_file, "{}", view_content.to_string());
-    Ok(())
+    utils::fs::generate_code_with_content(file_path, &view_content)
 }
