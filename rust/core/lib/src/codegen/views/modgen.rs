@@ -1,9 +1,8 @@
+use crate::utils;
 use proc_macro2::TokenStream;
 use quote::format_ident;
 use quote::quote;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::Write;
 use std::path::PathBuf;
 
 pub(crate) fn generate_mod_content(
@@ -84,8 +83,5 @@ pub(crate) fn generate_mod_content(
         }
     };
 
-    let mut mod_file = File::create(&mod_file).unwrap();
-    writeln!(mod_file, "{}", content.to_string()).unwrap();
-
-    Ok(())
+    utils::fs::generate_code_with_content(mod_file, &content)
 }

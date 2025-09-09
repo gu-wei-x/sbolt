@@ -7,4 +7,5 @@ edition = "2024"
 disguise = { path = "../../core/lib" }
 
 [build-dependencies]
-disguise = { path = "../../core/lib" }
+disguise = { path = "../../core/lib", features = ["pretty"] }
+#disguise = { path = "../../core/lib" }
