@@ -2,7 +2,7 @@
 
 view template engine in rust
 
-## 1. create views directory containing view template(*.rshtml)
+## 1. create views directory containing view templates(*.rshtml)
 ```
 $:.
 │   build.rs
@@ -46,7 +46,7 @@ fn main() {
 }
 ```
 
-## run
+## 4. run
 
 ```sh
 cargo run
