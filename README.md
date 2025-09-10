@@ -1,8 +1,15 @@
 # disguise
 
-view template engine in rust
+view template engine in rust. disguise pre-processes templates from a directory and compiles templates into crate bits.
 
-## 1. create views directory containing view templates(*.rshtml)
+## Following is the steps to use this view template engine. See: [examples/basic](./rust/examples/basic/)
+
+### 1. add disguise crate and add disguise to `[build-dependencies]`
+```shell
+cargo add disguise
+```
+
+### 2. create views directory containing view templates(*.rshtml)
 ```
 $:.
 │   build.rs
@@ -19,36 +26,58 @@ $:.
 
 
 ```
+src/views/comp/index.rshtml
+```html
+<html>
+    <head>
+        <title>Index</title>
+    </head>
+    <body>
+        <div>Hello Index!</div> 
+    </body>
+</html>
+```
 
-## 2. create build.rs, call `process_views` to pre-process views.
+### 3. build.rs: call `process_views` to pre-process views in build script.
+
 ```rust
-
 use disguise;
 use std::env;
 
 fn main() {
     _ = disguise::process_views("src/views", &format!("{}_views", env!("CARGO_PKG_NAME")));
 }
-
 ```
 
-## 3. main.rs: include generated-file map and call logic to render view ----TODO: add context/model for the view.
+### 4. main.rs: include generated views and call logic to render view.
 
 ```rust
-include!(env!("VIEW_FILES"));
+use disguise::types::{ViewContext, Writer};
+
+// include the generated views.
+disguise::include_view_templates!();
 
 fn main() {
-    let view = /*cratename_views*/basic_views::get_view("test" /*"comp/index*/);
-    if let Some(view) = view {
-        let output = view.render();
-        println!("{}", output);
-    }
+    let mut output = String::new();
+    let mut context: ViewContext<'_, dyn Writer> = ViewContext::new(&mut output);
+    basic_views::render("comp/index", &mut context);
+    println!("{}", output);
 }
 ```
 
-## 4. run
+### 5. run
 
 ```sh
-cargo run
+$>cargo run
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running `target\debug\basic.exe`
+<html>
+    <head>
+        <title>Index</title>
+    </head>
+    <body>
+        <div>Hello Index!</div>
+    </body>
+</html>
 ```
 

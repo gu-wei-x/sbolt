@@ -1,6 +1,6 @@
 mod codegen;
 
-pub mod template;
+pub mod types;
 pub mod utils;
 
 // re-export.
