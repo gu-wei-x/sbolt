@@ -6,6 +6,8 @@ use std::path::PathBuf;
 
 use crate::utils;
 
+const TEMPLATES_FILES_ENV: &'static str = "TEMPLATES_FILES";
+
 // called by build.rs to process view templates and generate intermediate files.
 // returns the path to the generated mod.rs file which contains all view modules.
 // mod.rs path will be used in the include! macro in the main.rs file of the application.
@@ -54,6 +56,17 @@ pub fn process_views(view_dir: &str, crate_name: &str) -> PathBuf {
 
     // Tell cargo to rerun the build script if the view directory changes.
     println!("cargo:rerun-if-changed={}", view_dir.display());
-    println!("cargo:rustc-env=VIEW_FILES={}", mod_file_path.display());
+    println!(
+        "cargo:rustc-env={}={}",
+        TEMPLATES_FILES_ENV,
+        mod_file_path.display()
+    );
     mod_file_path
+}
+
+#[macro_export]
+macro_rules! include_view_templates {
+    () => {
+        include!(env!("TEMPLATES_FILES"));
+    };
 }

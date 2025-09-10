@@ -25,9 +25,10 @@ pub(crate) fn generate_view_content(
             }
         }
 
-        impl disguise::template::Template for #view_name {
-            fn render(&self) -> String {
-                #content.to_string()
+        impl disguise::types::Template for #view_name
+        {
+            fn render(&self, context: &mut disguise::types::ViewContext<dyn disguise::types::Writer>) {
+                context.write(#content);
             }
         }
     };
