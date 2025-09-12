@@ -52,16 +52,17 @@ fn main() {
 ### 4. main.rs: include generated views and call logic to render view.
 
 ```rust
-use disguise::types::{ViewContext, Writer};
-
-// include the generated views.
+// Import the generated view modules.
 disguise::include_view_templates!();
 
 fn main() {
-    let mut output = String::new();
-    let mut context: ViewContext<'_, dyn Writer> = ViewContext::new(&mut output);
+    // create a context and set some data.
+    let mut context = disguise::context! {
+        strvalue => || "Hello, world!".to_string(),
+        intvalue => || 123
+    };
     basic_views::render("comp/index", &mut context);
-    println!("{}", output);
+    println!("{}", context);
 }
 ```
 

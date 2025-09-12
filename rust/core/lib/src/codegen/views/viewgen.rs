@@ -17,18 +17,33 @@ pub(crate) fn generate_view_content(
 
     let content = std::fs::read_to_string(template_path).unwrap_or_default();
     let view_name = format_ident!("{}", view_name);
+    let view_type = format_ident!("K{}", view_name);
     let view_content = quote! {
+        use crate::views::*;
+
         pub struct #view_name;
         impl #view_name {
-            pub fn new() -> Self {
+            pub(crate) fn new() -> Self {
                 Self
+            }
+
+            pub(crate) fn create() -> Views {
+               Views::#view_type(#view_name::new())
             }
         }
 
         impl disguise::types::Template for #view_name
         {
-            fn render(&self, context: &mut disguise::types::ViewContext<dyn disguise::types::Writer>) {
-                context.write(#content);
+            fn name() -> &'static str {
+                #name
+            }
+
+            fn render(&self, context: &mut impl disguise::types::Context) {
+               let str_data = context.get_data::<String>("strvalue").clone();
+               let i32_data = context.get_data::<i32>("intvalue").clone();
+               context.write_line(#content);
+               context.write_line(&str_data);
+               context.write_line(&i32_data.to_string());
             }
         }
     };
