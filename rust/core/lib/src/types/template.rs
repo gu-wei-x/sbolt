@@ -1,10 +1,9 @@
-use crate::types::ViewContext;
-use crate::types::Writer;
+use crate::types::Context;
 
 pub trait Template {
-    fn render(&self, context: &mut ViewContext<dyn Writer>);
-}
+    fn name() -> &'static str
+    where
+        Self: Sized;
 
-pub trait TemplateResolver {
-    fn resolve(&self, name: &str) -> Option<Box<dyn Template>>;
+    fn render(&self, context: &mut impl Context);
 }
