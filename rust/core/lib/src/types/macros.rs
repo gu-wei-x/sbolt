@@ -17,14 +17,14 @@ macro_rules! context {
         disguise::types::DefaultViewContext::new()
     };
     (
-        $($key:ident $(=> $value:expr)?),*
+        $($key:ident $(: $value:expr)?),*
     ) => {{
         use disguise::types::Context;
         let mut ctx = disguise::types::DefaultViewContext::new();
         $(
             ctx.set_data(stringify!($key), {
                 $(
-                    $value
+                    || $value
                 )*
             });
         )*

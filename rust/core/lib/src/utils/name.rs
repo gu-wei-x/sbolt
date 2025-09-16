@@ -1,9 +1,10 @@
-/// Normalize a file path to a Rust struct name.
-/// "comp/index" => "CompIndexView"
-pub(crate) fn normalize_path_to_struct_name(name: &str, suffix: &str) -> String {
-    let name = name.trim_matches(|c| c == '/' || c == '\\' || c == '_');
+pub fn normalize_name(name: &str) -> String {
+    name.replace("/", "::")
+}
+
+pub(crate) fn normalize_to_type_name(name: &str) -> String {
     let prefix = name
-        .split(&['/', '\\', '_'])
+        .split("::")
         .map(|part| {
             let mut chars = part.chars();
             match chars.next() {
@@ -12,31 +13,31 @@ pub(crate) fn normalize_path_to_struct_name(name: &str, suffix: &str) -> String 
             }
         })
         .collect::<String>();
-    format!("{}{}", prefix, suffix)
+    format!("{}View", prefix)
 }
 
-pub(crate) fn normalize_path_to_view_name(name: &str) -> String {
-    normalize_path_to_struct_name(name, "View")
+pub(crate) fn create_full_name(prefix: &Option<String>, name: &str) -> String {
+    match prefix {
+        None => return name.to_string(),
+        Some(p) => {
+            if p.is_empty() {
+                name.to_string()
+            } else {
+                let mut full_name = p.to_string();
+                full_name.push_str(&format!("::{}", name));
+                return full_name;
+            }
+        }
+    }
+}
+
+pub(crate) fn create_mode_prefix(path: &str) -> String {
+    path.replace("_", "::")
 }
 
 mod test {
     #[test]
-    fn test_normalize_path_to_struct_name() {
-        assert_eq!(
-            super::normalize_path_to_struct_name("comp/index", ""),
-            "CompIndex"
-        );
-        assert_eq!(
-            super::normalize_path_to_struct_name("comp_index", ""),
-            "CompIndex"
-        );
-        assert_eq!(
-            super::normalize_path_to_struct_name("comp/index", "View"),
-            "CompIndexView"
-        );
-        assert_eq!(
-            super::normalize_path_to_struct_name("comp_index", "View"),
-            "CompIndexView"
-        );
+    fn normalize_to_type_name() {
+        assert_eq!(super::normalize_to_type_name("index"), "IndexView");
     }
 }

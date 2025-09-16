@@ -2,7 +2,7 @@
 #[repr(u8)]
 pub enum Kind {
     CODE,
-    HTML,
+    CONTENT,
     EOF,
     UNKNOWN,
 }

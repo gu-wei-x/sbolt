@@ -1,51 +1,60 @@
+use crate::codegen::consts;
 use crate::utils;
 use proc_macro2::TokenStream;
 use quote::format_ident;
 use quote::quote;
-use std::collections::HashMap;
 use std::path::PathBuf;
 
-pub(crate) fn generate_mod_content(
+pub(crate) fn generate_root_mod_file(
     mod_file: &PathBuf,
     mod_name: &str,
     imported_mods: &[String],
-    _view_name_mapping: &HashMap<String, String>,
 ) -> Result<(), String> {
+    let viewtypes_ident = format!(
+        "{}::{}",
+        consts::TEMPLATES_MAP_FILE_NAME,
+        consts::TEMPLATE_TYPE_NAME
+    );
+
     let mod_name = format_ident!("{}", mod_name);
-    let imported_content: String = imported_mods
+    let import_content: String = imported_mods
         .iter()
         .map(|m| format!("mod {};\n", m))
         .collect::<String>();
-    let re_exported_content: String = imported_mods
+    let re_export_content: String = imported_mods
         .iter()
-        .map(|m| format!("pub use super::{}::*;\n", m))
+        .map(|m| {
+            format!(
+                "pub(crate) mod {} {{ pub(crate) use super::super::{}::*; }}\n",
+                m, m
+            )
+        })
         .collect::<String>();
 
-    let imported_mods: TokenStream = imported_content.parse().unwrap();
-    let re_exported_mods: TokenStream = re_exported_content.parse().unwrap();
+    let import_content_ts: TokenStream = import_content.parse().unwrap();
+    let re_export_content_ts: TokenStream = re_export_content.parse().unwrap();
+    let viewtypes_ident_ts: TokenStream = viewtypes_ident.parse().unwrap();
 
     let content = quote! {
-        #imported_mods
-
-        #[allow(unused_imports)]
+        #import_content_ts
         pub mod #mod_name {
-            #re_exported_mods
+            #re_export_content_ts
 
             // TemplateResolver.
             struct TemplateResolver {
-                view_creators: std::collections::HashMap<&'static str, fn() -> crate::views::Views>,
+                view_creators: std::collections::HashMap<&'static str, fn() -> #viewtypes_ident_ts>,
             }
 
             impl TemplateResolver {
                 fn new() -> Self {
                     Self {
-                        view_creators: crate::views::Views::create_view_registrar(),
+                        view_creators: #viewtypes_ident_ts::create_view_registrar(),
                     }
                 }
 
-                fn resolve(&self, name: &str) -> Option<crate::views::Views> {
-                    let template_name = disguise::utils::fs::normalize_name(name, "", "");
-                    self.view_creators.get(template_name.as_str()).map(|f| f())
+                fn resolve(&self, name: &str) -> Option<#viewtypes_ident_ts> {
+                    let normalized_name: &str = &disguise::utils::name::normalize_name(name);
+                    self.view_creators.get(normalized_name).map(|f| f())
                 }
             }
 
@@ -62,4 +71,19 @@ pub(crate) fn generate_mod_content(
     };
 
     utils::fs::generate_code_with_content(mod_file, &content)
+}
+
+pub(crate) fn generate_sub_mod_file(mod_file: &PathBuf, imported_mods: &[String]) {
+    let imported_content: String = imported_mods
+        .iter()
+        .map(|m| format!("pub(crate) mod {};\n", m))
+        .collect::<String>();
+
+    let imported_mods: TokenStream = imported_content.parse().unwrap();
+    let content = quote! {
+        #imported_mods
+    };
+
+    // Handle the Result, e.g., by unwrapping or logging the error
+    _ = utils::fs::generate_code_with_content(mod_file, &content);
 }

@@ -1,7 +1,12 @@
 // `cargo build -vv` to show output.
-use disguise;
-use std::env;
-
 fn main() {
-    _ = disguise::process_views("src/views", &format!("{}_views", env!("CARGO_PKG_NAME")));
+    // new
+    let mod_name = format!("{}_views", std::env!("CARGO_PKG_NAME"));
+    let option = disguise::codegen::CompilerOptions::default()
+        .with_optimize(true)
+        .with_source_dir("src/views")
+        .with_mod_name(&mod_name);
+
+    let compiler = disguise::codegen::Compiler::new(option);
+    _ = compiler.compile();
 }

@@ -4,9 +4,10 @@ disguise::include_view_templates!();
 fn main() {
     // create a context and set some data.
     let mut context = disguise::context! {
-        strvalue => || "Hello, world!".to_string(),
-        intvalue => || 123
+        name: "Disguise".to_string(),
+        age: 1,
+        msg: "Hello world!".to_string()
     };
-    basic_views::render("comp/index", &mut context);
+    basic_views::render("views/comp/index", &mut context);
     println!("{}", context);
 }

@@ -1,3 +1,3 @@
 pub mod fs;
 
-pub(crate) mod name;
+pub mod name;
