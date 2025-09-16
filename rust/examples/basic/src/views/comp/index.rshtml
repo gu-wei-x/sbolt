@@ -1,8 +1,13 @@
+@{
+    let name = context.get_data::<String>("name");
+    let age = context.get_data::<i32>("age");
+    let msg = context.get_data::<String>("msg");
+}
 <html>
     <head>
         <title>Index</title>
     </head>
     <body>
-        <div>Hello Index!</div> 
+        <div>@name(@age) says: @msg</div>
     </body>
 </html>

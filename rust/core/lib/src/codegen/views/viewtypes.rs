@@ -1,26 +1,36 @@
+use crate::codegen::consts;
 use crate::utils;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-pub(crate) fn generate_view_map(
+pub(crate) fn generate_view_types(
     file_path: &PathBuf,
-    crate_name: &str,
+    mode_name: &str,
     view_name_mapping: &HashMap<String, String>,
 ) -> Result<(), String> {
     let view_types_content = view_name_mapping
         .iter()
-        .map(|(_name, view_name)| format!(r#"K{}({}),"#, view_name, view_name))
+        .map(|(name, view_name)| {
+            format!(
+                "K{}(crate::{}::{}::{}),",
+                utils::name::normalize_to_type_name(&name),
+                mode_name,
+                utils::name::create_mode_prefix(&name),
+                view_name
+            )
+        })
         .collect::<Vec<String>>()
         .join("\n        ");
 
     let view_unpack_content = view_name_mapping
         .iter()
-        .map(|(_name, view_name)| {
+        .map(|(name, view_name)| {
             format!(
-                r#"Views::K{}({}) => {}.render(context),"#,
-                view_name,
+                "{}::K{}({}) => {}.render(context),",
+                consts::TEMPLATE_TYPE_NAME,
+                utils::name::normalize_to_type_name(&name),
                 view_name.to_lowercase(),
                 view_name.to_lowercase()
             )
@@ -35,21 +45,18 @@ pub(crate) fn generate_view_map(
         .parse::<proc_macro2::TokenStream>()
         .unwrap();
 
-    let crate_name_ts = format_ident!("{}", crate_name);
-    let reg_ts = generate_view_registration(view_name_mapping)?;
+    let reg_ts = generate_view_registration(mode_name, view_name_mapping)?;
+    let type_ident = format_ident!("{}", consts::TEMPLATE_TYPE_NAME);
     let content = quote! {
-        use crate::#crate_name_ts::*;
-        use disguise::types::Template;
-
-        pub(crate) enum Views {
+        use disguise::types::Template as _;
+        pub(crate) enum #type_ident {
             #view_types_ts
         }
 
-        impl Views {
+        impl #type_ident {
             pub(crate) fn render(&self, context: &mut impl disguise::types::Context) {
                 match self {
                    #view_unpack_content_ts
-                   // _ => {}
                 }
             }
 
@@ -61,14 +68,21 @@ pub(crate) fn generate_view_map(
 }
 
 fn generate_view_registration(
+    mode_name: &str,
     view_name_mapping: &HashMap<String, String>,
 ) -> Result<TokenStream, String> {
     let view_reg_content = view_name_mapping
         .iter()
-        .map(|(_name, view_name)| {
+        .map(|(name, view_name)| {
+            let prefix = format!(
+                "crate::{}::{}::{}",
+                mode_name,
+                utils::name::create_mode_prefix(name),
+                view_name
+            );
             format!(
                 r#"view_reg_creator.insert({}::name(), {}::create);"#,
-                view_name, view_name,
+                prefix, prefix
             )
         })
         .collect::<Vec<String>>()
@@ -78,9 +92,10 @@ fn generate_view_registration(
         .parse::<proc_macro2::TokenStream>()
         .unwrap();
 
+    let type_ident = format_ident!("{}", consts::TEMPLATE_TYPE_NAME);
     let content = quote! {
-        pub(crate) fn create_view_registrar() -> std::collections::HashMap::<&'static str, fn()->Views> {
-            let mut view_reg_creator = std::collections::HashMap::<&'static str, fn()->Views>::new();
+        pub(crate) fn create_view_registrar() -> std::collections::HashMap::<&'static str, fn()->#type_ident> {
+            let mut view_reg_creator = std::collections::HashMap::<&'static str, fn()->#type_ident>::new();
             // Register views
             #view_reg_content_ts
             view_reg_creator
