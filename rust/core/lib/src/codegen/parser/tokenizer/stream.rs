@@ -1,5 +1,5 @@
-use crate::parser::tokenizer::token::Kind;
-use crate::parser::tokenizer::token::Token;
+use crate::codegen::parser::tokenizer::Token;
+use crate::codegen::parser::tokenizer::token::Kind;
 use winnow::stream::LocatingSlice;
 use winnow::stream::Stream;
 use winnow::stream::TokenSlice;
@@ -9,12 +9,6 @@ pub(crate) type TokenStream<'i> = TokenSlice<'i, Token>;
 
 pub(crate) fn skip_whitespace(stream: &mut TokenStream) {
     skip_next_token_if(stream, |k| k == Kind::WHITESPACE);
-}
-
-pub(crate) fn skip_meanlingless(stream: &mut TokenStream) {
-    skip_next_token_if(stream, |k| {
-        vec![Kind::COMMENT, Kind::NEWLINE, Kind::WHITESPACE].contains(&k)
-    });
 }
 
 pub(crate) fn skip_whitespace_and_newline(stream: &mut TokenStream) {

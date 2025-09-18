@@ -1,20 +1,15 @@
-pub mod stream;
-pub mod token;
-
-use stream::StrStream;
-use winnow::stream::AsBStr as _;
-use winnow::stream::ContainsToken as _;
-use winnow::stream::FindSlice as _;
-use winnow::stream::Location;
+use crate::codegen::parser::tokenizer;
+use crate::codegen::parser::tokenizer::Token;
+use crate::codegen::parser::tokenizer::stream::StrStream;
 use winnow::stream::Stream as _;
 
-pub struct Tokenizer<'a> {
+pub(crate) struct Tokenizer<'a> {
     stream: StrStream<'a>,
     eof: bool,
 }
 
 impl<'a> Tokenizer<'a> {
-    pub fn new(input: &'a str) -> Self {
+    pub(crate) fn new(input: &'a str) -> Self {
         // skip BOM if present.
         let mut stream = StrStream::new(input);
         if input.as_bytes().starts_with(&[0xEF, 0xBB, 0xBF]) {
@@ -26,10 +21,10 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    pub fn into_vec(self) -> Vec<token::Token> {
+    pub(crate) fn into_vec(self) -> Vec<Token> {
         let capacity = core::cmp::min(
             self.stream.len(),
-            usize::MAX / core::mem::size_of::<token::Token>(),
+            usize::MAX / core::mem::size_of::<Token>(),
         );
 
         let mut tokens = Vec::with_capacity(capacity);
@@ -39,16 +34,16 @@ impl<'a> Tokenizer<'a> {
 }
 
 impl<'a> Iterator for Tokenizer<'a> {
-    type Item = token::Token;
+    type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.eof {
             return None;
         }
 
-        let token = token::tokenize(&mut self.stream);
+        let token = tokenizer::token::tokenize(&mut self.stream);
         match token.kind {
-            token::Kind::EOF => {
+            tokenizer::token::Kind::EOF => {
                 self.eof = true;
                 Some(token)
             }

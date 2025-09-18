@@ -2,7 +2,8 @@ mod stream;
 mod token;
 mod tokenizer;
 
+pub(crate) use stream::*;
+pub(crate) use token::*;
+pub(crate) use tokenizer::*;
 
-pub(crate) use self::stream::{StrStream, TokenStream};
-pub(crate) use self::tokenizer::Tokenizer;
-pub(crate) use self::token::{Kind, Token};
+pub(crate) type Token = crate::codegen::parser::Span<Kind>;

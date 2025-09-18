@@ -1,6 +1,8 @@
 mod context;
 mod data_store;
+pub(crate) mod error;
 mod macros;
+pub(crate) mod result;
 mod template;
 mod writer;
 

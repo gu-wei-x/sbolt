@@ -5,7 +5,7 @@ use quote::{format_ident, quote};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-pub(crate) fn generate_view_types(
+pub(crate) fn generate_registry(
     file_path: &PathBuf,
     mode_name: &str,
     view_name_mapping: &HashMap<String, String>,
@@ -45,7 +45,7 @@ pub(crate) fn generate_view_types(
         .parse::<proc_macro2::TokenStream>()
         .unwrap();
 
-    let reg_ts = generate_view_registration(mode_name, view_name_mapping)?;
+    let reg_ts = generate_registry_method(mode_name, view_name_mapping)?;
     let type_ident = format_ident!("{}", consts::TEMPLATE_TYPE_NAME);
     let content = quote! {
         use disguise::types::Template as _;
@@ -67,7 +67,7 @@ pub(crate) fn generate_view_types(
     utils::fs::generate_code_with_content(file_path, &content)
 }
 
-fn generate_view_registration(
+fn generate_registry_method(
     mode_name: &str,
     view_name_mapping: &HashMap<String, String>,
 ) -> Result<TokenStream, String> {
