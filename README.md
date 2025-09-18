@@ -29,9 +29,9 @@ $:.
 src/views/comp/index.rshtml
 ```rust
 @{
-    let name = context.get_data::<String>("name");
-    let age = context.get_data::<i32>("age");
-    let msg = context.get_data::<String>("msg");
+    let name = context.get_data::<String>("name").clone();
+    let age = context.get_data::<i32>("age").clone();
+    let msg = context.get_data::<String>("msg").clone();
 }
 <html>
     <head>

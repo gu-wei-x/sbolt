@@ -1,7 +1,8 @@
+use crate::types::error;
 use std::collections::HashMap;
 
 pub struct CompileResult {
-    errors: Vec<String>,
+    errors: Vec<error::Error>,
     view_name_mapping: HashMap<String, String>,
     mods: Vec<String>,
 }
@@ -21,7 +22,7 @@ impl CompileResult {
         }
     }
 
-    pub fn add_error(&mut self, error: String) {
+    pub fn add_error(&mut self, error: error::Error) {
         self.errors.push(error);
     }
 
@@ -29,7 +30,7 @@ impl CompileResult {
         self.errors.is_empty()
     }
 
-    pub fn errors(&self) -> &[String] {
+    pub fn errors(&self) -> &[error::Error] {
         &self.errors
     }
 }
@@ -52,5 +53,18 @@ impl CompileResult {
 
     pub(crate) fn mods(&self) -> &[String] {
         &self.mods
+    }
+
+    pub(crate) fn merge_without_mods(&mut self, other: CompileResult) {
+        self.errors.extend(other.errors);
+        self.view_name_mapping
+            .extend(other.view_name_mapping.into_iter());
+        /*for m in other.mods {
+            self.add_mod(&m);
+        }*/
+    }
+
+    pub(crate) fn merge_into(self, other: &mut CompileResult) {
+        other.merge_without_mods(self);
     }
 }

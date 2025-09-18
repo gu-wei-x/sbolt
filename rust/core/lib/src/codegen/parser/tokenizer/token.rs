@@ -1,10 +1,18 @@
-use super::*;
-use crate::parser::tokenizer::StrStream;
-use std::ops::Range;
+use winnow::stream::AsBStr as _;
+use winnow::stream::ContainsToken as _;
+use winnow::stream::Location;
+use winnow::stream::Stream as _;
+
+use crate::codegen::parser::tokenizer::Token;
+use crate::codegen::parser::tokenizer::stream::StrStream;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[repr(u8)]
 pub enum Kind {
+    NEWLINE = 0,
+    EXPRESSION = 1,
+    EOF = 2,
+    UNKNOWN = 3,
     AT = b'@',
     EQUALS = b'=',
     EXCLAMATION = b'!',
@@ -18,34 +26,6 @@ pub enum Kind {
     SLASH = b'/',
     STAR = b'*',
     WHITESPACE = b' ',
-    CR = b'\r',
-    LF = b'\n',
-    NEWLINE,
-    EXPRESSION,
-    EOF,
-    UNKNOWN,
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub struct Token {
-    pub kind: Kind,
-    pub start: usize,
-    pub end: usize,
-}
-
-impl Token {
-    pub fn new(kind: Kind, start: usize, end: usize) -> Self {
-        Self { kind, start, end }
-    }
-
-    #[inline(always)]
-    pub fn kind(&self) -> Kind {
-        self.kind
-    }
-
-    pub fn range(&self) -> Range<usize> {
-        self.start..self.end
-    }
 }
 
 impl std::fmt::Display for Token {
@@ -80,8 +60,8 @@ pub(crate) fn tokenize(stream: &mut StrStream<'_>) -> Token {
         b'>' => tokenize_symbol(stream, Kind::GREATTHAN),
         b')' => tokenize_symbol(stream, Kind::CPARENTHESIS),
         b'(' => tokenize_symbol(stream, Kind::OPARENTHESIS),
-        b'{' => tokenize_symbol(stream, Kind::CCURLYBRACKET),
-        b'}' => tokenize_symbol(stream, Kind::OCURLYBRACKET),
+        b'}' => tokenize_symbol(stream, Kind::CCURLYBRACKET),
+        b'{' => tokenize_symbol(stream, Kind::OCURLYBRACKET),
         b'/' => tokenize_symbol(stream, Kind::SLASH),
         b'*' => tokenize_symbol(stream, Kind::STAR),
         b' ' => tokenize_whitespace(stream),
