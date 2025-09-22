@@ -48,7 +48,7 @@ impl Writer for DefaultViewContext {
         self.output.push_str(content);
     }
 
-    fn write_line(&mut self, content: &str) {
+    fn writeln(&mut self, content: &str) {
         self.write(content);
         self.write("\n");
     }

@@ -1,6 +1,9 @@
 pub trait Writer {
     fn write(&mut self, content: &str);
-    fn write_line(&mut self, content: &str);
+    fn writeln(&mut self, content: &str);
+    fn writefn(&mut self, content_fn: impl FnOnce() -> String) {
+        self.write(&content_fn());
+    }
 }
 
 impl Writer for String {
@@ -8,7 +11,7 @@ impl Writer for String {
         self.push_str(content);
     }
 
-    fn write_line(&mut self, content: &str) {
+    fn writeln(&mut self, content: &str) {
         self.write(content);
         self.write("\n");
     }
