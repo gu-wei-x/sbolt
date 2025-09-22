@@ -6,6 +6,17 @@ pub(crate) struct Span<T: Copy> {
 }
 
 use std::ops::Range;
+
+impl<T: Default + Copy> Default for Span<T> {
+    fn default() -> Self {
+        Self {
+            kind: T::default(),
+            start: 0,
+            end: 0,
+        }
+    }
+}
+
 impl<T: Copy> Span<T> {
     pub(crate) fn new(kind: T, start: usize, end: usize) -> Self {
         Self { kind, start, end }

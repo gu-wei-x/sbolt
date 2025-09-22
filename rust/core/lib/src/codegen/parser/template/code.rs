@@ -1,67 +1,112 @@
-use crate::codegen::parser::template::Template;
-use crate::codegen::parser::template::{self, Fragment};
+use crate::codegen::parser;
+use crate::codegen::parser::template;
+use crate::codegen::parser::template::types::Block;
 use crate::codegen::parser::tokenizer::{self, Token, TokenStream};
 use crate::types::error; // Add this import if your error type is defined here
 use crate::types::result;
-use winnow::stream::Stream as _;
+use winnow::stream::Stream;
 
-impl<'a> Template<'a> {
-    pub(crate) fn code_from(
+impl<'a> Block<'a> {
+    pub(in crate::codegen::parser::template) fn parse_code(
         source: &'a str,
-        token_stream: &mut TokenStream,
         start_token: &Token,
-    ) -> result::Result<Fragment<'a>> {
+        token_stream: &mut TokenStream,
+    ) -> result::Result<Block<'a>> {
         if start_token.kind() != tokenizer::Kind::AT {
             return error::Error::from_parser("Expected '@' token").into();
         }
 
-        // consume @<expr:whitespace>
         token_stream.next_token();
         tokenizer::skip_whitespace(token_stream);
-        match token_stream.peek_token() {
-            Some(token) => match token.kind() {
-                tokenizer::Kind::OPARENTHESIS => Self::create_fragment_with_kind(
-                    source,
-                    tokenizer::Kind::OPARENTHESIS,
-                    tokenizer::Kind::CPARENTHESIS,
-                    token_stream,
-                ),
-                tokenizer::Kind::OCURLYBRACKET => Self::create_fragment_with_kind(
-                    source,
-                    tokenizer::Kind::OCURLYBRACKET,
-                    tokenizer::Kind::CCURLYBRACKET,
-                    token_stream,
-                ),
-                _ => Self::create_inlined_code_fragment(source, token, token_stream),
-            },
-            _ => {
-                println!("*****************{:?}", token_stream.peek_token());
-                // not code block but a single @.
-                Ok(Fragment {
-                    kind: template::Kind::CONTENT(&source[start_token.range()]),
-                    start: start_token.start,
-                    end: start_token.end,
-                })
+        while let Some(next_token) = token_stream.peek_token() {
+            match next_token.kind() {
+                tokenizer::Kind::EOF => break,
+                tokenizer::Kind::NEWLINE => {
+                    // consume newline.
+                    token_stream.next_token();
+                }
+                tokenizer::Kind::OPARENTHESIS => {
+                    // code part.
+                    return Self::parse_code_block_with_kind(
+                        source,
+                        tokenizer::Kind::OPARENTHESIS,
+                        tokenizer::Kind::CPARENTHESIS,
+                        token_stream,
+                    );
+                }
+                tokenizer::Kind::OCURLYBRACKET => {
+                    // code part.
+                    let code_block = Self::parse_code_block_with_kind(
+                        source,
+                        tokenizer::Kind::OCURLYBRACKET,
+                        tokenizer::Kind::CCURLYBRACKET,
+                        token_stream,
+                    );
+                    return code_block;
+                }
+                tokenizer::Kind::EXPRESSION => {
+                    // inlined code part.
+                    let code_block =
+                        Self::create_inlined_code_block(source, next_token, token_stream);
+                    // caution: inlined should return to parent context.
+                    return code_block;
+                }
+                _ => {
+                    // code part.
+                    //token_stream.next_token();
+                    return Err(error::Error::from_parser("Failed to parse code block").into());
+                }
             }
         }
-    }
-}
 
-impl<'a> Template<'a> {
-    fn create_fragment_with_kind(
+        Err(error::Error::from_parser("Failed to parse code block").into())
+    }
+
+    fn create_code_block(
+        source: &'a str,
+        start_token: &Option<&Token>,
+        end_token: &Option<&Token>,
+    ) -> result::Result<Block<'a>> {
+        if start_token.is_none() {
+            return Err(error::Error::from_parser("Missing start or end token"));
+        }
+
+        let start_token = start_token.unwrap();
+        let start = start_token.range().start;
+        let end = match end_token {
+            Some(token) => token.range().start,
+            None => source.len(),
+        };
+
+        if end <= start {
+            return Err(error::Error::from_parser("Invalid token range"));
+        }
+
+        let mut block = Block::default();
+        block.with_span(parser::Span {
+            kind: template::Kind::CODE(&source[start..end]),
+            start: start,
+            end: end,
+        });
+        Ok(block)
+    }
+
+    fn parse_code_block_with_kind(
         source: &'a str,
         open_kind: tokenizer::Kind,
         close_kind: tokenizer::Kind,
         token_stream: &mut TokenStream,
-    ) -> result::Result<Fragment<'a>> {
+    ) -> result::Result<Block<'a>> {
         // Assume the current token is the opening delimiter (either '(' or '{')
-        let start_token = token_stream
+        _ = token_stream
             .next_token()
             .ok_or_else(|| error::Error::from_parser("Expected opening delimiter").into())?;
 
         let mut depth = 1;
-        let start = start_token.range().start;
-        let mut end = start_token.range().end;
+        let mut result = Block::default();
+        let start_token = token_stream.peek_token();
+        let mut start_token2 = token_stream.peek_token();
+        let mut end_token: Option<&Token> = None;
         while let Some(token) = token_stream.next_token() {
             match token.kind() {
                 k if k == open_kind => {
@@ -70,54 +115,57 @@ impl<'a> Template<'a> {
                 k if k == close_kind => {
                     depth -= 1;
                     if depth == 0 {
-                        end = token.range().end;
+                        end_token = Some(token);
                         break;
                     }
                 }
+                tokenizer::Kind::AT => {
+                    // 1. consume the tokens before this one as code block and switch to content block.
+                    let code_block = Self::create_code_block(source, &start_token2, &Some(token))?;
+                    result.push_block(code_block);
+
+                    // 2. transfer to content.
+                    let content_block = Self::parse_content(source, token, token_stream)?;
+                    result.push_block(content_block);
+
+                    // transfer back.
+                    start_token2 = token_stream.peek_token();
+                }
                 _ => {}
             }
-            end = token.range().end;
         }
 
         if depth != 0 {
             return error::Error::from_parser("Unbalanced delimiters in code block").into();
         }
 
-        Ok(Fragment {
-            kind: template::Kind::CODE(&source[start + 1..end - 1]),
-            start: start + 1,
-            end: end - 1,
-        })
+        match start_token2 {
+            Some(token) => {
+                let code_block = Self::create_code_block(source, &Some(token), &end_token)?;
+                if start_token == start_token2 {
+                    return Ok(code_block);
+                } else {
+                    result.push_block(code_block);
+                }
+            }
+            None => { /* no-op */ }
+        }
+
+        Ok(result)
     }
 
-    fn create_inlined_code_fragment(
+    fn create_inlined_code_block(
         source: &'a str,
         token: &Token,
         token_stream: &mut TokenStream,
-    ) -> result::Result<Fragment<'a>> {
-        if let Some(end_token) = tokenizer::get_next_token_if(token_stream, |k| {
-            !vec![
-                tokenizer::Kind::WHITESPACE,
-                tokenizer::Kind::NEWLINE,
-                tokenizer::Kind::EOF,
-                tokenizer::Kind::EXPRESSION,
-            ]
-            .contains(&k)
-        }) {
-            token_stream.next_token(); // consume end_token
-            Ok(Fragment {
-                kind: template::Kind::CODE(&source[token.range().start..end_token.range().end]),
-                start: token.range().start,
-                end: end_token.range().end,
-            })
-        } else {
-            // TODO: consume all left.
-            token_stream.next_token(); // consume end_token
-            Ok(Fragment {
-                kind: template::Kind::CONTENT(&source[token.range().start..source.len()]),
-                start: token.range().start,
-                end: source.len(),
-            })
-        }
+    ) -> result::Result<Block<'a>> {
+        let mut block = Block::default();
+        block.with_span(parser::Span {
+            kind: template::Kind::CODE(&source[token.range()]),
+            start: token.range().start,
+            end: token.range().end,
+        });
+        token_stream.next_token();
+        Ok(block)
     }
 }

@@ -1,4 +1,3 @@
-use crate::codegen::parser::template::Kind;
 use crate::{
     codegen::{CompileResult, consts, parser::template::Template},
     utils,
@@ -25,31 +24,9 @@ impl<'a> Template<'a> {
                 let view_type = format_ident!("K{}", view_type);
                 let template_type = format_ident!("{}", consts::TEMPLATE_TYPE_NAME);
 
-                // TODO: render content.
                 let mut render_content = String::new();
-                for (index, fragment) in self.fragments.iter().enumerate() {
-                    match fragment.kind() {
-                        Kind::CONTENT(str) => {
-                            render_content.push_str(
-                                format!(r####"context.write(r#"{}"#);"####, str).as_str(),
-                            );
-                        }
-                        Kind::CODE(str) => {
-                            // TODO: block or inline.
-                            if index == 0 {
-                                render_content.push_str(str);
-                            } else {
-                                render_content.push_str(
-                                    format!(
-                                        r####"context.write(&format!(r#"{{}}"#, {}));"####,
-                                        str
-                                    )
-                                    .as_str(),
-                                );
-                            }
-                        }
-                    }
-                }
+                let root_block = &self.block;
+                root_block.generate_code(&mut render_content);
 
                 let render_content_ts: TokenStream = render_content.parse().unwrap();
                 let view_content = quote! {
