@@ -25,9 +25,7 @@ impl<'a> Template<'a> {
                 let template_type = format_ident!("{}", consts::TEMPLATE_TYPE_NAME);
 
                 let mut render_content = String::new();
-                let root_block = &self.block;
-                root_block.generate_code(&mut render_content);
-
+                self.generate_code(&mut render_content);
                 let render_content_ts: TokenStream = render_content.parse().unwrap();
                 let view_content = quote! {
                     use crate::viewtypes::*;
@@ -60,5 +58,11 @@ impl<'a> Template<'a> {
         }
 
         result
+    }
+
+    pub(crate) fn generate_code(&self, output: &mut String) {
+        for block in &self.blocks {
+            block.generate_code(&None, output);
+        }
     }
 }

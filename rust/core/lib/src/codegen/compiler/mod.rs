@@ -4,6 +4,9 @@ mod options;
 mod result;
 mod template;
 
+#[cfg(test)]
+pub(crate) mod tests;
+
 pub(crate) mod module;
 pub(crate) mod registry;
 
