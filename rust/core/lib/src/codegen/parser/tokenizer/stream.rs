@@ -17,7 +17,6 @@ pub(crate) fn skip_whitespace_and_newline(stream: &mut TokenStream) {
     });
 }
 
-#[allow(dead_code)]
 pub(crate) fn get_next_token_if<'a, F: Fn(Kind) -> bool>(
     stream: &mut TokenSlice<'a, Token>,
     pred: F,

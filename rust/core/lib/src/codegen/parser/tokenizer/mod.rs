@@ -2,6 +2,9 @@ mod stream;
 mod token;
 mod tokenizer;
 
+#[cfg(test)]
+pub(crate) mod tests;
+
 pub(crate) use stream::*;
 pub(crate) use token::*;
 pub(crate) use tokenizer::*;

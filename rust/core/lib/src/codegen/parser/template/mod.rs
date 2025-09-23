@@ -1,7 +1,10 @@
+mod block;
 mod code;
 mod content;
 mod template;
-mod types;
 
+#[cfg(test)]
+pub(crate) mod tests;
+
+pub(crate) use block::*;
 pub(crate) use template::Template;
-pub(crate) use types::*;
