@@ -29,7 +29,7 @@ impl<'a> Template<'a> {
 }
 
 impl<'a> Block<'a> {
-    pub(in crate::codegen::parser::template) fn parse_doc(
+    pub(crate) fn parse_doc(
         source: &'a str,
         token_stream: &mut TokenStream,
     ) -> result::Result<Vec<Block<'a>>> {
@@ -76,7 +76,10 @@ impl<'a> Block<'a> {
         }
 
         match blocks.is_empty() {
-            true => Err(error::Error::Parser(None, "Empty template is not allowed")),
+            true => Err(error::Error::Parser(
+                None,
+                "Empty template is not allowed".to_string(),
+            )),
             false => Ok(blocks),
         }
     }

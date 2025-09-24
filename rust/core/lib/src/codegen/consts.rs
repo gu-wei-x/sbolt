@@ -6,3 +6,7 @@ pub(crate) const TEMPLATE_TYPE_NAME: &'static str = "Template";
 pub(crate) const TEMPLATES_FILES_ENV: &'static str = "TEMPLATES_FILES";
 pub(crate) const TEMPLATES_MAP_FILE_NAME: &'static str = "viewtypes";
 pub(crate) const TEMPLATES_MOD_FILE_NAME: &'static str = "mod.rs";
+
+pub(crate) const KEYWORD_LAYOUT: &'static str = "layout";
+pub(crate) const KEYWORD_SECTION: &'static str = "section";
+pub(crate) const KEYWORD_USE: &'static str = "use";

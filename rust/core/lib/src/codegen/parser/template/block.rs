@@ -31,6 +31,8 @@ impl<'a> Default for Kind<'a> {
 
 #[derive(Debug)]
 pub(crate) struct Block<'a> {
+    // block like use, section could have name.
+    pub(crate) name: Option<String>,
     pub(crate) span: parser::Span<Kind<'a>>,
     pub(crate) blocks: Vec<Block<'a>>,
 }
@@ -38,6 +40,7 @@ pub(crate) struct Block<'a> {
 impl<'a> Default for Block<'a> {
     fn default() -> Self {
         Self {
+            name: None,
             span: parser::Span::<Kind<'a>>::default(),
             blocks: vec![],
         }
@@ -56,18 +59,17 @@ impl<'a> Block<'a> {
         }
     }
 
-    pub(in crate::codegen::parser::template) fn with_span(
-        &mut self,
-        span: parser::Span<Kind<'a>>,
-    ) -> &mut Self {
+    pub(crate) fn with_name(&mut self, name: &str) -> &mut Self {
+        self.name = Some(name.to_string());
+        self
+    }
+
+    pub(crate) fn with_span(&mut self, span: parser::Span<Kind<'a>>) -> &mut Self {
         self.span = span;
         self
     }
 
-    pub(in crate::codegen::parser::template) fn push_block(
-        &mut self,
-        block: Block<'a>,
-    ) -> &mut Self {
+    pub(crate) fn push_block(&mut self, block: Block<'a>) -> &mut Self {
         // update container kind with first block.
         if matches!(self.span.kind, Kind::UNKNOWN(_)) {
             match &block.span.kind() {
@@ -123,10 +125,10 @@ impl<'a> Block<'a> {
                 }
                 tokenizer::Kind::AT => {
                     if is_inlined {
-                        return error::Error::from_parser(
+                        return Err(error::Error::from_parser(
+                            Some(*token),
                             "Inlined block is not allowed to use '@' token",
-                        )
-                        .into();
+                        ));
                     }
 
                     if is_content {

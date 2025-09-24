@@ -22,7 +22,7 @@ pub(crate) fn get_next_token_if<'a, F: Fn(Kind) -> bool>(
     pred: F,
 ) -> Option<&'a Token> {
     while let Some(current_token) = stream.peek_token() {
-        if pred(current_token.kind()) {
+        if pred(current_token.kind()) && current_token.kind() != Kind::EOF {
             stream.next_token();
         } else {
             break;

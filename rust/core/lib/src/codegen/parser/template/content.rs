@@ -5,7 +5,7 @@ use crate::codegen::parser::tokenizer::{self, Token, TokenStream, get_next_token
 use crate::types::{error, result};
 use winnow::stream::Stream as _;
 impl<'a> Block<'a> {
-    pub(in crate::codegen::parser::template) fn parse_content(
+    pub(crate) fn parse_content(
         source: &'a str,
         start_token: &Token,
         token_stream: &mut TokenStream,
@@ -14,7 +14,10 @@ impl<'a> Block<'a> {
         match start_token.kind() {
             tokenizer::Kind::AT => {
                 if is_inlined {
-                    return error::Error::from_parser("Unexpected '@' in inlined content").into();
+                    return Err(error::Error::from_parser(
+                        Some(*start_token),
+                        "Unexpected '@' in inlined content",
+                    ));
                 }
 
                 // from code to content.

@@ -6,7 +6,7 @@ use std::fmt::Debug;
 pub enum Error {
     CodeGen(String),
     String(String),
-    Parser(Option<parser::Token>, &'static str),
+    Parser(Option<parser::Token>, String),
 }
 
 impl Error {
