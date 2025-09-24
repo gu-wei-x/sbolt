@@ -13,7 +13,10 @@ impl<'a> Block<'a> {
         token_stream: &mut TokenStream,
     ) -> result::Result<Block<'a>> {
         if start_token.kind() != tokenizer::Kind::AT {
-            return error::Error::from_parser("Expected '@' token").into();
+            return Err(error::Error::from_parser(
+                Some(*start_token),
+                "Expected '@' token",
+            ));
         }
 
         token_stream.next_token();
@@ -53,12 +56,18 @@ impl<'a> Block<'a> {
                 _ => {
                     // code part.
                     //token_stream.next_token();
-                    return Err(error::Error::from_parser("Failed to parse code block").into());
+                    return Err(error::Error::from_parser(
+                        Some(*next_token),
+                        "Failed to parse code block",
+                    ));
                 }
             }
         }
 
-        Err(error::Error::from_parser("Failed to parse code block").into())
+        Err(error::Error::from_parser(
+            Some(*start_token),
+            "Empty code block",
+        ))
     }
 
     fn create_inlined_code_block(

@@ -89,9 +89,10 @@ impl<'a> Block<'a> {
         token_stream: &mut TokenStream,
     ) -> result::Result<Block<'a>> {
         // Assume the current token is the opening delimiter (either '(' or '{')
-        _ = token_stream
-            .next_token()
-            .ok_or_else(|| error::Error::from_parser("Expected opening delimiter").into())?;
+        _ = token_stream.next_token().ok_or_else(|| {
+            let previous_token = token_stream.previous_tokens().last().copied();
+            error::Error::from_parser(previous_token, "Expected opening delimiter").into()
+        })?;
 
         let mut depth = 1;
         let mut result = Block::default();
@@ -142,7 +143,10 @@ impl<'a> Block<'a> {
         }
 
         if depth != 0 {
-            return error::Error::from_parser("Unbalanced delimiters in block").into();
+            return Err(error::Error::from_parser(
+                Some(*start.unwrap()),
+                "Unbalanced delimiters in block",
+            ));
         }
 
         match next_start {
@@ -167,7 +171,11 @@ impl<'a> Block<'a> {
         is_content: bool,
     ) -> result::Result<Block<'a>> {
         if start_token.is_none() {
-            return Err(error::Error::from_parser("Missing start or end token"));
+            // not possible here.
+            return Err(error::Error::from_parser(
+                None,
+                "Missing start or end token",
+            ));
         }
 
         let start_token = start_token.unwrap();
@@ -178,7 +186,10 @@ impl<'a> Block<'a> {
         };
 
         if end <= start {
-            return Err(error::Error::from_parser("Invalid token range"));
+            return Err(error::Error::from_parser(
+                end_token.cloned(),
+                "Invalid token range",
+            ));
         }
 
         let mut block = Block::default();

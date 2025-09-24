@@ -69,14 +69,16 @@ impl<'a> Block<'a> {
                         }
                     }
                 }
+                return Err(error::Error::from_parser(
+                    Some(*start_token),
+                    "Single @ must be followed by a block or inline content.",
+                ));
             }
             _ => {
                 // content.
                 return Self::parse_content_block(source, start_token, token_stream);
             }
         }
-
-        Err(error::Error::from_parser("Failed to parse content block").into())
     }
 }
 

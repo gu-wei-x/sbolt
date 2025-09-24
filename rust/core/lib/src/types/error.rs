@@ -1,10 +1,12 @@
+use crate::codegen::parser;
 use std::fmt::Debug;
 
+#[allow(private_interfaces)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
     CodeGen(String),
     String(String),
-    Parser(String),
+    Parser(Option<parser::Token>, &'static str),
 }
 
 impl Error {
@@ -24,9 +26,15 @@ impl std::fmt::Display for Error {
                 write!(f, "Err:({})", msg)
             }
 
-            Error::Parser(token) => {
-                write!(f, "Paser Err({:?})", token)
+            Error::Parser(token, str) => {
+                write!(f, "Parser Err({:?}, {:?})", token, str)
             }
         }
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
     }
 }

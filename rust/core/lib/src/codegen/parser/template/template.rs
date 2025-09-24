@@ -55,9 +55,7 @@ impl<'a> Block<'a> {
         }
 
         match blocks.is_empty() {
-            true => Err(error::Error::from_str(
-                "No content or code found in the template.",
-            )),
+            true => Err(error::Error::Parser(None, "Empty template is not allowed")),
             false => Ok(blocks),
         }
     }
