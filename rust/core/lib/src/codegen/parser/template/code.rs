@@ -34,8 +34,9 @@ impl<'a> Block<'a> {
                         source,
                         tokenizer::Kind::OPARENTHESIS,
                         tokenizer::Kind::CPARENTHESIS,
-                        false,
                         token_stream,
+                        false,
+                        true,
                     );
                 }
                 tokenizer::Kind::OCURLYBRACKET => {
@@ -44,13 +45,15 @@ impl<'a> Block<'a> {
                         source,
                         tokenizer::Kind::OCURLYBRACKET,
                         tokenizer::Kind::CCURLYBRACKET,
-                        false,
                         token_stream,
+                        false,
+                        false,
                     );
                 }
                 tokenizer::Kind::EXPRESSION => {
                     // inlined code part.
                     // caution: inlined should return to parent context.
+                    // todo: @sth.call is not legal tu @(sth.call) is legal.
                     return Self::create_inlined_code_block(source, next_token, token_stream);
                 }
                 _ => {
@@ -77,7 +80,7 @@ impl<'a> Block<'a> {
     ) -> result::Result<Block<'a>> {
         let mut block = Block::default();
         block.with_span(parser::Span {
-            kind: template::Kind::CODE(&source[token.range()]),
+            kind: template::Kind::INLINEDCODE(&source[token.range()]),
             start: token.range().start,
             end: token.range().end,
         });

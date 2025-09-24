@@ -10,8 +10,15 @@ use winnow::stream::Stream as _;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub(crate) enum Kind<'a> {
+    // TODO:
+    // USE: @use
+    // Layout: @layout "layout_name"
+    // Section: @section name{}
+    // TODO: RenderSection: @render("name", is_required): this could be inline function call, render is defined in view.
     CODE(&'a str),
+    INLINEDCODE(&'a str),
     CONTENT(&'a str),
+    INLINEDCONTENT(&'a str),
     // intermediate kind.
     UNKNOWN(&'a str),
 }
@@ -42,7 +49,9 @@ impl<'a> Block<'a> {
     pub(crate) fn content(&self) -> &'a str {
         match &self.span.kind {
             Kind::CODE(content) => content,
+            Kind::INLINEDCODE(content) => content,
             Kind::CONTENT(content) => content,
+            Kind::INLINEDCONTENT(content) => content,
             Kind::UNKNOWN(content) => content,
         }
     }
@@ -85,8 +94,9 @@ impl<'a> Block<'a> {
         source: &'a str,
         open_kind: tokenizer::Kind,
         close_kind: tokenizer::Kind,
-        is_content: bool,
         token_stream: &mut TokenStream,
+        is_content: bool,
+        is_inlined: bool,
     ) -> result::Result<Block<'a>> {
         // Assume the current token is the opening delimiter (either '(' or '{')
         _ = token_stream.next_token().ok_or_else(|| {
@@ -111,31 +121,36 @@ impl<'a> Block<'a> {
                         break;
                     }
                 }
-                tokenizer::Kind::AT if !is_content => {
-                    // transfer from code to content.
-                    // 1. consume the tokens before this one as code block and switch to content block.
-                    let code_block = Self::create_block(source, &next_start, &Some(token), false)?;
-                    result.push_block(code_block);
+                tokenizer::Kind::AT => {
+                    if is_inlined {
+                        return error::Error::from_parser(
+                            "Inlined block is not allowed to use '@' token",
+                        )
+                        .into();
+                    }
 
-                    // 2. transfer to content.
-                    let content_block = Self::parse_content(source, token, token_stream)?;
-                    result.push_block(content_block);
+                    if is_content {
+                        // transfer from content to code.
+                        // 1. consume the tokens before this one as content block and switch to code block.
+                        let content_block =
+                            Self::create_block(source, &next_start, &Some(token), true, false)?;
+                        result.push_block(content_block);
 
-                    // 3. transfer back.
-                    next_start = token_stream.peek_token();
-                }
-                tokenizer::Kind::AT if is_content => {
-                    // transfer from content to code.
-                    // 1. consume the tokens before this one as content block and switch to code block.
-                    let content_block =
-                        Self::create_block(source, &next_start, &Some(token), true)?;
-                    result.push_block(content_block);
+                        // 2. transfer to code.
+                        let code_block = Self::parse_code(source, token, token_stream)?;
+                        result.push_block(code_block);
+                    } else {
+                        // transfer from code to content.
+                        // 1. consume the tokens before this one as code block and switch to content block.
+                        let code_block =
+                            Self::create_block(source, &next_start, &Some(token), false, false)?;
+                        result.push_block(code_block);
 
-                    // 2. transfer to code.
-                    let code_block = Self::parse_code(source, token, token_stream)?;
-                    result.push_block(code_block);
-
-                    // transfer back.
+                        // 2. transfer to content.
+                        let content_block =
+                            Self::parse_content(source, token, token_stream, false)?;
+                        result.push_block(content_block);
+                    }
                     next_start = token_stream.peek_token();
                 }
                 _ => {}
@@ -151,7 +166,8 @@ impl<'a> Block<'a> {
 
         match next_start {
             Some(token) => {
-                let block = Self::create_block(source, &Some(token), &end_token, is_content)?;
+                let block =
+                    Self::create_block(source, &Some(token), &end_token, is_content, is_inlined)?;
                 if start == next_start {
                     return Ok(block);
                 } else {
@@ -169,6 +185,7 @@ impl<'a> Block<'a> {
         start_token: &Option<&Token>,
         end_token: &Option<&Token>,
         is_content: bool,
+        is_inlined: bool,
     ) -> result::Result<Block<'a>> {
         if start_token.is_none() {
             // not possible here.
@@ -194,16 +211,36 @@ impl<'a> Block<'a> {
 
         let mut block = Block::default();
         match is_content {
-            true => block.with_span(parser::Span {
-                kind: Kind::CONTENT(&source[start..end]),
-                start: start,
-                end: end,
-            }),
-            false => block.with_span(parser::Span {
-                kind: Kind::CODE(&source[start..end]),
-                start: start,
-                end: end,
-            }),
+            true => {
+                if is_inlined {
+                    block.with_span(parser::Span {
+                        kind: Kind::INLINEDCONTENT(&source[start..end]),
+                        start: start,
+                        end: end,
+                    })
+                } else {
+                    block.with_span(parser::Span {
+                        kind: Kind::CONTENT(&source[start..end]),
+                        start: start,
+                        end: end,
+                    })
+                }
+            }
+            false => {
+                if is_inlined {
+                    block.with_span(parser::Span {
+                        kind: Kind::INLINEDCODE(&source[start..end]),
+                        start: start,
+                        end: end,
+                    })
+                } else {
+                    block.with_span(parser::Span {
+                        kind: Kind::CODE(&source[start..end]),
+                        start: start,
+                        end: end,
+                    })
+                }
+            }
         };
         Ok(block)
     }

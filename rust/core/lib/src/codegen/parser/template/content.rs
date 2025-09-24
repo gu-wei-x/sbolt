@@ -9,9 +9,14 @@ impl<'a> Block<'a> {
         source: &'a str,
         start_token: &Token,
         token_stream: &mut TokenStream,
+        is_inlined: bool,
     ) -> result::Result<Block<'a>> {
         match start_token.kind() {
             tokenizer::Kind::AT => {
+                if is_inlined {
+                    return error::Error::from_parser("Unexpected '@' in inlined content").into();
+                }
+
                 // from code to content.
                 tokenizer::skip_whitespace(token_stream);
                 while let Some(next_token) = token_stream.peek_token() {
@@ -23,8 +28,9 @@ impl<'a> Block<'a> {
                                 source,
                                 tokenizer::Kind::OPARENTHESIS,
                                 tokenizer::Kind::CPARENTHESIS,
-                                true,
                                 token_stream,
+                                true,
+                                true,
                             );
                         }
                         tokenizer::Kind::OCURLYBRACKET => {
@@ -33,8 +39,9 @@ impl<'a> Block<'a> {
                                 source,
                                 tokenizer::Kind::OCURLYBRACKET,
                                 tokenizer::Kind::CCURLYBRACKET,
-                                true,
                                 token_stream,
+                                true,
+                                false,
                             );
                         }
                         _ => {
@@ -48,7 +55,7 @@ impl<'a> Block<'a> {
                                 None => {
                                     // end of file.
                                     block.with_span(parser::Span {
-                                        kind: template::Kind::CONTENT(
+                                        kind: template::Kind::INLINEDCONTENT(
                                             &source[next_token.range().start..source.len()],
                                         ),
                                         start: next_token.range().start,
@@ -57,7 +64,7 @@ impl<'a> Block<'a> {
                                 }
                                 Some(token) => {
                                     block.with_span(parser::Span {
-                                        kind: template::Kind::CONTENT(
+                                        kind: template::Kind::INLINEDCONTENT(
                                             &source[next_token.range().start..token.range().start],
                                         ),
                                         start: next_token.range().start,
@@ -106,7 +113,7 @@ impl<'a> Block<'a> {
                     // 1. consume the tokens before this one as content block and switch to code block.
                     // transfer to code.
                     let content_block =
-                        Block::create_block(source, &next_start, &Some(next_token), true)?;
+                        Block::create_block(source, &next_start, &Some(next_token), true, false)?;
                     result.push_block(content_block);
 
                     // 2. transfer to code.
@@ -125,7 +132,7 @@ impl<'a> Block<'a> {
 
         match next_start {
             Some(token) => {
-                let content_block = Self::create_block(source, &Some(token), &None, true)?;
+                let content_block = Self::create_block(source, &Some(token), &None, true, false)?;
                 if next_start == start {
                     return Ok(content_block);
                 } else {
