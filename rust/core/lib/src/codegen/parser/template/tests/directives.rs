@@ -6,7 +6,7 @@ use crate::types::error;
 use winnow::stream::{Stream, TokenSlice};
 
 #[test]
-fn test_parse_use_block() -> core::result::Result<(), error::Error> {
+fn test_parse_directive_use() -> core::result::Result<(), error::Error> {
     let use_statement = "use std::fmt";
     let use_contents = [
         use_statement,
@@ -31,7 +31,7 @@ fn test_parse_use_block() -> core::result::Result<(), error::Error> {
 }
 
 #[test]
-fn test_parse_use_block_illegal() {
+fn test_parse_directive_use_illegal() {
     let use_statement = "use";
     let use_contents = [
         use_statement,
@@ -51,4 +51,14 @@ fn test_parse_use_block_illegal() {
         let resut = Block::parse_code(content, start_token, &mut token_stream);
         assert!(resut.is_err());
     }
+}
+
+#[test]
+fn test_parse_directive_layout() {
+    panic!("TODO: impl")
+}
+
+#[test]
+fn test_parse_directive_layout_illegal() {
+    panic!("TODO: impl")
 }
