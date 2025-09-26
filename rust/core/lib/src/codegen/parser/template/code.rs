@@ -54,18 +54,14 @@ impl<'a> Block<'a> {
                         )
                     }
                     tokenizer::Kind::EXPRESSION => {
-                        // inlined code part.
-                        // caution: inlined should return to parent context.
-                        // @section, @use, @layout
                         let exp = &source[token.range()];
                         match exp {
-                            consts::KEYWORD_LAYOUT => {
-                                Self::parse_layout(source, token, token_stream)
+                            consts::DIRECTIVE_KEYWORD_LAYOUT | consts::DIRECTIVE_KEYWORD_USE => {
+                                Self::parse_directive(source, token, token_stream, exp)
                             }
                             consts::KEYWORD_SECTION => {
                                 Self::parse_section(source, token, token_stream)
                             }
-                            consts::KEYWORD_USE => Self::parse_use(source, token, token_stream),
                             _ => Self::create_inlined_code_block(source, token, token_stream),
                         }
                     }
@@ -89,55 +85,63 @@ impl<'a> Block<'a> {
             start: token.range().start,
             end: token.range().end,
         });
+
+        // consume the expression token.
         token_stream.next_token();
         Ok(block)
     }
 
-    fn parse_layout(
+    fn parse_directive(
         source: &'a str,
         token: &Token,
         token_stream: &mut TokenStream,
+        directive: &str,
     ) -> result::Result<Block<'a>> {
         // consume the layout token
         token_stream.next_token();
 
         // whitespace after layout token
-        tokenizer::skip_whitespace(token_stream);
+        if !tokenizer::skip_whitespace(token_stream) {
+            return Err(error::Error::from_parser(
+                Some(*token),
+                &format!("Expected whitespace name after '@{directive}'"),
+            ));
+        }
+
         match token_stream.peek_token() {
             None => Err(error::Error::from_parser(
                 Some(*token),
-                &format!(
-                    "Expected {} name after '@{}'",
-                    consts::KEYWORD_LAYOUT,
-                    consts::KEYWORD_LAYOUT
-                ),
+                &format!("Expected {directive} content after '@{directive}'"),
             )),
             Some(start_token) => {
-                // TODO: validate layout name
-                let end_token = tokenizer::get_next_token_if(token_stream, |k| {
-                    !vec![tokenizer::Kind::SEMICOLON, tokenizer::Kind::NEWLINE].contains(&k)
+                let end_token = tokenizer::get_next_token_util(token_stream, |k| {
+                    vec![tokenizer::Kind::SEMICOLON, tokenizer::Kind::NEWLINE].contains(&k)
                 });
 
                 match end_token {
                     None => Err(error::Error::from_parser(
-                        Some(*start_token),
-                        &format!(
-                            "Expected {} name after '@{}'",
-                            consts::KEYWORD_LAYOUT,
-                            consts::KEYWORD_LAYOUT
-                        ),
+                        Some(*token),
+                        &format!("Expected {directive} content after '@{directive}'"),
                     )),
                     Some(end_token) => {
-                        // TODO: validate layout name
+                        let start = start_token.range().start;
+                        let end = end_token.range().start;
+                        let exp = source[start..end].trim_end();
+                        if exp.len() <= 0 {
+                            return Err(error::Error::from_parser(
+                                Some(*token),
+                                &format!("Expected {directive} content after '@{directive}'"),
+                            ));
+                        }
                         let mut block = Block::default();
                         block.with_span(parser::Span {
-                            kind: template::Kind::CODE(
-                                &source[start_token.range().start..end_token.range().start],
-                            ),
-                            start: start_token.range().start,
-                            end: end_token.range().start,
+                            kind: template::Kind::CODE(&exp),
+                            start: start,
+                            end: end,
                         });
-                        block.with_name(consts::KEYWORD_LAYOUT);
+                        block.with_name(directive);
+
+                        // consume the end token.
                         token_stream.next_token();
                         Ok(block)
                     }
@@ -154,8 +158,14 @@ impl<'a> Block<'a> {
         // consume the section token
         token_stream.next_token();
 
-        // whitespace after section token
-        tokenizer::skip_whitespace(token_stream);
+        // whitespace after layout token
+        if !tokenizer::skip_whitespace(token_stream) {
+            return Err(error::Error::from_parser(
+                Some(*token),
+                &format!("Expected whitespace after '@{}'", consts::KEYWORD_SECTION),
+            ));
+        }
+
         match token_stream.peek_token() {
             None => Err(error::Error::from_parser(
                 Some(*token),
@@ -165,91 +175,48 @@ impl<'a> Block<'a> {
                     consts::KEYWORD_SECTION
                 ),
             )),
-            Some(start_token) => {
-                match start_token.kind() {
-                    tokenizer::Kind::EXPRESSION => {
-                        // TODO: validate section name
-                        let section_name = &source[start_token.range()];
-                        token_stream.next_token();
-                        tokenizer::skip_whitespace(token_stream);
-                        let next_token = token_stream.peek_token();
-                        match next_token {
-                            Some(token) if token.kind() == tokenizer::Kind::OCURLYBRACKET => {
-                                // code part.
-                                let mut block = Self::parse_block_within_kind(
-                                    source,
-                                    tokenizer::Kind::OCURLYBRACKET,
-                                    tokenizer::Kind::CCURLYBRACKET,
-                                    token_stream,
-                                    false,
-                                    false,
-                                )?;
-                                block.with_name(section_name);
-                                Ok(block)
-                            }
-                            _ => Err(error::Error::from_parser(
-                                Some(*start_token),
-                                &format!(
-                                    "Expected '{{' after section name for '@{}'",
-                                    consts::KEYWORD_SECTION
-                                ),
-                            )),
+            Some(start_token) => match start_token.kind() {
+                tokenizer::Kind::EXPRESSION => {
+                    let name = &source[start_token.range()];
+                    // consume the expression token.
+                    token_stream.next_token();
+
+                    // whitespace after section name
+                    tokenizer::skip_whitespace(token_stream);
+                    match token_stream.peek_token() {
+                        Some(brace_token)
+                            if brace_token.kind() == tokenizer::Kind::OCURLYBRACKET =>
+                        {
+                            let mut block = Self::parse_block_within_kind(
+                                source,
+                                tokenizer::Kind::OCURLYBRACKET,
+                                tokenizer::Kind::CCURLYBRACKET,
+                                token_stream,
+                                true,
+                                false,
+                            )?;
+                            block.with_name(name);
+                            Ok(block)
                         }
-                    }
-                    _ => {
-                        return Err(error::Error::from_parser(
-                            Some(*start_token),
+                        _ => Err(error::Error::from_parser(
+                            Some(*token),
                             &format!(
-                                "Expected {} name after '@{}'",
+                                "Expected '{{' after '@{} {}'",
                                 consts::KEYWORD_SECTION,
-                                consts::KEYWORD_SECTION
+                                name
                             ),
-                        ));
+                        )),
                     }
                 }
-            }
-        }
-    }
-
-    fn parse_use(
-        source: &'a str,
-        token: &Token,
-        token_stream: &mut TokenStream,
-    ) -> result::Result<Block<'a>> {
-        // consume the use token
-        token_stream.next_token();
-
-        // whitespace after use token
-        tokenizer::skip_whitespace(token_stream);
-        let end_token = tokenizer::get_next_token_if(token_stream, |k| {
-            !vec![tokenizer::Kind::SEMICOLON, tokenizer::Kind::NEWLINE].contains(&k)
-        });
-
-        match end_token {
-            None => Err(error::Error::from_parser(
-                Some(*token),
-                &format!("Expected module path after '@{}'", consts::KEYWORD_USE),
-            )),
-            Some(end_token) => {
-                let start = token.range().start;
-                let end = end_token.range().start;
-                let exp = source[start..end].trim_end();
-                if exp.len() <= consts::KEYWORD_USE.len() {
-                    return Err(error::Error::from_parser(
-                        Some(*token),
-                        &format!("Expected module path after '@{}'", consts::KEYWORD_USE),
-                    ));
-                }
-                let mut block = Block::default();
-                block.with_span(parser::Span {
-                    kind: template::Kind::CODE(exp),
-                    start: start,
-                    end: end,
-                });
-                block.with_name(consts::KEYWORD_USE);
-                token_stream.next_token();
-                Ok(block)
-            }
+                _ => Err(error::Error::from_parser(
+                    Some(*token),
+                    &format!(
+                        "Expected {} name after '@{}'",
+                        consts::KEYWORD_SECTION,
+                        consts::KEYWORD_SECTION
+                    ),
+                )),
+            },
         }
     }
 }
