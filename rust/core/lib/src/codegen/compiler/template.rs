@@ -24,11 +24,14 @@ impl<'a> Template<'a> {
                 let view_type = format_ident!("K{}", view_type);
                 let template_type = format_ident!("{}", consts::TEMPLATE_TYPE_NAME);
 
+                let imports_content = self.generate_imports();
+                let layout_content = self.generate_layout();
                 let mut render_content = String::new();
                 self.generate_code(&mut render_content);
                 let render_content_ts: TokenStream = render_content.parse().unwrap();
                 let view_content = quote! {
                     use crate::viewtypes::*;
+                    #imports_content
 
                     pub struct #view_name;
                     impl #view_name {
@@ -43,9 +46,11 @@ impl<'a> Template<'a> {
 
                     impl disguise::types::Template for #view_name
                     {
-                        fn name() -> &'static str {
-                            #full_view_name
+                        fn name() -> String {
+                            #full_view_name.to_string()
                         }
+
+                        #layout_content
 
                         #[allow(unused_variables)]
                         fn render(&self, context: impl disguise::types::Context, output: &mut impl disguise::types::Writer) {
@@ -61,9 +66,57 @@ impl<'a> Template<'a> {
         result
     }
 
-    pub(crate) fn generate_code(&self, output: &mut String) {
+    fn generate_code(&self, output: &mut String) {
         for block in &self.blocks {
-            block.generate_code(&None, output);
+            if block.name.is_none() {
+                block.generate_code(&None, output);
+            }
+        }
+    }
+
+    fn generate_imports(&self) -> Option<TokenStream> {
+        let import_content = self
+            .blocks
+            .iter()
+            .map(|block| {
+                if block.name == Some(consts::DIRECTIVE_KEYWORD_USE.to_string()) {
+                    let import_content = block.content();
+                    format!("{} {};", consts::DIRECTIVE_KEYWORD_USE, import_content)
+                } else {
+                    "".to_string()
+                }
+            })
+            .collect::<Vec<String>>()
+            .join("");
+
+        let ts: TokenStream = import_content.parse::<TokenStream>().unwrap();
+        Some(quote! {
+            #ts
+        })
+    }
+
+    fn generate_layout(&self) -> TokenStream {
+        let items = self
+            .blocks
+            .iter()
+            .filter(|b| b.name == Some("layout".to_string()))
+            .collect::<Vec<_>>();
+        let layout_count = items.len();
+        match layout_count {
+            1 => {
+                let layout_block = items[0];
+                let layout_name = layout_block.content();
+                quote! {
+                    fn layout() -> Option<String> {
+                       Some(#layout_name.to_string())
+                    }
+                }
+            }
+            _ => quote! {
+                fn layout() -> Option<String> {
+                    None
+                }
+            },
         }
     }
 }

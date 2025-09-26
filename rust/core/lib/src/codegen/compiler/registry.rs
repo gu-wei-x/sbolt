@@ -94,8 +94,8 @@ fn generate_registry_method(
 
     let type_ident = format_ident!("{}", consts::TEMPLATE_TYPE_NAME);
     let content = quote! {
-        pub(crate) fn create_view_registrar() -> std::collections::HashMap::<&'static str, fn()->#type_ident> {
-            let mut view_reg_creator = std::collections::HashMap::<&'static str, fn()->#type_ident>::new();
+        pub(crate) fn create_view_registrar() -> std::collections::HashMap::<String, fn()->#type_ident> {
+            let mut view_reg_creator = std::collections::HashMap::<String, fn()->#type_ident>::new();
             // Register views
             #view_reg_content_ts
             view_reg_creator

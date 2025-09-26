@@ -1,3 +1,4 @@
+@layout test::test;
 @{
     let name = context.get_data::<String>("name");
     let age = context.get_data::<i32>("age");

@@ -122,7 +122,7 @@ impl Module {
 
                 // TemplateResolver.
                 struct TemplateResolver {
-                    view_creators: std::collections::HashMap<&'static str, fn() -> #viewtypes_ident_ts>,
+                    view_creators: std::collections::HashMap<String, fn() -> #viewtypes_ident_ts>,
                 }
 
                 impl TemplateResolver {
