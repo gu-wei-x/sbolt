@@ -1,0 +1,22 @@
+Parser:
+
+syntax:
+@functions{} --- define functions in view
+@layout --- define layout of a view
+@use --- define import mod
+@*EXP --- derefrence 
+@&EXP --- borrow
+@customerview --- render another view
+
+
+
+future:
+associate errors with file and line info for Parser
+
+
+CodeGen:
+genenrate code from different types of blocks
+
+
+interface:
+simplify the interface for adopting in different web frameworks

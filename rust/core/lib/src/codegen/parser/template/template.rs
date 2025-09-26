@@ -29,7 +29,7 @@ impl<'a> Template<'a> {
 }
 
 impl<'a> Block<'a> {
-    pub(in crate::codegen::parser::template) fn parse_doc(
+    pub(crate) fn parse_doc(
         source: &'a str,
         token_stream: &mut TokenStream,
     ) -> result::Result<Vec<Block<'a>>> {
@@ -43,19 +43,43 @@ impl<'a> Block<'a> {
                     token_stream.next_token();
                 }
                 tokenizer::Kind::AT => {
+                    // TODO: doc level, use, section, layout, need to peek next-next to decide.
+                    // keyword: use, section, layout
+                    match token_stream.offset_at(1) {
+                        Ok(1) => {
+                            if let Some(next_next_token) = token_stream.iter_offsets().nth(1) {
+                                println!("************************************");
+                                println!("next next token: {:?}", next_next_token.1);
+                                match next_next_token.1.kind() {
+                                    tokenizer::Kind::EXPRESSION => {
+                                        // get the value and compare with keywords.
+                                        println!("************************************");
+                                        println!("next next token: {:?}", next_next_token.1);
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+
                     // consume @
                     let code_block = Block::parse_code(source, next_token, token_stream)?;
                     blocks.push(code_block);
                 }
                 _ => {
-                    let content_block = Block::parse_content(source, next_token, token_stream)?;
+                    let content_block =
+                        Block::parse_content(source, next_token, token_stream, false)?;
                     blocks.push(content_block);
                 }
             }
         }
 
         match blocks.is_empty() {
-            true => Err(error::Error::Parser(None, "Empty template is not allowed")),
+            true => Err(error::Error::Parser(
+                None,
+                "Empty template is not allowed".to_string(),
+            )),
             false => Ok(blocks),
         }
     }

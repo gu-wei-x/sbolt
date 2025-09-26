@@ -59,7 +59,7 @@ fn test_template_from_inline_code_in_content() -> core::result::Result<(), error
     assert_eq!(block.blocks[0].content(), pre_content);
     assert!(matches!(
         block.blocks[1].span.kind(),
-        template::block::Kind::CODE(_)
+        template::block::Kind::INLINEDCODE(_)
     ));
     assert_eq!(block.blocks[1].content(), code);
     assert!(matches!(
@@ -95,7 +95,7 @@ fn test_template_from_inlined_code_in_content2() -> core::result::Result<(), err
     assert_eq!(block.blocks[0].content(), pre_content);
     assert!(matches!(
         block.blocks[1].span.kind(),
-        template::block::Kind::CODE(_)
+        template::block::Kind::INLINEDCODE(_)
     ));
     assert_eq!(block.blocks[1].content(), code);
     assert!(matches!(
@@ -167,7 +167,7 @@ fn test_template_from_inlined_content_in_code() -> core::result::Result<(), erro
     assert_eq!(block.blocks[0].content(), pre_code);
     assert!(matches!(
         block.blocks[1].span.kind(),
-        template::block::Kind::CONTENT(_)
+        template::block::Kind::INLINEDCONTENT(_)
     ));
     assert_eq!(block.blocks[1].content(), content);
     assert!(matches!(
@@ -203,7 +203,7 @@ fn test_template_from_inlined_content_in_code2() -> core::result::Result<(), err
     assert_eq!(block.blocks[0].content(), pre_code);
     assert!(matches!(
         block.blocks[1].span.kind(),
-        template::block::Kind::CONTENT(_)
+        template::block::Kind::INLINEDCONTENT(_)
     ));
     assert_eq!(block.blocks[1].content(), content);
     assert!(matches!(
@@ -251,7 +251,7 @@ fn test_template_from_content_block_in_code() -> core::result::Result<(), error:
 }
 
 #[test]
-fn test_template_from_content_block_in_code2() -> core::result::Result<(), error::Error> {
+fn test_template_from_lined_content_in_code() -> core::result::Result<(), error::Error> {
     let pre_code = "let name = '';";
     let content = "test";
     let post_code = "println!(\"Hello, {}!\", name);";
@@ -275,7 +275,7 @@ fn test_template_from_content_block_in_code2() -> core::result::Result<(), error
     assert_eq!(block.blocks[0].content(), pre_code);
     assert!(matches!(
         block.blocks[1].span.kind(),
-        template::block::Kind::CONTENT(_)
+        template::block::Kind::INLINEDCONTENT(_)
     ));
     assert_eq!(block.blocks[1].content(), content);
     assert!(matches!(

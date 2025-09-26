@@ -15,7 +15,7 @@ impl<'a> Block<'a> {
                         // or content block.
                         output.push_str(&format!(r####"context.write(r#"{}"#);"####, str));
                     }
-                    (Kind::CONTENT(_), Kind::CODE(str)) => {
+                    (Kind::CONTENT(_), Kind::INLINEDCODE(str)) => {
                         // code inside content.
                         // todo: check whether type is inlined.
                         // or block: block should be closure with output as parameter.
