@@ -1,3 +1,4 @@
+use crate::codegen::parser::template::{ParseContext, utils};
 use crate::codegen::parser::tokenizer::TokenStream;
 use crate::{
     codegen::parser::{
@@ -48,7 +49,6 @@ impl<'a> Default for Block<'a> {
 }
 
 impl<'a> Block<'a> {
-    #[cfg(test)]
     pub(crate) fn content(&self) -> &'a str {
         match &self.span.kind {
             Kind::CODE(content) => content,
@@ -131,28 +131,45 @@ impl<'a> Block<'a> {
                         ));
                     }
 
-                    if is_content {
-                        // transfer from content to code.
-                        // 1. consume the tokens before this one as content block and switch to code block.
-                        let content_block =
-                            Self::create_block(source, &next_start, &Some(token), true, false)?;
-                        result.push_block(content_block);
-
-                        // 2. transfer to code.
-                        let code_block = Self::parse_code(source, token, token_stream)?;
-                        result.push_block(code_block);
+                    let from_context = if is_content {
+                        ParseContext::Content
                     } else {
-                        // transfer from code to content.
-                        // 1. consume the tokens before this one as code block and switch to content block.
-                        let code_block =
-                            Self::create_block(source, &next_start, &Some(token), false, false)?;
-                        result.push_block(code_block);
+                        ParseContext::Code
+                    };
 
-                        // 2. transfer to content.
-                        let content_block =
-                            Self::parse_content(source, token, token_stream, false)?;
-                        result.push_block(content_block);
+                    // check whether switch context.
+                    let next_context =
+                        utils::get_context_at(source, token, token_stream, from_context)?;
+                    if next_context != from_context {
+                        if is_content {
+                            // transfer from content to code.
+                            // 1. consume the tokens before this one as content block and switch to code block.
+                            let content_block =
+                                Self::create_block(source, &next_start, &Some(token), true, false)?;
+                            result.push_block(content_block);
+
+                            // 2. transfer to code.
+                            let code_block = Self::parse_code(source, token, token_stream)?;
+                            result.push_block(code_block);
+                        } else {
+                            // transfer from code to content.
+                            // 1. consume the tokens before this one as code block and switch to content block.
+                            let code_block = Self::create_block(
+                                source,
+                                &next_start,
+                                &Some(token),
+                                false,
+                                false,
+                            )?;
+                            result.push_block(code_block);
+
+                            // 2. transfer to content.
+                            let content_block =
+                                Self::parse_content(source, token, token_stream, false)?;
+                            result.push_block(content_block);
+                        }
                     }
+
                     next_start = token_stream.peek_token();
                 }
                 _ => {}

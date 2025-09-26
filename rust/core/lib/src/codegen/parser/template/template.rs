@@ -1,4 +1,5 @@
 use crate::codegen::parser::template::block::Block;
+use crate::codegen::parser::template::{ParseContext, utils};
 use crate::codegen::parser::tokenizer::TokenStream;
 use crate::codegen::parser::tokenizer::{self, Tokenizer};
 use crate::types::{error, result};
@@ -39,33 +40,23 @@ impl<'a> Block<'a> {
             match next_token.kind() {
                 tokenizer::Kind::EOF => break,
                 tokenizer::Kind::NEWLINE => {
-                    // consume newline.
                     token_stream.next_token();
                 }
                 tokenizer::Kind::AT => {
-                    // TODO: doc level, use, section, layout, need to peek next-next to decide.
-                    // keyword: use, section, layout
-                    match token_stream.offset_at(1) {
-                        Ok(1) => {
-                            if let Some(next_next_token) = token_stream.iter_offsets().nth(1) {
-                                println!("************************************");
-                                println!("next next token: {:?}", next_next_token.1);
-                                match next_next_token.1.kind() {
-                                    tokenizer::Kind::EXPRESSION => {
-                                        // get the value and compare with keywords.
-                                        println!("************************************");
-                                        println!("next next token: {:?}", next_next_token.1);
-                                    }
-                                    _ => {}
-                                }
-                            }
-                        }
-                        _ => {}
+                    // todo: refactoring: use following logic for code and content
+                    let next_context = utils::get_context_at(
+                        source,
+                        next_token,
+                        token_stream,
+                        ParseContext::Content,
+                    )?;
+                    if next_context == ParseContext::Code {
+                        let code_block = Block::parse_code(source, next_token, token_stream)?;
+                        blocks.push(code_block);
+                    } else {
+                        // keep current context unchanged.
+                        token_stream.next_token();
                     }
-
-                    // consume @
-                    let code_block = Block::parse_code(source, next_token, token_stream)?;
-                    blocks.push(code_block);
                 }
                 _ => {
                     let content_block =
