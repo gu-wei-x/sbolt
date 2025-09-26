@@ -13,20 +13,20 @@ impl<'a> Block<'a> {
                         // TODO: from code to content.put in a closure
                         // todo: inlined content sth like <View test="@code" .../>
                         // or content block.
-                        output.push_str(&format!(r####"context.write(r#"{}"#);"####, str));
+                        output.push_str(&format!(r####"output.write(r#"{}"#);"####, str));
                     }
                     (Kind::CONTENT(_), Kind::INLINEDCODE(str)) => {
                         // code inside content.
                         // todo: check whether type is inlined.
                         // or block: block should be closure with output as parameter.
                         output.push_str(&format!(
-                            r####"context.writefn(||({}).to_string());"####,
+                            r####"output.writefn(||({}).to_string());"####,
                             str
                         ));
                     }
                     (Kind::CONTENT(_), Kind::CONTENT(str)) => {
                         // from content to content.
-                        output.push_str(&format!(r####"context.write(r#"{}"#);"####, str));
+                        output.push_str(&format!(r####"output.write(r#"{}"#);"####, str));
                     }
                     _ => {}
                 }
@@ -48,7 +48,7 @@ impl<'a> Block<'a> {
                     Kind::CONTENT(str) => {
                         if self.blocks.is_empty() {
                             //pure content block.
-                            output.push_str(&format!(r####"context.write(r#"{}"#);"####, str));
+                            output.push_str(&format!(r####"output.write(r#"{}"#);"####, str));
                         } else {
                             // TODO: mixed content block. should be FnOnce with output as parameter.
                             for block in &self.blocks {
