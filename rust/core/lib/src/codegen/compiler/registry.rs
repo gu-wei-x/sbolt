@@ -28,7 +28,7 @@ pub(crate) fn generate_registry(
         .iter()
         .map(|(name, view_name)| {
             format!(
-                "{}::K{}({}) => {}.render(context),",
+                "{}::K{}({}) => {}.render(context, output),",
                 consts::TEMPLATE_TYPE_NAME,
                 utils::name::normalize_to_type_name(&name),
                 view_name.to_lowercase(),
@@ -54,7 +54,7 @@ pub(crate) fn generate_registry(
         }
 
         impl #type_ident {
-            pub(crate) fn render(&self, context: &mut impl disguise::types::Context) {
+            pub(crate) fn render(&self, context: impl disguise::types::Context, output: &mut impl disguise::types::Writer) {
                 match self {
                    #view_unpack_content_ts
                 }

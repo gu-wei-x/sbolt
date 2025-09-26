@@ -1,9 +1,8 @@
-use crate::types::Context;
+use crate::types::{Context, Writer};
 
 pub trait Template {
     fn name() -> &'static str
     where
         Self: Sized;
-
-    fn render(&self, context: &mut impl Context);
+    fn render(&self, context: impl Context, output: &mut impl Writer);
 }

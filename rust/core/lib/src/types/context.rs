@@ -1,7 +1,6 @@
-use crate::types::{DataStore, Writer};
-use std::fmt::{self, Display, Formatter};
+use crate::types::DataStore;
 
-pub trait Context: Writer {
+pub trait Context {
     fn set_data<T, F>(&mut self, key: &str, f: F)
     where
         F: FnOnce() -> T,
@@ -13,14 +12,12 @@ pub trait Context: Writer {
 }
 
 pub struct DefaultViewContext {
-    pub output: String,
     pub(crate) state: DataStore<String>,
 }
 
 impl DefaultViewContext {
     pub fn new() -> Self {
         Self {
-            output: String::new(),
             state: DataStore::<String>::new(),
         }
     }
@@ -40,22 +37,5 @@ impl Context for DefaultViewContext {
         T: Send + Sync + 'static,
     {
         self.state.get(key).unwrap()
-    }
-}
-
-impl Writer for DefaultViewContext {
-    fn write(&mut self, content: &str) {
-        self.output.push_str(content);
-    }
-
-    fn writeln(&mut self, content: &str) {
-        self.write(content);
-        self.write("\n");
-    }
-}
-
-impl Display for DefaultViewContext {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.output)
     }
 }

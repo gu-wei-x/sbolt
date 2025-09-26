@@ -142,9 +142,9 @@ impl Module {
                     TemplateResolver::new()
                 });
 
-                pub(crate) fn render(name: &str, context: &mut impl disguise::types::Context) {
+                pub(crate) fn render(name: &str, context: impl disguise::types::Context, output: &mut impl disguise::types::Writer) {
                      if let Some(view) = TEMPLATE_RESOLVER.resolve(name) {
-                        view.render(context);
+                        view.render(context, output);
                      }
                 }
             }

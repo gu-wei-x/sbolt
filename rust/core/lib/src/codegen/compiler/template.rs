@@ -47,8 +47,9 @@ impl<'a> Template<'a> {
                             #full_view_name
                         }
 
-                        fn render(&self, context: &mut impl disguise::types::Context) {
-                           #render_content_ts
+                        #[allow(unused_variables)]
+                        fn render(&self, context: impl disguise::types::Context, output: &mut impl disguise::types::Writer) {
+                            #render_content_ts
                         }
                     }
                 };
