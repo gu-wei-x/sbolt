@@ -1,7 +1,7 @@
-use crate::codegen::parser::template;
+use crate::codegen::consts;
 use crate::codegen::parser::template::block::Block;
-use crate::codegen::parser::tokenizer::{self, Token, TokenStream, get_next_token_if};
-use crate::codegen::{consts, parser};
+use crate::codegen::parser::template::{self, ParseContext, util};
+use crate::codegen::parser::tokenizer::{self, Token, TokenStream};
 use crate::types::{error, result};
 use winnow::stream::Stream as _;
 
@@ -55,35 +55,17 @@ impl<'a> Block<'a> {
                                 Self::parse_section(source, token, token_stream)
                             }
                             _ => {
-                                // TODO: consume util next transfer @, linefeed, @layout.
-                                let end_token = get_next_token_if(token_stream, |k| {
-                                    !vec![tokenizer::Kind::WHITESPACE, tokenizer::Kind::NEWLINE]
-                                        .contains(&k)
-                                });
-                                let mut block = Block::default();
-                                match end_token {
-                                    None => {
-                                        // end of file.
-                                        block.with_span(parser::Span {
-                                            kind: template::Kind::INLINEDCONTENT(
-                                                &source[token.range().start..source.len()],
-                                            ),
-                                            start: token.range().start,
-                                            end: source.len(),
-                                        });
-                                    }
-                                    Some(end_token) => {
-                                        block.with_span(parser::Span {
-                                            kind: template::Kind::INLINEDCONTENT(
-                                                &source
-                                                    [token.range().start..end_token.range().start],
-                                            ),
-                                            start: token.range().start,
-                                            end: end_token.range().start,
-                                        });
-                                    }
-                                }
-                                Ok(block)
+                                // consume util next transfer @, linefeed or whitespace.
+                                let end_token = util::get_token_before_transfer(
+                                    source,
+                                    token_stream,
+                                    &ParseContext::new(template::Context::Content),
+                                    |k| {
+                                        !vec![tokenizer::Kind::WHITESPACE, tokenizer::Kind::NEWLINE]
+                                            .contains(&k)
+                                    },
+                                );
+                                Block::create_block(source, &Some(token), &end_token, true, true)
                             }
                         }
                     }
