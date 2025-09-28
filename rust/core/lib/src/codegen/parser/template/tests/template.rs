@@ -42,31 +42,24 @@ fn test_template_from_inline_code_in_content() -> core::result::Result<(), error
 
     let content = &format!("{}@{}{}", pre_content, code, post_content);
     let template = template::Template::from(&content, None)?;
-    assert_eq!(template.blocks.len(), 1);
+    assert_eq!(template.blocks.len(), 3);
+
+    let blocks = &template.blocks;
     assert!(matches!(
-        template.blocks[0].span.kind(),
+        blocks[0].span.kind(),
         template::block::Kind::CONTENT(_)
     ));
-
-    let block = &template.blocks[0];
-    assert_eq!(block.blocks.len(), 3);
-    assert_eq!(block.content(), "");
-
+    assert_eq!(blocks[0].content(), pre_content);
     assert!(matches!(
-        block.blocks[0].span.kind(),
-        template::block::Kind::CONTENT(_)
-    ));
-    assert_eq!(block.blocks[0].content(), pre_content);
-    assert!(matches!(
-        block.blocks[1].span.kind(),
+        blocks[1].span.kind(),
         template::block::Kind::INLINEDCODE(_)
     ));
-    assert_eq!(block.blocks[1].content(), code);
+    assert_eq!(blocks[1].content(), code);
     assert!(matches!(
-        block.blocks[2].span.kind(),
+        blocks[2].span.kind(),
         template::block::Kind::CONTENT(_)
     ));
-    assert_eq!(block.blocks[2].content(), post_content);
+    assert_eq!(blocks[2].content(), post_content);
     Ok(())
 }
 
@@ -78,31 +71,24 @@ fn test_template_from_inlined_code_in_content2() -> core::result::Result<(), err
 
     let content = &format!("{}@({}){}", pre_content, code, post_content);
     let template = template::Template::from(&content, None)?;
-    assert_eq!(template.blocks.len(), 1);
+    assert_eq!(template.blocks.len(), 3);
+
+    let blocks = &template.blocks;
     assert!(matches!(
-        template.blocks[0].span.kind(),
+        blocks[0].span.kind(),
         template::block::Kind::CONTENT(_)
     ));
-
-    let block = &template.blocks[0];
-    assert_eq!(block.blocks.len(), 3);
-    assert_eq!(block.content(), "");
-
+    assert_eq!(blocks[0].content(), pre_content);
     assert!(matches!(
-        block.blocks[0].span.kind(),
-        template::block::Kind::CONTENT(_)
-    ));
-    assert_eq!(block.blocks[0].content(), pre_content);
-    assert!(matches!(
-        block.blocks[1].span.kind(),
+        blocks[1].span.kind(),
         template::block::Kind::INLINEDCODE(_)
     ));
-    assert_eq!(block.blocks[1].content(), code);
+    assert_eq!(blocks[1].content(), code);
     assert!(matches!(
-        block.blocks[2].span.kind(),
+        blocks[2].span.kind(),
         template::block::Kind::CONTENT(_)
     ));
-    assert_eq!(block.blocks[2].content(), post_content);
+    assert_eq!(blocks[2].content(), post_content);
     Ok(())
 }
 
@@ -114,31 +100,24 @@ fn test_template_from_code_block_in_content() -> core::result::Result<(), error:
 
     let content = &format!("{}@{{{}}}{}", pre_content, code, post_content);
     let template = template::Template::from(&content, None)?;
-    assert_eq!(template.blocks.len(), 1);
+    assert_eq!(template.blocks.len(), 3);
+
+    let blocks = &template.blocks;
     assert!(matches!(
-        template.blocks[0].span.kind(),
+        blocks[0].span.kind(),
         template::block::Kind::CONTENT(_)
     ));
-
-    let block = &template.blocks[0];
-    assert_eq!(block.blocks.len(), 3);
-    assert_eq!(block.content(), "");
-
+    assert_eq!(blocks[0].content(), pre_content);
     assert!(matches!(
-        block.blocks[0].span.kind(),
-        template::block::Kind::CONTENT(_)
-    ));
-    assert_eq!(block.blocks[0].content(), pre_content);
-    assert!(matches!(
-        block.blocks[1].span.kind(),
+        blocks[1].span.kind(),
         template::block::Kind::CODE(_)
     ));
-    assert_eq!(block.blocks[1].content(), code);
+    assert_eq!(blocks[1].content(), code);
     assert!(matches!(
-        block.blocks[2].span.kind(),
+        blocks[2].span.kind(),
         template::block::Kind::CONTENT(_)
     ));
-    assert_eq!(block.blocks[2].content(), post_content);
+    assert_eq!(blocks[2].content(), post_content);
     Ok(())
 }
 
@@ -150,31 +129,23 @@ fn test_template_from_inlined_content_in_code() -> core::result::Result<(), erro
 
     let raw_content = &format!("@{{{}@{}{}}}", pre_code, content, post_code);
     let template = template::Template::from(&raw_content, None)?;
-    assert_eq!(template.blocks.len(), 1);
+    assert_eq!(template.blocks.len(), 3);
+    let blocks = &template.blocks;
     assert!(matches!(
-        template.blocks[0].span.kind(),
+        blocks[0].span.kind(),
         template::block::Kind::CODE(_)
     ));
-
-    let block = &template.blocks[0];
-    assert_eq!(block.blocks.len(), 3);
-    assert_eq!(block.content(), "");
-
+    assert_eq!(blocks[0].content(), pre_code);
     assert!(matches!(
-        block.blocks[0].span.kind(),
-        template::block::Kind::CODE(_)
-    ));
-    assert_eq!(block.blocks[0].content(), pre_code);
-    assert!(matches!(
-        block.blocks[1].span.kind(),
+        blocks[1].span.kind(),
         template::block::Kind::INLINEDCONTENT(_)
     ));
-    assert_eq!(block.blocks[1].content(), content);
+    assert_eq!(blocks[1].content(), content);
     assert!(matches!(
-        block.blocks[2].span.kind(),
+        blocks[2].span.kind(),
         template::block::Kind::CODE(_)
     ));
-    assert_eq!(block.blocks[2].content(), post_code);
+    assert_eq!(blocks[2].content(), post_code);
     Ok(())
 }
 
@@ -186,31 +157,24 @@ fn test_template_from_inlined_content_in_code2() -> core::result::Result<(), err
 
     let raw_content = &format!("@{{{}@{}{}}}", pre_code, content, post_code);
     let template = template::Template::from(&raw_content, None)?;
-    assert_eq!(template.blocks.len(), 1);
+    assert_eq!(template.blocks.len(), 3);
+
+    let blocks = &template.blocks;
     assert!(matches!(
-        template.blocks[0].span.kind(),
+        blocks[0].span.kind(),
         template::block::Kind::CODE(_)
     ));
-
-    let block = &template.blocks[0];
-    assert_eq!(block.blocks.len(), 3);
-    assert_eq!(block.content(), "");
-
+    assert_eq!(blocks[0].content(), pre_code);
     assert!(matches!(
-        block.blocks[0].span.kind(),
-        template::block::Kind::CODE(_)
-    ));
-    assert_eq!(block.blocks[0].content(), pre_code);
-    assert!(matches!(
-        block.blocks[1].span.kind(),
+        blocks[1].span.kind(),
         template::block::Kind::INLINEDCONTENT(_)
     ));
-    assert_eq!(block.blocks[1].content(), content);
+    assert_eq!(blocks[1].content(), content);
     assert!(matches!(
-        block.blocks[2].span.kind(),
+        blocks[2].span.kind(),
         template::block::Kind::CODE(_)
     ));
-    assert_eq!(block.blocks[2].content(), post_code);
+    assert_eq!(blocks[2].content(), post_code);
     Ok(())
 }
 
@@ -222,31 +186,24 @@ fn test_template_from_content_block_in_code() -> core::result::Result<(), error:
 
     let raw_content = &format!("@{{{}@{{{}}}{}}}", pre_code, content, post_code);
     let template = template::Template::from(&raw_content, None)?;
-    assert_eq!(template.blocks.len(), 1);
+    assert_eq!(template.blocks.len(), 3);
+
+    let blocks = &template.blocks;
     assert!(matches!(
-        template.blocks[0].span.kind(),
+        blocks[0].span.kind(),
         template::block::Kind::CODE(_)
     ));
-
-    let block = &template.blocks[0];
-    assert_eq!(block.blocks.len(), 3);
-    assert_eq!(block.content(), "");
-
+    assert_eq!(blocks[0].content(), pre_code);
     assert!(matches!(
-        block.blocks[0].span.kind(),
-        template::block::Kind::CODE(_)
-    ));
-    assert_eq!(block.blocks[0].content(), pre_code);
-    assert!(matches!(
-        block.blocks[1].span.kind(),
+        blocks[1].span.kind(),
         template::block::Kind::CONTENT(_)
     ));
-    assert_eq!(block.blocks[1].content(), content);
+    assert_eq!(blocks[1].content(), content);
     assert!(matches!(
-        block.blocks[2].span.kind(),
+        blocks[2].span.kind(),
         template::block::Kind::CODE(_)
     ));
-    assert_eq!(block.blocks[2].content(), post_code);
+    assert_eq!(blocks[2].content(), post_code);
     Ok(())
 }
 
@@ -258,30 +215,24 @@ fn test_template_from_lined_content_in_code() -> core::result::Result<(), error:
 
     let raw_content = &format!("@{{{}@({}){}}}", pre_code, content, post_code);
     let template = template::Template::from(&raw_content, None)?;
-    assert_eq!(template.blocks.len(), 1);
-    assert!(matches!(
-        template.blocks[0].span.kind(),
-        template::block::Kind::CODE(_)
-    ));
+    assert_eq!(template.blocks.len(), 3);
 
-    let block = &template.blocks[0];
-    assert_eq!(block.blocks.len(), 3);
-    assert_eq!(block.content(), "");
+    let blocks = &template.blocks;
 
     assert!(matches!(
-        block.blocks[0].span.kind(),
+        blocks[0].span.kind(),
         template::block::Kind::CODE(_)
     ));
-    assert_eq!(block.blocks[0].content(), pre_code);
+    assert_eq!(blocks[0].content(), pre_code);
     assert!(matches!(
-        block.blocks[1].span.kind(),
+        blocks[1].span.kind(),
         template::block::Kind::INLINEDCONTENT(_)
     ));
-    assert_eq!(block.blocks[1].content(), content);
+    assert_eq!(blocks[1].content(), content);
     assert!(matches!(
-        block.blocks[2].span.kind(),
+        blocks[2].span.kind(),
         template::block::Kind::CODE(_)
     ));
-    assert_eq!(block.blocks[2].content(), post_code);
+    assert_eq!(blocks[2].content(), post_code);
     Ok(())
 }

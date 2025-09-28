@@ -38,7 +38,7 @@ src/views/comp/index.rshtml
         <title>Index</title>
     </head>
     <body>
-        <div>@name(@age) says: @msg</div>
+        <div>@msg - from @name(@age)</div>
     </body>
 </html>
 ```
@@ -90,7 +90,7 @@ $>cargo run
         <title>Index</title>
     </head>
     <body>
-        <div>Disguise(1) says: Hello world!</div>
+        <div>Hello world! - from Disguise(1)</div>
     </body>
 </html>
 ```

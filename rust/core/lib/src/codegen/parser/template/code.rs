@@ -22,8 +22,10 @@ impl<'a> Block<'a> {
             ));
         }
 
-        // consume the '@' token
-        token_stream.next_token();
+        if Some(start_token) == token_stream.peek_token() {
+            // consume @.
+            token_stream.next_token();
+        }
         match token_stream.peek_token() {
             None => Err(error::Error::from_parser(
                 Some(*start_token),

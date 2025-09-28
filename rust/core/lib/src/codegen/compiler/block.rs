@@ -13,6 +13,7 @@ impl<'a> Block<'a> {
                         // TODO: from code to content.put in a closure
                         // todo: inlined content sth like <View test="@code" .../>
                         // or content block.
+                        println!("???????????????????exepected: {}", str);
                         output.push_str(&format!(r####"output.write(r#"{}"#);"####, str));
                     }
                     (Kind::CONTENT(_), Kind::INLINEDCODE(str)) => {
@@ -28,7 +29,12 @@ impl<'a> Block<'a> {
                         // from content to content.
                         output.push_str(&format!(r####"output.write(r#"{}"#);"####, str));
                     }
-                    _ => {}
+                    (_, _) => {
+                        println!(
+                            "+++++++++++++++++++++++++++++exepected:{from_kind:?}, {:?}",
+                            self.span.kind()
+                        )
+                    }
                 }
             }
             None => {
@@ -55,6 +61,12 @@ impl<'a> Block<'a> {
                                 block.generate_code(&Some(&self.span.kind()), output);
                             }
                         }
+                    }
+                    Kind::INLINEDCODE(str) => {
+                        output.push_str(&format!(
+                            r####"output.writefn(||({}).to_string());"####,
+                            str
+                        ));
                     }
                     _ => {}
                 }
