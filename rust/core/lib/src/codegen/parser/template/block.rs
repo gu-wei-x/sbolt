@@ -7,7 +7,7 @@ use crate::{
     },
     types::{error, result},
 };
-use winnow::stream::Stream as _;
+use winnow::stream::Stream;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub(crate) enum Kind<'a> {
@@ -101,11 +101,26 @@ impl<'a> Block<'a> {
         is_content: bool,
         is_inlined: bool,
     ) -> result::Result<Block<'a>> {
-        // Assume the current token is the opening delimiter (either '(' or '{')
-        _ = token_stream.next_token().ok_or_else(|| {
-            let previous_token = token_stream.previous_tokens().last().copied();
-            error::Error::from_parser(previous_token, "Expected opening delimiter").into()
-        })?;
+        // validate, first token must be open_kind and consume the token.
+        let previous_token = token_stream.previous_tokens().last().copied();
+        match token_stream.peek_token() {
+            Some(token) => {
+                if token.kind() != open_kind {
+                    return Err(error::Error::from_parser(
+                        previous_token,
+                        "Expected opening delimiter",
+                    ));
+                } else {
+                    token_stream.next_token();
+                }
+            }
+            _ => {
+                return Err(error::Error::from_parser(
+                    previous_token,
+                    "Expected opening delimiter",
+                ));
+            }
+        }
 
         let mut depth = 1;
         let mut result = Block::default();
@@ -148,7 +163,6 @@ impl<'a> Block<'a> {
                             let content_block =
                                 Self::create_block(source, &next_start, &Some(token), true, false)?;
                             result.push_block(content_block);
-                            token_stream.next_token();
 
                             // 2. transfer to code.
                             let code_block = Self::parse_code(source, token, token_stream)?;
@@ -164,7 +178,6 @@ impl<'a> Block<'a> {
                                 false,
                             )?;
                             result.push_block(code_block);
-                            token_stream.next_token();
 
                             // 2. transfer to content.
                             let content_block =
@@ -181,6 +194,7 @@ impl<'a> Block<'a> {
             }
         }
 
+        // not balanced.
         if depth != 0 {
             return Err(error::Error::from_parser(
                 Some(*start.unwrap()),
