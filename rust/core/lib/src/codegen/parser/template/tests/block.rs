@@ -178,11 +178,11 @@ fn test_block_parse_content_block() -> core::result::Result<(), error::Error> {
 fn test_block_parse_complex_code_block() -> core::result::Result<(), error::Error> {
     let source = r#"
         @{
-           parent
+           l1
            @{
-                child1
+                l2
                 @{
-                    child2
+                    l3
                 }
            }
         }"#;
@@ -192,8 +192,36 @@ fn test_block_parse_complex_code_block() -> core::result::Result<(), error::Erro
     let mut context = ParseContext::new(Context::Content);
     let block = block::Block::parse(source, &mut token_stream, &mut context)?;
     assert_eq!(block.name, None);
+    assert!(matches!(block.span.kind(), block::Kind::CODE(_)));
+
     // pre, child, post: \n
     assert_eq!(block.blocks.len(), 3);
+    let blocks = &block.blocks;
+
+    // l1.
+    assert!(matches!(blocks[0].span.kind(), block::Kind::CODE(_)));
+    assert!(blocks[0].blocks.is_empty());
+    assert_eq!(blocks[0].content().trim(), "l1");
+
+    // after l1.
+    assert!(matches!(blocks[1].span.kind(), block::Kind::CONTENT(_)));
+    assert_eq!(blocks[1].blocks.len(), 3);
+    let l1_content_blocks = &blocks[1].blocks;
+    assert!(matches!(
+        l1_content_blocks[0].span.kind(),
+        block::Kind::CONTENT(_)
+    ));
+    assert!(matches!(
+        l1_content_blocks[1].span.kind(),
+        block::Kind::CODE(_)
+    ));
+    assert!(matches!(
+        l1_content_blocks[2].span.kind(),
+        block::Kind::CONTENT(_)
+    ));
+
+    // last contains linefeed.
+    assert!(matches!(blocks[2].span.kind(), block::Kind::CODE(_)));
     Ok(())
 }
 
@@ -202,11 +230,11 @@ fn test_block_parse_complex_code_block() -> core::result::Result<(), error::Erro
 fn test_block_parse_complex_content_block() -> core::result::Result<(), error::Error> {
     let source = r#"
         @{
-           parent
+           l1
            @{
-                child1
+                l2
                 @{
-                    child2
+                    l3
                 }
            }
         }"#;
@@ -216,8 +244,36 @@ fn test_block_parse_complex_content_block() -> core::result::Result<(), error::E
     let mut context = ParseContext::new(Context::Code);
     let block = block::Block::parse(source, &mut token_stream, &mut context)?;
     assert_eq!(block.name, None);
+    assert!(matches!(block.span.kind(), block::Kind::CONTENT(_)));
+
     // pre, child, post: \n
     assert_eq!(block.blocks.len(), 3);
+    let blocks = &block.blocks;
+
+    // l1.
+    assert!(matches!(blocks[0].span.kind(), block::Kind::CONTENT(_)));
+    assert!(blocks[0].blocks.is_empty());
+    assert_eq!(blocks[0].content().trim(), "l1");
+
+    // after l1.
+    assert!(matches!(blocks[1].span.kind(), block::Kind::CODE(_)));
+    assert_eq!(blocks[1].blocks.len(), 3);
+    let l1_content_blocks = &blocks[1].blocks;
+    assert!(matches!(
+        l1_content_blocks[0].span.kind(),
+        block::Kind::CODE(_)
+    ));
+    assert!(matches!(
+        l1_content_blocks[1].span.kind(),
+        block::Kind::CONTENT(_)
+    ));
+    assert!(matches!(
+        l1_content_blocks[2].span.kind(),
+        block::Kind::CODE(_)
+    ));
+
+    // last contains linefeed.
+    assert!(matches!(blocks[2].span.kind(), block::Kind::CONTENT(_)));
     Ok(())
 }
 
@@ -242,5 +298,8 @@ fn test_block_parse_complex_content_block2() -> core::result::Result<(), error::
     assert_eq!(block.name, None);
     // pre, child, post: \n
     assert_eq!(block.blocks.len(), 2);
+    let blocks = block.blocks;
+    assert!(matches!(blocks[0].span.kind(), block::Kind::CONTENT(_)));
+    assert!(matches!(blocks[1].span.kind(), block::Kind::CODE(_)));
     Ok(())
 }
