@@ -55,6 +55,9 @@ impl<'a> Block<'a> {
                                 Self::parse_section(source, token, token_stream)
                             }
                             _ => {
+                                // consume the exp token.
+                                let start_token = token_stream.next_token();
+
                                 // consume util next transfer @, linefeed or whitespace.
                                 let end_token = util::get_token_before_transfer(
                                     source,
@@ -65,7 +68,7 @@ impl<'a> Block<'a> {
                                             .contains(&k)
                                     },
                                 );
-                                Block::create_block(source, &Some(token), &end_token, true, true)
+                                Block::create_block(source, &start_token, &end_token, true, true)
                             }
                         }
                     }

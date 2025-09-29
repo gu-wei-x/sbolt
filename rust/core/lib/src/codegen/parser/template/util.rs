@@ -17,9 +17,18 @@ pub(crate) fn get_token_before_transfer<'a, F: Fn(Kind) -> bool>(
         } else if kind == Kind::AT {
             match parser_context.should_switch(source, token, stream) {
                 Ok(true) => break,
-                _ => {}
+                _ => {
+                    // consume first @.
+                    stream.next_token();
+                    match stream.peek_token() {
+                        Some(next_token) if next_token.kind() == Kind::AT => {
+                            // @@, consume the second @.
+                            stream.next_token();
+                        }
+                        _ => { /*no-ops */ }
+                    }
+                }
             }
-            stream.next_token();
         } else if skip_pred(kind) {
             stream.next_token();
         } else {

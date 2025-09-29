@@ -110,7 +110,7 @@ impl ParseContext {
 
     pub(crate) fn to_block<'a>(&mut self, source: &'a str) -> Option<Block<'a>> {
         // TODO: create block from current context and destruct current data.
-        if self.tokens.is_empty() {
+        if self.tokens.is_empty() || self.tokens[0].kind() == tokenizer::Kind::EOF {
             return None;
         }
 
