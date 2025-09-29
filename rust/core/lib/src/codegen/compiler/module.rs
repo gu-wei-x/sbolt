@@ -122,7 +122,7 @@ impl Module {
 
                 // TemplateResolver.
                 struct TemplateResolver {
-                    view_creators: std::collections::HashMap<String, fn() -> #viewtypes_ident_ts>,
+                    view_creators: std::collections::HashMap<String, fn(context: disguise::types::DefaultViewContext) -> #viewtypes_ident_ts>,
                 }
 
                 impl TemplateResolver {
@@ -132,9 +132,9 @@ impl Module {
                         }
                     }
 
-                    fn resolve(&self, name: &str) -> Option<#viewtypes_ident_ts> {
+                    fn resolve(&self, name: &str) -> Option<fn(context: disguise::types::DefaultViewContext) -> #viewtypes_ident_ts> {
                         let normalized_name: &str = &disguise::utils::name::normalize_name(name);
-                        self.view_creators.get(normalized_name).map(|f| f())
+                        self.view_creators.get(normalized_name).map(|f| *f)
                     }
                 }
 
@@ -142,9 +142,10 @@ impl Module {
                     TemplateResolver::new()
                 });
 
-                pub(crate) fn render(name: &str, context: impl disguise::types::Context, output: &mut impl disguise::types::Writer) {
-                     if let Some(view) = TEMPLATE_RESOLVER.resolve(name) {
-                        view.render(context, output);
+                pub(crate) fn render(name: &str, context: disguise::types::DefaultViewContext, output: &mut impl disguise::types::Writer) {
+                     if let Some(creator) = TEMPLATE_RESOLVER.resolve(name) {
+                        let view = creator(context);
+                        view.render(output);
                      }
                 }
             }

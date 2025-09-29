@@ -6,7 +6,7 @@ pub trait Context {
         F: FnOnce() -> T,
         T: Send + Sync + 'static;
 
-    fn get_data<T>(&self, key: &str) -> &T
+    fn get_data<T>(&self, key: &str) -> Option<&T>
     where
         T: Send + Sync + 'static;
 }
@@ -32,10 +32,10 @@ impl Context for DefaultViewContext {
         self.state.set(key, f());
     }
 
-    fn get_data<T>(&self, key: &str) -> &T
+    fn get_data<T>(&self, key: &str) -> Option<&T>
     where
         T: Send + Sync + 'static,
     {
-        self.state.get(key).unwrap()
+        self.state.get(key)
     }
 }

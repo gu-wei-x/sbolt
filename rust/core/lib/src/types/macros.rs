@@ -1,5 +1,5 @@
 #[macro_export]
-macro_rules! include_view_templates {
+macro_rules! include_views {
     () => {
         include!(env!("TEMPLATES_FILES"));
     };

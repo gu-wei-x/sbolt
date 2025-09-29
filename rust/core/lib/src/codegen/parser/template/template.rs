@@ -1,18 +1,17 @@
 use crate::codegen::parser::template::block::Block;
 use crate::codegen::parser::template::{Context, ParseContext};
-use crate::codegen::parser::tokenizer::TokenStream;
 use crate::codegen::parser::tokenizer::{self, Tokenizer};
-use crate::types::{error, result};
+use crate::types::result;
 use winnow::stream::TokenSlice;
 
 pub(crate) struct Template<'a> {
-    pub(crate) namespace: Option<String>,
-    pub(crate) blocks: Vec<Block<'a>>,
+    namespace: Option<String>,
+    block: Block<'a>,
 }
 
 impl<'a> Template<'a> {
-    fn new(namespace: Option<String>, blocks: Vec<Block<'a>>) -> Self {
-        Template { namespace, blocks }
+    fn new(namespace: Option<String>, block: Block<'a>) -> Self {
+        Template { namespace, block }
     }
 }
 
@@ -21,38 +20,22 @@ impl<'a> Template<'a> {
         let tokenizer = Tokenizer::new(source);
         let tokens = tokenizer.into_vec();
         let mut token_stream = TokenSlice::new(&tokens);
-        let blocks = Block::parse_doc(source, &mut token_stream)?;
-        let template = Template::new(namespace, blocks);
+
+        // skip leading whitespace and newlines.
+        tokenizer::skip_whitespace_and_newline(&mut token_stream);
+        // begin with content context.
+        let mut context = ParseContext::new(Context::Content);
+        let mut block = Block::parse(source, &mut token_stream, &mut context)?;
+        block.with_kind(super::Kind::CONTENT);
+        let template = Template::new(namespace, block);
         Ok(template)
     }
-}
 
-impl<'a> Block<'a> {
-    pub(crate) fn parse_doc(
-        source: &'a str,
-        token_stream: &mut TokenStream,
-    ) -> result::Result<Vec<Block<'a>>> {
-        let mut blocks = Vec::new();
-        tokenizer::skip_whitespace_and_newline(token_stream);
-        let mut context = ParseContext::new(Context::Content);
-        let block = Block::parse(source, token_stream, &mut context)?;
-        match !block.has_blocks() {
-            true => {
-                blocks.push(block);
-            }
-            false => {
-                for block in block.blocks() {
-                    blocks.push(block.clone());
-                }
-            }
-        }
+    pub(crate) fn namespace(&self) -> Option<&String> {
+        self.namespace.as_ref()
+    }
 
-        match blocks.is_empty() {
-            true => Err(error::Error::Parser(
-                None,
-                "Empty template is not allowed".to_string(),
-            )),
-            false => Ok(blocks),
-        }
+    pub(crate) fn block(&self) -> &Block<'a> {
+        &self.block
     }
 }

@@ -29,9 +29,12 @@ $:.
 src/views/comp/index.rshtml
 ```rust
 @{
-    let name = context.get_data::<String>("name");
-    let age = context.get_data::<i32>("age");
-    let msg = context.get_data::<String>("msg");
+    let name = match self.get_data::<String>("name") {
+        Some(str) => str,
+        None => "",
+    };
+    let age = disguise::types::DisplayOptionRef(self.get_data::<i32>("age"));
+    let msg = disguise::types::DisplayOptionRef(self.get_data::<String>("msg"));
 }
 <html>
     <head>
@@ -64,7 +67,7 @@ fn main() {
 
 ```rust
 // Import the generated view modules.
-disguise::include_view_templates!();
+disguise::include_views!();
 
 fn main() {
     // create a context and set some data.
