@@ -202,8 +202,7 @@ impl<'a> Block<'a> {
         let main_ts = content.parse::<TokenStream>();
         match main_ts {
             Ok(ts) => Ok(quote! {
-                #[allow(unused_variables)]
-                fn render(&self, context: impl disguise::types::Context, output: &mut impl disguise::types::Writer) {
+                fn render(&self, output: &mut impl disguise::types::Writer) {
                     #ts
                 }
             }),

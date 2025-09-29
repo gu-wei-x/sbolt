@@ -12,4 +12,4 @@ pub(crate) mod tests;
 pub use context::*;
 pub use data_store::*;
 pub use template::Template;
-pub use writer::Writer;
+pub use writer::*;

@@ -28,7 +28,7 @@ pub(crate) fn generate_registry(
         .iter()
         .map(|(name, view_name)| {
             format!(
-                "{}::K{}({}) => {}.render(context, output),",
+                "{}::K{}({}) => {}.render(output),",
                 consts::TEMPLATE_TYPE_NAME,
                 utils::name::normalize_to_type_name(&name),
                 view_name.to_lowercase(),
@@ -54,7 +54,7 @@ pub(crate) fn generate_registry(
         }
 
         impl #type_ident {
-            pub(crate) fn render(&self, context: impl disguise::types::Context, output: &mut impl disguise::types::Writer) {
+            pub(crate) fn render(&self, output: &mut impl disguise::types::Writer) {
                 match self {
                    #view_unpack_content_ts
                 }
@@ -94,8 +94,8 @@ fn generate_registry_method(
 
     let type_ident = format_ident!("{}", consts::TEMPLATE_TYPE_NAME);
     let content = quote! {
-        pub(crate) fn create_view_registrar() -> std::collections::HashMap::<String, fn()->#type_ident> {
-            let mut view_reg_creator = std::collections::HashMap::<String, fn()->#type_ident>::new();
+        pub(crate) fn create_view_registrar() -> std::collections::HashMap::<String, fn(context: disguise::types::DefaultViewContext) -> #type_ident> {
+            let mut view_reg_creator = std::collections::HashMap::<String, fn(context: disguise::types::DefaultViewContext) -> #type_ident>::new();
             // Register views
             #view_reg_content_ts
             view_reg_creator

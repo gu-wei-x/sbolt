@@ -1,5 +1,5 @@
 // Import the generated view modules.
-disguise::include_view_templates!();
+disguise::include_views!();
 
 fn main() {
     // create a context and set some data.
