@@ -3,7 +3,7 @@ mod code;
 mod content;
 mod context;
 mod template;
-mod utils;
+pub(crate) mod util;
 
 #[cfg(test)]
 pub(crate) mod tests;

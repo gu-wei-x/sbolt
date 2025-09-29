@@ -9,6 +9,6 @@
         <title>Index</title>
     </head>
     <body>
-        <div>@name(@age) says: @msg</div>
+        <div>@msg - from @name(@age)</div>
     </body>
 </html>

@@ -19,10 +19,10 @@ pub(crate) fn skip_whitespace_and_newline(stream: &mut TokenStream) -> bool {
 
 pub(crate) fn get_next_token_if<'a, F: Fn(Kind) -> bool>(
     stream: &mut TokenSlice<'a, Token>,
-    pred: F,
+    skip_pred: F,
 ) -> Option<&'a Token> {
     while let Some(current_token) = stream.peek_token() {
-        if pred(current_token.kind()) && current_token.kind() != Kind::EOF {
+        if skip_pred(current_token.kind()) && current_token.kind() != Kind::EOF {
             stream.next_token();
         } else {
             break;

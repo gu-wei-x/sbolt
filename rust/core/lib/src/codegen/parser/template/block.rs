@@ -1,4 +1,4 @@
-use crate::codegen::parser::template::{ParseContext, utils};
+use crate::codegen::parser::template::ParseContext;
 use crate::codegen::parser::tokenizer::TokenStream;
 use crate::{
     codegen::parser::{
@@ -7,7 +7,7 @@ use crate::{
     },
     types::{error, result},
 };
-use winnow::stream::Stream as _;
+use winnow::stream::Stream;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub(crate) enum Kind<'a> {
@@ -91,6 +91,7 @@ impl<'a> Block<'a> {
     }
 }
 
+// todo: all branch should use unconsumed stream
 impl<'a> Block<'a> {
     pub(crate) fn parse_block_within_kind(
         source: &'a str,
@@ -100,23 +101,40 @@ impl<'a> Block<'a> {
         is_content: bool,
         is_inlined: bool,
     ) -> result::Result<Block<'a>> {
-        // Assume the current token is the opening delimiter (either '(' or '{')
-        _ = token_stream.next_token().ok_or_else(|| {
-            let previous_token = token_stream.previous_tokens().last().copied();
-            error::Error::from_parser(previous_token, "Expected opening delimiter").into()
-        })?;
+        // validate, first token must be open_kind and consume the token.
+        let previous_token = token_stream.previous_tokens().last().copied();
+        match token_stream.peek_token() {
+            Some(token) => {
+                if token.kind() != open_kind {
+                    return Err(error::Error::from_parser(
+                        previous_token,
+                        "Expected opening delimiter",
+                    ));
+                } else {
+                    token_stream.next_token();
+                }
+            }
+            _ => {
+                return Err(error::Error::from_parser(
+                    previous_token,
+                    "Expected opening delimiter",
+                ));
+            }
+        }
 
         let mut depth = 1;
         let mut result = Block::default();
         let start = token_stream.peek_token();
         let mut next_start = token_stream.peek_token();
         let mut end_token: Option<&Token> = None;
-        while let Some(token) = token_stream.next_token() {
+        while let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 k if k == open_kind => {
+                    token_stream.next_token();
                     depth += 1;
                 }
                 k if k == close_kind => {
+                    token_stream.next_token();
                     depth -= 1;
                     if depth == 0 {
                         end_token = Some(token);
@@ -132,15 +150,13 @@ impl<'a> Block<'a> {
                     }
 
                     let from_context = if is_content {
-                        ParseContext::Content
+                        ParseContext::new(super::Context::Content)
                     } else {
-                        ParseContext::Code
+                        ParseContext::new(super::Context::Code)
                     };
 
                     // check whether switch context.
-                    let next_context =
-                        utils::get_context_at(source, token, token_stream, from_context)?;
-                    if next_context != from_context {
+                    if from_context.should_switch(source, token, token_stream)? {
                         if is_content {
                             // transfer from content to code.
                             // 1. consume the tokens before this one as content block and switch to code block.
@@ -172,10 +188,13 @@ impl<'a> Block<'a> {
 
                     next_start = token_stream.peek_token();
                 }
-                _ => {}
+                _ => {
+                    token_stream.next_token();
+                }
             }
         }
 
+        // not balanced.
         if depth != 0 {
             return Err(error::Error::from_parser(
                 Some(*start.unwrap()),
@@ -262,5 +281,94 @@ impl<'a> Block<'a> {
             }
         };
         Ok(block)
+    }
+
+    pub(crate) fn parse(
+        source: &'a str,
+        token_stream: &mut TokenStream,
+        context: &mut ParseContext,
+    ) -> result::Result<Block<'a>> {
+        // skip leading whitespace and linefeeds.
+        tokenizer::skip_whitespace_and_newline(token_stream);
+        let mut blocks = Vec::new();
+        match token_stream.peek_token() {
+            None => {
+                return Err(error::Error::from_parser(None, "Empty stream"));
+            }
+            Some(_) => {
+                while let Some(token) = token_stream.peek_token() {
+                    match token.kind() {
+                        tokenizer::Kind::EOF => break,
+                        tokenizer::Kind::NEWLINE => {
+                            token_stream.next_token();
+                            //for prettry, ignore the newline
+                            //context.push(*token);
+                        }
+                        tokenizer::Kind::AT => {
+                            match context.should_switch(source, token, token_stream)? {
+                                false => {
+                                    // consume and push @ current context.
+                                    token_stream.next_token();
+                                    context.push(*token);
+                                }
+                                true => {
+                                    // switch back -- nothing to do as stack was cleared in to_block.
+                                    match context.to_block(source) {
+                                        Some(block) => {
+                                            blocks.push(block);
+                                        }
+                                        _ => {
+                                            // no-op: as there is no pending tokens belong to current context.
+                                        }
+                                    }
+                                    let block = match context.is_content() {
+                                        // parse_code. @{}, @exp. @section {}
+                                        true => Block::parse_code(source, token, token_stream)?,
+                                        // parse_content. @{}, @exp. @section {}
+                                        false => Block::parse_content(
+                                            source,
+                                            token,
+                                            token_stream,
+                                            false,
+                                        )?,
+                                    };
+
+                                    blocks.push(block);
+                                }
+                            }
+                        }
+                        _ => {
+                            // consume and push to current context.
+                            // TODO: for prettry, ignore the newline when generate code.
+                            token_stream.next_token();
+                            context.push(*token);
+                        }
+                    }
+                }
+
+                // consume the context.
+                // TODO: for prettry, ignore the newline when generate code.
+                match context.to_block(source) {
+                    Some(block) => blocks.push(block),
+                    _ => { /* no-ops*/ }
+                }
+
+                match blocks.len() {
+                    0 => Err(error::Error::from_parser(None, "Failed to parser")),
+                    1 => {
+                        let block = blocks.pop().unwrap();
+                        Ok(block)
+                    }
+                    _ => {
+                        // combine to a single block.
+                        let mut result = Block::default();
+                        for block in blocks {
+                            result.push_block(block);
+                        }
+                        Ok(result)
+                    }
+                }
+            }
+        }
     }
 }

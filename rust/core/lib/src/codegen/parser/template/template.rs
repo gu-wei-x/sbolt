@@ -1,9 +1,8 @@
 use crate::codegen::parser::template::block::Block;
-use crate::codegen::parser::template::{ParseContext, utils};
+use crate::codegen::parser::template::{Context, ParseContext};
 use crate::codegen::parser::tokenizer::TokenStream;
 use crate::codegen::parser::tokenizer::{self, Tokenizer};
 use crate::types::{error, result};
-use winnow::stream::Stream as _;
 use winnow::stream::TokenSlice;
 
 pub(crate) struct Template<'a> {
@@ -22,7 +21,6 @@ impl<'a> Template<'a> {
         let tokenizer = Tokenizer::new(source);
         let tokens = tokenizer.into_vec();
         let mut token_stream = TokenSlice::new(&tokens);
-
         let blocks = Block::parse_doc(source, &mut token_stream)?;
         let template = Template::new(namespace, blocks);
         Ok(template)
@@ -36,32 +34,15 @@ impl<'a> Block<'a> {
     ) -> result::Result<Vec<Block<'a>>> {
         let mut blocks = Vec::new();
         tokenizer::skip_whitespace_and_newline(token_stream);
-        while let Some(next_token) = token_stream.peek_token() {
-            match next_token.kind() {
-                tokenizer::Kind::EOF => break,
-                tokenizer::Kind::NEWLINE => {
-                    token_stream.next_token();
-                }
-                tokenizer::Kind::AT => {
-                    // todo: refactoring: use following logic for code and content
-                    let next_context = utils::get_context_at(
-                        source,
-                        next_token,
-                        token_stream,
-                        ParseContext::Content,
-                    )?;
-                    if next_context == ParseContext::Code {
-                        let code_block = Block::parse_code(source, next_token, token_stream)?;
-                        blocks.push(code_block);
-                    } else {
-                        // keep current context unchanged.
-                        token_stream.next_token();
-                    }
-                }
-                _ => {
-                    let content_block =
-                        Block::parse_content(source, next_token, token_stream, false)?;
-                    blocks.push(content_block);
+        let mut context = ParseContext::new(Context::Content);
+        let block = Block::parse(source, token_stream, &mut context)?;
+        match block.blocks.is_empty() {
+            true => {
+                blocks.push(block);
+            }
+            false => {
+                for block in block.blocks {
+                    blocks.push(block);
                 }
             }
         }

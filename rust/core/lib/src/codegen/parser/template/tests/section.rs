@@ -14,7 +14,7 @@ macro_rules! section_test_case {
             let tokens = tokenizer.into_vec();
             let mut token_stream = TokenSlice::new(&tokens);
             let start_token = token_stream.peek_token().unwrap();
-            Block::parse_code($content, start_token, &mut token_stream).unwrap();
+            Block::parse_content($content, start_token, &mut token_stream, false).unwrap();
         }
     };
     ($case_name:ident, $section_name:expr, $section_content:expr) => {
@@ -30,7 +30,7 @@ macro_rules! section_test_case {
             let tokens = tokenizer.into_vec();
             let mut token_stream = TokenSlice::new(&tokens);
             let start_token = token_stream.peek_token().unwrap();
-            let block = Block::parse_code(content, start_token, &mut token_stream)?;
+            let block = Block::parse_content(content, start_token, &mut token_stream, false)?;
             assert_eq!(block.name, Some($section_name.to_string()));
             assert_eq!(block.content(), $section_content);
             Ok(())
