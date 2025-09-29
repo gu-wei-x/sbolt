@@ -158,7 +158,7 @@ fn test_parse_context_to_block_from_content() -> core::result::Result<(), error:
     assert!(result.is_some());
     let block = result.unwrap();
     assert_eq!(block.content(), source);
-    assert!(matches!(block.span.kind(), block::Kind::CONTENT(_)));
+    assert!(matches!(block.kind(), block::Kind::CONTENT));
     Ok(())
 }
 
@@ -175,6 +175,6 @@ fn test_parse_context_to_block_from_code() -> core::result::Result<(), error::Er
     assert!(result.is_some());
     let block = result.unwrap();
     assert_eq!(block.content(), source);
-    assert!(matches!(block.span.kind(), block::Kind::CODE(_)));
+    assert!(matches!(block.kind(), block::Kind::CODE));
     Ok(())
 }

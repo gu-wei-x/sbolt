@@ -1,6 +1,6 @@
 #![cfg(test)]
 use crate::codegen::consts;
-use crate::codegen::parser::template::Block;
+use crate::codegen::parser::template::{Block, Kind};
 use crate::codegen::parser::tokenizer::Tokenizer;
 use crate::types::error;
 use winnow::stream::{Stream, TokenSlice};
@@ -51,7 +51,8 @@ macro_rules! directive_test_case {
                     .peek_token()
                     .ok_or_else(|| error::Error::from_parser(None, "Expected '@'"))?;
                 let block = Block::parse_code(statement, start_token, &mut token_stream)?;
-                assert_eq!(block.name, Some($directive.to_string()));
+                assert_eq!(block.name(), Some(&$directive.to_string()));
+                assert!(matches!(block.kind(), Kind::DIRECTIVE));
                 assert_eq!(block.content(), $statement);
             }
 

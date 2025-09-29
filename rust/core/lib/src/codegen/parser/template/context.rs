@@ -1,9 +1,10 @@
+use crate::codegen::consts;
 use crate::codegen::parser::Token;
 use crate::codegen::parser::template::block::{self, Block};
 use crate::codegen::parser::tokenizer;
 use crate::codegen::parser::tokenizer::TokenStream;
-use crate::codegen::{consts, parser};
 use crate::types::{error, result};
+use std::ops::Range;
 use winnow::stream::Stream as _;
 
 #[derive(PartialEq, Eq)]
@@ -117,23 +118,27 @@ impl ParseContext {
         let length = self.tokens.len();
         let start = self.tokens[0].range().start;
         let end = self.tokens[length - 1].range().end;
-        let mut block = Block::default();
-        match self.kind {
-            Context::Content => {
-                block.with_span(parser::Span {
-                    kind: block::Kind::CONTENT(&source[start..end]),
+        let content = &source[start..end];
+        let block = match self.kind {
+            Context::Content => Block::new(
+                None,
+                Range {
                     start: start,
                     end: end,
-                });
-            }
-            Context::Code => {
-                block.with_span(parser::Span {
-                    kind: block::Kind::CODE(&source[start..end]),
+                },
+                block::Kind::CONTENT,
+                content,
+            ),
+            Context::Code => Block::new(
+                None,
+                Range {
                     start: start,
                     end: end,
-                });
-            }
-        }
+                },
+                block::Kind::CODE,
+                content,
+            ),
+        };
 
         self.tokens.clear();
         Some(block)

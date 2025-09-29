@@ -36,13 +36,13 @@ impl<'a> Block<'a> {
         tokenizer::skip_whitespace_and_newline(token_stream);
         let mut context = ParseContext::new(Context::Content);
         let block = Block::parse(source, token_stream, &mut context)?;
-        match block.blocks.is_empty() {
+        match !block.has_blocks() {
             true => {
                 blocks.push(block);
             }
             false => {
-                for block in block.blocks {
-                    blocks.push(block);
+                for block in block.blocks() {
+                    blocks.push(block.clone());
                 }
             }
         }

@@ -68,8 +68,8 @@ impl<'a> Template<'a> {
 
     fn generate_code(&self, output: &mut String) {
         for block in &self.blocks {
-            if block.name.is_none() {
-                block.generate_code(&None, output);
+            if block.name().is_none() {
+                block.generate_code(None, output);
             }
         }
     }
@@ -79,7 +79,7 @@ impl<'a> Template<'a> {
             .blocks
             .iter()
             .map(|block| {
-                if block.name == Some(consts::DIRECTIVE_KEYWORD_USE.to_string()) {
+                if block.name() == Some(&consts::DIRECTIVE_KEYWORD_USE.to_string()) {
                     let import_content = block.content();
                     format!("{} {};", consts::DIRECTIVE_KEYWORD_USE, import_content)
                 } else {
@@ -99,7 +99,7 @@ impl<'a> Template<'a> {
         let items = self
             .blocks
             .iter()
-            .filter(|b| b.name == Some("layout".to_string()))
+            .filter(|b| b.name() == Some(&"layout".to_string()))
             .collect::<Vec<_>>();
         let layout_count = items.len();
         match layout_count {
