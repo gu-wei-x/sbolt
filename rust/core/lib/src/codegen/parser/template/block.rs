@@ -1,62 +1,85 @@
 use crate::codegen::parser::template::ParseContext;
 use crate::codegen::parser::tokenizer::TokenStream;
 use crate::{
-    codegen::parser::{
-        self,
-        tokenizer::{self, Token},
-    },
+    codegen::parser::tokenizer::{self, Token},
     types::{error, result},
 };
+use std::ops::Range;
 use winnow::stream::Stream;
 
+#[allow(dead_code)]
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub(crate) enum Kind<'a> {
-    // TODO:
-    // USE: @use
-    // Layout: @layout "layout_name"
-    // Section: @section name{}
-    // TODO: RenderSection: @render("name", is_required): this could be inline function call, render is defined in view.
-    CODE(&'a str),
-    INLINEDCODE(&'a str),
-    CONTENT(&'a str),
-    INLINEDCONTENT(&'a str),
+pub(crate) enum Kind {
+    CODE,
+    COMMENT,
+    INLINEDCODE,
+    CONTENT,
+    // layout, use.
+    DIRECTIVE,
+    INLINEDCONTENT,
+    FUNCTIONS,
+    SECTION,
     // intermediate kind.
-    UNKNOWN(&'a str),
+    UNKNOWN,
 }
 
-impl<'a> Default for Kind<'a> {
-    fn default() -> Self {
-        Self::UNKNOWN("")
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Block<'a> {
     // block like use, section could have name.
-    pub(crate) name: Option<String>,
-    pub(crate) span: parser::Span<Kind<'a>>,
-    pub(crate) blocks: Vec<Block<'a>>,
+    name: Option<String>,
+    kind: Kind,
+    content: &'a str,
+    blocks: Vec<Block<'a>>,
+    // use for error reporting.
+    span: Range<usize>,
 }
 
 impl<'a> Default for Block<'a> {
     fn default() -> Self {
         Self {
             name: None,
-            span: parser::Span::<Kind<'a>>::default(),
+            span: Range::default(),
+            kind: Kind::UNKNOWN,
+            content: "",
             blocks: vec![],
         }
     }
 }
 
 impl<'a> Block<'a> {
-    pub(crate) fn content(&self) -> &'a str {
-        match &self.span.kind {
-            Kind::CODE(content) => content,
-            Kind::INLINEDCODE(content) => content,
-            Kind::CONTENT(content) => content,
-            Kind::INLINEDCONTENT(content) => content,
-            Kind::UNKNOWN(content) => content,
+    pub(crate) fn new(
+        name: Option<String>,
+        span: Range<usize>,
+        kind: Kind,
+        content: &'a str,
+    ) -> Self {
+        Self {
+            name,
+            span,
+            kind,
+            content,
+            blocks: vec![],
         }
+    }
+
+    pub(crate) fn kind(&self) -> &Kind {
+        &self.kind
+    }
+
+    pub(crate) fn content(&self) -> &'a str {
+        self.content
+    }
+
+    pub(crate) fn name(&self) -> Option<&String> {
+        self.name.as_ref()
+    }
+
+    pub(crate) fn blocks(&self) -> &Vec<Block<'a>> {
+        &self.blocks
+    }
+
+    pub(crate) fn has_blocks(&self) -> bool {
+        !self.blocks.is_empty()
     }
 
     pub(crate) fn with_name(&mut self, name: &str) -> &mut Self {
@@ -64,20 +87,15 @@ impl<'a> Block<'a> {
         self
     }
 
-    pub(crate) fn with_span(&mut self, span: parser::Span<Kind<'a>>) -> &mut Self {
-        self.span = span;
-        self
-    }
-
     pub(crate) fn push_block(&mut self, block: Block<'a>) -> &mut Self {
         // update container kind with first block.
-        if matches!(self.span.kind, Kind::UNKNOWN(_)) {
-            match &block.span.kind() {
-                Kind::CODE(_) => {
-                    self.span.kind = Kind::CODE("");
+        if matches!(self.kind(), Kind::UNKNOWN) {
+            match &block.kind() {
+                Kind::CODE => {
+                    self.kind = Kind::CODE;
                 }
-                Kind::CONTENT(_) => {
-                    self.span.kind = Kind::CONTENT("");
+                Kind::CONTENT => {
+                    self.kind = Kind::CONTENT;
                 }
                 _ => { /* no-op */ }
             }
@@ -247,36 +265,20 @@ impl<'a> Block<'a> {
             ));
         }
 
-        let mut block = Block::default();
-        match is_content {
+        let source = &source[start..end];
+        let block = match is_content {
             true => {
                 if is_inlined {
-                    block.with_span(parser::Span {
-                        kind: Kind::INLINEDCONTENT(&source[start..end]),
-                        start: start,
-                        end: end,
-                    })
+                    Block::new(None, Range { start, end }, Kind::INLINEDCONTENT, source)
                 } else {
-                    block.with_span(parser::Span {
-                        kind: Kind::CONTENT(&source[start..end]),
-                        start: start,
-                        end: end,
-                    })
+                    Block::new(None, Range { start, end }, Kind::CONTENT, source)
                 }
             }
             false => {
                 if is_inlined {
-                    block.with_span(parser::Span {
-                        kind: Kind::INLINEDCODE(&source[start..end]),
-                        start: start,
-                        end: end,
-                    })
+                    Block::new(None, Range { start, end }, Kind::INLINEDCODE, source)
                 } else {
-                    block.with_span(parser::Span {
-                        kind: Kind::CODE(&source[start..end]),
-                        start: start,
-                        end: end,
-                    })
+                    Block::new(None, Range { start, end }, Kind::CODE, source)
                 }
             }
         };

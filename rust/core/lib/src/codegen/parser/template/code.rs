@@ -1,11 +1,11 @@
 use crate::codegen::consts;
-use crate::codegen::parser;
 use crate::codegen::parser::template;
 use crate::codegen::parser::template::block::Block;
 use crate::codegen::parser::tokenizer;
 use crate::codegen::parser::tokenizer::{Token, TokenStream};
 use crate::types::error;
 use crate::types::result;
+use std::ops::Range;
 use winnow::stream::Stream;
 
 impl<'a> Block<'a> {
@@ -78,12 +78,8 @@ impl<'a> Block<'a> {
         token: &Token,
         token_stream: &mut TokenStream,
     ) -> result::Result<Block<'a>> {
-        let mut block = Block::default();
-        block.with_span(parser::Span {
-            kind: template::Kind::INLINEDCODE(&source[token.range()]),
-            start: token.range().start,
-            end: token.range().end,
-        });
+        let content = &source[token.range()];
+        let block = Block::new(None, token.range(), template::Kind::INLINEDCODE, content);
 
         // consume the expression token.
         token_stream.next_token();
@@ -132,13 +128,13 @@ impl<'a> Block<'a> {
                                 &format!("Expected {directive} content after '@{directive}'"),
                             ));
                         }
-                        let mut block = Block::default();
-                        block.with_span(parser::Span {
-                            kind: template::Kind::CODE(&exp),
-                            start: start,
-                            end: end,
-                        });
-                        block.with_name(directive);
+
+                        let block = Block::new(
+                            Some(directive.to_string()),
+                            Range { start, end },
+                            template::Kind::DIRECTIVE,
+                            &exp,
+                        );
 
                         // consume the end token.
                         token_stream.next_token();
