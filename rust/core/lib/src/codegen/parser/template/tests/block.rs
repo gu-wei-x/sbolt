@@ -69,8 +69,9 @@ fn test_block_parse_inline_code() -> core::result::Result<(), error::Error> {
     let mut context = ParseContext::new(Context::Content);
     let block = block::Block::parse(source, &mut token_stream, &mut context)?;
     assert_eq!(block.name(), None);
-    assert!(!block.has_blocks());
-    assert!(matches!(block.kind(), block::Kind::INLINEDCODE));
+    assert!(block.has_blocks());
+    assert!(matches!(block.kind(), block::Kind::CONTENT));
+    assert!(matches!(block.blocks()[0].kind(), block::Kind::INLINEDCODE));
 
     // ending with ;
     let source = r#"@test;"#;
@@ -136,8 +137,10 @@ fn test_block_parse_code_block() -> core::result::Result<(), error::Error> {
     let mut context = ParseContext::new(Context::Content);
     let block = block::Block::parse(source, &mut token_stream, &mut context)?;
     assert_eq!(block.name(), None);
-    assert!(!block.has_blocks());
-    assert!(matches!(block.kind(), block::Kind::CODE));
+
+    assert!(block.has_blocks());
+    assert!(matches!(block.kind(), block::Kind::CONTENT));
+    assert!(matches!(block.blocks()[0].kind(), block::Kind::CODE));
     Ok(())
 }
 
@@ -185,11 +188,11 @@ fn test_block_parse_complex_code_block() -> core::result::Result<(), error::Erro
     let mut context = ParseContext::new(Context::Content);
     let block = block::Block::parse(source, &mut token_stream, &mut context)?;
     assert_eq!(block.name(), None);
-    assert!(matches!(block.kind(), block::Kind::CODE));
+    assert!(matches!(block.kind(), block::Kind::CONTENT));
 
     // pre, child, post: \n
-    assert_eq!(block.blocks().len(), 3);
-    let blocks = &block.blocks();
+    assert_eq!(block.blocks().len(), 1);
+    let blocks = block.blocks()[0].blocks();
 
     // l1.
     assert!(matches!(blocks[0].kind(), block::Kind::CODE));

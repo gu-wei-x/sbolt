@@ -62,8 +62,8 @@ impl<'a> Block<'a> {
         }
     }
 
-    pub(crate) fn kind(&self) -> &Kind {
-        &self.kind
+    pub(crate) fn kind(&self) -> Kind {
+        self.kind
     }
 
     pub(crate) fn content(&self) -> &'a str {
@@ -80,6 +80,15 @@ impl<'a> Block<'a> {
 
     pub(crate) fn has_blocks(&self) -> bool {
         !self.blocks.is_empty()
+    }
+
+    pub(crate) fn is_code(&self) -> bool {
+        matches!(self.kind(), Kind::CODE | Kind::INLINEDCODE)
+    }
+
+    pub(crate) fn with_kind(&mut self, kind: Kind) -> &mut Self {
+        self.kind = kind;
+        self
     }
 
     pub(crate) fn with_name(&mut self, name: &str) -> &mut Self {
@@ -355,15 +364,36 @@ impl<'a> Block<'a> {
                     _ => { /* no-ops*/ }
                 }
 
+                let mut result = Block::default();
+                match context.is_content() {
+                    true => {
+                        result.with_kind(Kind::CONTENT);
+                    }
+                    false => {
+                        result.with_kind(Kind::CODE);
+                    }
+                }
+
                 match blocks.len() {
                     0 => Err(error::Error::from_parser(None, "Failed to parser")),
                     1 => {
                         let block = blocks.pop().unwrap();
-                        Ok(block)
+                        if context.is_content() {
+                            // from content bu have code block.
+                            match block.is_code() {
+                                true => {
+                                    result.push_block(block);
+                                }
+                                false => {
+                                    return Ok(block);
+                                }
+                            }
+                            Ok(result)
+                        } else {
+                            Ok(block)
+                        }
                     }
                     _ => {
-                        // combine to a single block.
-                        let mut result = Block::default();
                         for block in blocks {
                             result.push_block(block);
                         }

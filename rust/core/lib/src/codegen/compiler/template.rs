@@ -2,7 +2,6 @@ use crate::{
     codegen::{CompileResult, consts, parser::template::Template},
     utils,
 };
-use proc_macro2::TokenStream;
 use quote::format_ident;
 use quote::quote;
 use std::path::PathBuf;
@@ -15,7 +14,8 @@ impl<'a> Template<'a> {
                 return result;
             }
             Some(name) => {
-                let full_view_name = utils::name::create_full_name(&self.namespace, &name);
+                let namespace = self.namespace().cloned();
+                let full_view_name = utils::name::create_full_name(&namespace, &name);
                 let view_name = utils::name::normalize_to_type_name(&name);
                 let view_type = utils::name::normalize_to_type_name(&full_view_name);
                 result.add_view_mapping(full_view_name.to_string(), view_name.clone());
@@ -24,99 +24,49 @@ impl<'a> Template<'a> {
                 let view_type = format_ident!("K{}", view_type);
                 let template_type = format_ident!("{}", consts::TEMPLATE_TYPE_NAME);
 
-                let imports_content = self.generate_imports();
-                let layout_content = self.generate_layout();
-                let mut render_content = String::new();
-                self.generate_code(&mut render_content);
-                let render_content_ts: TokenStream = render_content.parse().unwrap();
-                let view_content = quote! {
-                    use crate::viewtypes::*;
-                    #imports_content
-
-                    pub struct #view_name;
-                    impl #view_name {
-                        pub(crate) fn new() -> Self {
-                            Self
-                        }
-
-                        pub(crate) fn create() -> #template_type {
-                           #template_type::#view_type(#view_name::new())
-                        }
+                let codegen_result = self.block().generate_code();
+                match codegen_result {
+                    Err(e) => {
+                        result.add_error(e);
+                        return result;
                     }
+                    Ok(cgresult) => {
+                        let imports_content = cgresult.imports;
+                        let layout_content = cgresult.layout;
+                        let render_content = cgresult.code;
+                        let view_content = quote! {
+                            use crate::viewtypes::*;
+                            #imports_content
 
-                    impl disguise::types::Template for #view_name
-                    {
-                        fn name() -> String {
-                            #full_view_name.to_string()
-                        }
+                            pub struct #view_name;
+                            impl #view_name {
+                                pub(crate) fn new() -> Self {
+                                    Self
+                                }
 
-                        #layout_content
+                                pub(crate) fn create() -> #template_type {
+                                   #template_type::#view_type(#view_name::new())
+                                }
+                            }
 
-                        #[allow(unused_variables)]
-                        fn render(&self, context: impl disguise::types::Context, output: &mut impl disguise::types::Writer) {
-                            #render_content_ts
-                        }
+                            impl disguise::types::Template for #view_name
+                            {
+                                fn name() -> String {
+                                    #full_view_name.to_string()
+                                }
+
+                                #layout_content
+
+                                #render_content
+                            }
+                        };
+
+                        _ = utils::fs::generate_code_with_content(&target, &view_content);
                     }
-                };
-
-                _ = utils::fs::generate_code_with_content(&target, &view_content);
+                }
             }
         }
 
         result
-    }
-
-    fn generate_code(&self, output: &mut String) {
-        for block in &self.blocks {
-            if block.name().is_none() {
-                block.generate_code(None, output);
-            }
-        }
-    }
-
-    fn generate_imports(&self) -> Option<TokenStream> {
-        let import_content = self
-            .blocks
-            .iter()
-            .map(|block| {
-                if block.name() == Some(&consts::DIRECTIVE_KEYWORD_USE.to_string()) {
-                    let import_content = block.content();
-                    format!("{} {};", consts::DIRECTIVE_KEYWORD_USE, import_content)
-                } else {
-                    "".to_string()
-                }
-            })
-            .collect::<Vec<String>>()
-            .join("");
-
-        let ts: TokenStream = import_content.parse::<TokenStream>().unwrap();
-        Some(quote! {
-            #ts
-        })
-    }
-
-    fn generate_layout(&self) -> TokenStream {
-        let items = self
-            .blocks
-            .iter()
-            .filter(|b| b.name() == Some(&"layout".to_string()))
-            .collect::<Vec<_>>();
-        let layout_count = items.len();
-        match layout_count {
-            1 => {
-                let layout_block = items[0];
-                let layout_name = layout_block.content();
-                quote! {
-                    fn layout() -> Option<String> {
-                       Some(#layout_name.to_string())
-                    }
-                }
-            }
-            _ => quote! {
-                fn layout() -> Option<String> {
-                    None
-                }
-            },
-        }
     }
 }
