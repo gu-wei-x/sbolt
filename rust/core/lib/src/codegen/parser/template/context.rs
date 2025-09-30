@@ -161,15 +161,14 @@ impl ParseContext {
                         tokenizer::Kind::OPARENTHESIS => {
                             // inlined
                             if self.kind().is_code_kind() {
-                                return Ok((false, ParseContext::new(block::Kind::INLINEDCONTENT)));
+                                return Ok((true, ParseContext::new(block::Kind::INLINEDCONTENT)));
                             } else {
                                 return Ok((true, ParseContext::new(block::Kind::INLINEDCODE)));
                             }
                         }
                         tokenizer::Kind::OCURLYBRACKET => {
-                            // inlined
                             if self.kind().is_code_kind() {
-                                return Ok((false, ParseContext::new(block::Kind::CONTENT)));
+                                return Ok((true, ParseContext::new(block::Kind::CONTENT)));
                             } else {
                                 return Ok((true, ParseContext::new(block::Kind::CODE)));
                             }

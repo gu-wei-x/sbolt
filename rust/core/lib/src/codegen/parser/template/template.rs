@@ -1,5 +1,4 @@
-use crate::codegen::parser::template::ParseContext;
-use crate::codegen::parser::template::block::{self, Block};
+use crate::codegen::parser::template::block::Block;
 use crate::codegen::parser::tokenizer::{self, Tokenizer};
 use crate::types::result;
 use winnow::stream::TokenSlice;
@@ -23,9 +22,7 @@ impl<'a> Template<'a> {
 
         // skip leading whitespace and newlines.
         tokenizer::skip_whitespace_and_newline(&mut token_stream);
-        // begin with ROOT context.
-        let mut context = ParseContext::new(block::Kind::ROOT);
-        let block = Block::parse(source, &mut token_stream, &mut context)?;
+        let block = Block::parse(source, &mut token_stream)?;
         let template = Template::new(namespace, block);
         println!("*******************************************");
         println!("Root block: {:#?}", template.block());

@@ -255,16 +255,17 @@ impl<'a> Block<'a> {
     pub(crate) fn parse(
         source: &'a str,
         token_stream: &mut TokenStream,
-        context: &mut ParseContext,
     ) -> result::Result<Block<'a>> {
         // skip leading whitespace and linefeeds.
         tokenizer::skip_whitespace_and_newline(token_stream);
-        let mut blocks = Vec::new();
         match token_stream.peek_token() {
             None => {
                 return Err(error::Error::from_parser(None, "Empty stream"));
             }
             Some(_) => {
+                let mut context = ParseContext::new(Kind::ROOT);
+                let mut result = Block::default();
+                result.with_kind(context.kind());
                 while let Some(token) = token_stream.peek_token() {
                     match token.kind() {
                         tokenizer::Kind::EOF => break,
@@ -283,7 +284,7 @@ impl<'a> Block<'a> {
                                             if block.kind() == Kind::ROOT {
                                                 block.with_kind(Kind::CONTENT);
                                             }
-                                            blocks.push(block);
+                                            result.push_block(block);
                                         }
                                         _ => {
                                             // no-op: as there is no pending tokens belong to current context.
@@ -296,7 +297,7 @@ impl<'a> Block<'a> {
                                         token_stream,
                                         &mut new_context,
                                     )?;
-                                    blocks.push(block);
+                                    result.push_block(block);
                                 }
                                 Ok((false, _)) => {
                                     token_stream.next_token();
@@ -323,38 +324,14 @@ impl<'a> Block<'a> {
                             block.with_kind(Kind::CONTENT);
                         }
 
-                        blocks.push(block);
+                        result.push_block(block);
                     }
                     _ => { /* no-ops*/ }
                 }
 
-                let mut result = Block::default();
-                result.with_kind(context.kind());
-                match blocks.len() {
-                    0 => Err(error::Error::from_parser(None, "Failed to parser")),
-                    1 => {
-                        let block = blocks.pop().unwrap();
-                        if context.kind().is_content_kind() {
-                            // from content but have code block.
-                            match block.kind().is_code_kind() {
-                                true => {
-                                    result.push_block(block);
-                                }
-                                false => {
-                                    return Ok(block);
-                                }
-                            }
-                            Ok(result)
-                        } else {
-                            Ok(block)
-                        }
-                    }
-                    _ => {
-                        for block in blocks {
-                            result.push_block(block);
-                        }
-                        Ok(result)
-                    }
+                match result.has_blocks() {
+                    false => Err(error::Error::from_parser(None, "Empty block")),
+                    true => Ok(result),
                 }
             }
         }
