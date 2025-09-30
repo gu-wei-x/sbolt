@@ -1,87 +1,12 @@
 use crate::codegen::consts;
-use crate::codegen::parser::template::block::Block;
-use crate::codegen::parser::template::{self, ParseContext, util};
+use crate::codegen::parser::template::ParseContext;
+use crate::codegen::parser::template::block::{self, Block};
 use crate::codegen::parser::tokenizer::{self, Token, TokenStream};
 use crate::types::{error, result};
 use winnow::stream::Stream as _;
 
 impl<'a> Block<'a> {
-    pub(crate) fn parse_content(
-        source: &'a str,
-        start_token: &Token,
-        token_stream: &mut TokenStream,
-        is_inlined: bool,
-    ) -> result::Result<Block<'a>> {
-        if start_token.kind() != tokenizer::Kind::AT {
-            return Err(error::Error::from_parser(
-                Some(*start_token),
-                "Expected '@'",
-            ));
-        }
-        if Some(start_token) == token_stream.peek_token() {
-            // consume @.
-            token_stream.next_token();
-        }
-        match token_stream.peek_token() {
-            None => Err(error::Error::from_parser(
-                Some(*start_token),
-                "Expected content after '@'",
-            )),
-            Some(token) => {
-                match token.kind() {
-                    tokenizer::Kind::OPARENTHESIS if !is_inlined => {
-                        // inlinded.
-                        Self::parse_block_within_kind(
-                            source,
-                            tokenizer::Kind::OPARENTHESIS,
-                            tokenizer::Kind::CPARENTHESIS,
-                            token_stream,
-                            true,
-                            true,
-                        )
-                    }
-                    tokenizer::Kind::OCURLYBRACKET => Self::parse_block_within_kind(
-                        source,
-                        tokenizer::Kind::OCURLYBRACKET,
-                        tokenizer::Kind::CCURLYBRACKET,
-                        token_stream,
-                        true,
-                        false,
-                    ),
-                    tokenizer::Kind::EXPRESSION => {
-                        let exp = &source[token.range()];
-                        match exp {
-                            consts::KEYWORD_SECTION => {
-                                Self::parse_section(source, token, token_stream)
-                            }
-                            _ => {
-                                // consume the exp token.
-                                let start_token = token_stream.next_token();
-
-                                // consume util next transfer @, linefeed or whitespace.
-                                let end_token = util::get_token_before_transfer(
-                                    source,
-                                    token_stream,
-                                    &ParseContext::new(template::Context::Content),
-                                    |k| {
-                                        !vec![tokenizer::Kind::WHITESPACE, tokenizer::Kind::NEWLINE]
-                                            .contains(&k)
-                                    },
-                                );
-                                Block::create_block(source, &start_token, &end_token, true, true)
-                            }
-                        }
-                    }
-                    _ => Err(error::Error::from_parser(
-                        Some(*token),
-                        "Expected '(', '{' or expression after '@'",
-                    )),
-                }
-            }
-        }
-    }
-
-    fn parse_section(
+    pub(crate) fn parse_section(
         source: &'a str,
         token: &Token,
         token_stream: &mut TokenStream,
@@ -118,13 +43,13 @@ impl<'a> Block<'a> {
                         Some(brace_token)
                             if brace_token.kind() == tokenizer::Kind::OCURLYBRACKET =>
                         {
-                            let mut block = Self::parse_block_within_kind(
+                            let mut context = ParseContext::new(block::Kind::SECTION);
+                            let mut block = Self::parse_block_within_kinds(
                                 source,
                                 tokenizer::Kind::OCURLYBRACKET,
                                 tokenizer::Kind::CCURLYBRACKET,
                                 token_stream,
-                                true,
-                                false,
+                                &mut context,
                             )?;
                             block.with_name(name);
                             Ok(block)

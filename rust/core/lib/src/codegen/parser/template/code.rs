@@ -10,65 +10,86 @@ use winnow::stream::Stream;
 
 impl<'a> Block<'a> {
     // @exp, @{}, @()
-    pub(crate) fn parse_code(
+    pub(crate) fn parse_at_block(
         source: &'a str,
-        start_token: &Token,
         token_stream: &mut TokenStream,
+        context: &mut template::ParseContext,
     ) -> result::Result<Block<'a>> {
-        if start_token.kind() != tokenizer::Kind::AT {
-            return Err(error::Error::from_parser(
-                Some(*start_token),
-                "Expected '@'",
-            ));
-        }
+        // first token must be '@'
+        let start_token = match token_stream.peek_token() {
+            Some(token) => {
+                if token.kind() != tokenizer::Kind::AT {
+                    return Err(error::Error::from_parser(
+                        None,
+                        "Expecting '@' token to start context extraction.",
+                    ));
+                }
+                token
+            }
+            _ => {
+                return Err(error::Error::from_parser(
+                    None,
+                    "Empty token stream when expecting '@' token to start context extraction.",
+                ));
+            }
+        };
 
-        if Some(start_token) == token_stream.peek_token() {
-            // consume @.
-            token_stream.next_token();
-        }
+        // consume @.
+        token_stream.next_token();
         match token_stream.peek_token() {
             None => Err(error::Error::from_parser(
                 Some(*start_token),
                 "Expected content after '@'",
             )),
             Some(token) => {
-                match token.kind() {
+                let mut block = match token.kind() {
                     tokenizer::Kind::OPARENTHESIS => {
                         // code part.
-                        Self::parse_block_within_kind(
+                        Self::parse_block_within_kinds(
                             source,
                             tokenizer::Kind::OPARENTHESIS,
                             tokenizer::Kind::CPARENTHESIS,
                             token_stream,
-                            false,
-                            true,
-                        )
+                            context,
+                        )?
                     }
                     tokenizer::Kind::OCURLYBRACKET => {
                         // code part.
-                        Self::parse_block_within_kind(
+                        Self::parse_block_within_kinds(
                             source,
                             tokenizer::Kind::OCURLYBRACKET,
                             tokenizer::Kind::CCURLYBRACKET,
                             token_stream,
-                            false,
-                            false,
-                        )
+                            context,
+                        )?
                     }
                     tokenizer::Kind::EXPRESSION => {
                         let exp = &source[token.range()];
                         match exp {
                             consts::DIRECTIVE_KEYWORD_LAYOUT | consts::DIRECTIVE_KEYWORD_USE => {
-                                Self::parse_directive(source, token, token_stream, exp)
+                                Self::parse_directive(source, token, token_stream, exp)?
                             }
-                            _ => Self::create_inlined_code_block(source, token, token_stream),
+                            consts::KEYWORD_SECTION => {
+                                Self::parse_section(source, token, token_stream)?
+                            }
+                            _ => {
+                                // todo: consume until next transfer @, linefeed or whitespace for content.
+                                let mut block =
+                                    Self::create_inlined_code_block(source, token, token_stream)?;
+                                block.with_kind(context.kind());
+                                return Ok(block);
+                            }
                         }
                     }
-                    _ => Err(error::Error::from_parser(
-                        Some(*token),
-                        "Expected '(', '{' or expression after '@'",
-                    )),
-                }
+                    _ => {
+                        return Err(error::Error::from_parser(
+                            Some(*token),
+                            "Expected '(', '{' or expression after '@'",
+                        ));
+                    }
+                };
+                block.with_kind(context.kind());
+                Ok(block)
             }
         }
     }

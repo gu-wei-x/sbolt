@@ -177,10 +177,10 @@ impl<'a> Block<'a> {
     }
 
     fn generate_render(block: &Block) -> Result<TokenStream, error::Error> {
-        // block can only be content and from root.
-        if block.kind() != Kind::CONTENT {
+        // block can only be from root.
+        if !matches!(block.kind(), Kind::ROOT) {
             return Err(error::Error::CodeGen(
-                "Only content block can be rendered".to_string(),
+                "Only root block can be rendered".to_string(),
             ));
         }
 

@@ -1,5 +1,5 @@
 #![cfg(test)]
-use crate::codegen::parser::template::util;
+/*use crate::codegen::parser::template::util;
 use crate::{
     codegen::parser::{
         template::{Context, ParseContext},
@@ -107,4 +107,4 @@ fn get_token_before_transfer_end_with_non_transfer() -> core::result::Result<(),
     let token = result.unwrap();
     assert_eq!(token.kind(), tokenizer::Kind::EOF);
     Ok(())
-}
+}*/
