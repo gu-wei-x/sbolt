@@ -1,12 +1,11 @@
-use crate::codegen::parser;
 use std::fmt::Debug;
+use std::ops::Range;
 
-#[allow(private_interfaces)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
     CodeGen(String),
+    Parser(Option<Range<usize>>, String),
     String(String),
-    Parser(Option<parser::Token>, String),
 }
 
 impl Error {
@@ -15,6 +14,7 @@ impl Error {
     }
 }
 
+// TODO: how to associate with source error?
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -22,12 +22,12 @@ impl std::fmt::Display for Error {
                 write!(f, "CodeGen Err({:?})", msg)
             }
 
-            Error::String(msg) => {
-                write!(f, "Err:({})", msg)
+            Error::Parser(range, str) => {
+                write!(f, "Parser Err({:?}, {:?})", range, str)
             }
 
-            Error::Parser(token, str) => {
-                write!(f, "Parser Err({:?}, {:?})", token, str)
+            Error::String(msg) => {
+                write!(f, "Err:({})", msg)
             }
         }
     }
@@ -36,5 +36,26 @@ impl std::fmt::Display for Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         None
+    }
+}
+
+impl From<String> for Error {
+    fn from(value: String) -> Self {
+        Error::String(value)
+    }
+}
+
+impl From<Option<String>> for Error {
+    fn from(value: Option<String>) -> Self {
+        match value {
+            Some(v) => Error::String(v),
+            None => Error::String("Unknown error".to_owned()),
+        }
+    }
+}
+
+impl From<&str> for Error {
+    fn from(value: &str) -> Self {
+        Error::String(value.to_owned())
     }
 }

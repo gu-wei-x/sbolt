@@ -1,6 +1,6 @@
 use crate::{
     codegen::{CompileResult, consts},
-    types::error,
+    types::result,
     utils,
 };
 use proc_macro2::TokenStream;
@@ -25,18 +25,22 @@ impl Module {
     pub(crate) fn process(
         &self,
         compiler_options: &crate::codegen::compiler::CompilerOptions,
-    ) -> CompileResult {
-        let mut result = CompileResult::default();
+    ) -> result::Result<CompileResult> {
         if !self.source.is_dir() {
-            result.add_error(error::Error::from_str(&format!(
+            return Err(format!(
                 "Source directory '{}' does not exist or is not a directory",
                 self.source.display()
-            )));
-            return result;
+            )
+            .into());
         }
 
-        let dir_name = utils::fs::get_dir_name(&self.source).unwrap();
+        let dir_name = utils::fs::get_dir_name(&self.source).ok_or(format!(
+            "Failed to get directory name from {}",
+            self.source.display()
+        ))?;
+
         let target_dir = utils::fs::create_target_dir(&self.target, &dir_name);
+        let mut result = CompileResult::default();
         if let Ok(read_dir) = fs::read_dir(&self.source) {
             let full_name = &Some(utils::name::create_full_name(&self.namespace, &dir_name));
             for entry in read_dir.flatten() {
@@ -44,7 +48,7 @@ impl Module {
                 if let Ok(meta) = entry.metadata() {
                     if meta.is_dir() {
                         Module::new(entry.path(), target_dir.clone(), full_name.clone())
-                            .process(compiler_options)
+                            .process(compiler_options)?
                             .merge_into(&mut result);
                         result.add_mod(entry.file_name().to_str().unwrap_or_default());
                     } else if meta.is_file()
@@ -54,16 +58,38 @@ impl Module {
                         )
                     {
                         let content = fs::read_to_string(entry.path()).unwrap_or_default();
-                        let template = crate::codegen::parser::template::Template::from(
+                        let template = match crate::codegen::parser::template::Template::from(
                             &content,
                             full_name.clone(),
-                        )
-                        .unwrap();
+                        ) {
+                            Ok(t) => t,
+                            Err(e) => {
+                                return Err(format!(
+                                    "Failed to parse template '{}': {}",
+                                    entry.path().display(),
+                                    e
+                                )
+                                .into());
+                            }
+                        };
 
                         let file_name = utils::fs::get_file_name(&entry.path()).unwrap_or_default();
                         let file_name = format!("{}{}", file_name, consts::RS_FILE_EXTENSION);
                         let target_file = target_dir.join(&file_name);
-                        template.compile(target_file).merge_into(&mut result);
+                        match template.compile(target_file) {
+                            Ok(c_result) => {
+                                c_result.merge_into(&mut result);
+                            }
+                            Err(e) => {
+                                return Err(format!(
+                                    "Failed to compile template '{}': {}",
+                                    entry.path().display(),
+                                    e
+                                )
+                                .into());
+                            }
+                        }
+
                         result
                             .add_mod(&utils::fs::get_file_name(&entry.path()).unwrap_or_default());
                     }
@@ -73,10 +99,9 @@ impl Module {
             // generate the mod.rs file.
             let ts = Self::generate_sub_mod_ts(result.mods());
             let mod_file = target_dir.join(consts::TEMPLATES_MOD_FILE_NAME);
-            _ = utils::fs::generate_code_with_content(&mod_file, &ts);
+            utils::fs::generate_code_with_content(&mod_file, &ts)?;
         }
-
-        result
+        Ok(result)
     }
 }
 
