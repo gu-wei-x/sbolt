@@ -120,7 +120,10 @@ impl ParseContext {
                                 consts::DIRECTIVE_KEYWORD_LAYOUT => {
                                     if self.kind() == block::Kind::ROOT {
                                         // only allowed in root context.
-                                        return Ok((true, ParseContext::new(block::Kind::CONTENT)));
+                                        return Ok((
+                                            true,
+                                            ParseContext::new(block::Kind::DIRECTIVE),
+                                        ));
                                     } else {
                                         return Err(error::Error::from_parser(
                                             Some(*next_token.1),
@@ -146,7 +149,7 @@ impl ParseContext {
                                     // inlined
                                     if self.kind().is_code_kind() {
                                         return Ok((
-                                            false,
+                                            true,
                                             ParseContext::new(block::Kind::INLINEDCONTENT),
                                         ));
                                     } else {

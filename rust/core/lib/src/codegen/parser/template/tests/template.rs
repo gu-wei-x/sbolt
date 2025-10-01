@@ -1,6 +1,9 @@
 #![cfg(test)]
 use crate::{
-    codegen::{consts, parser::template},
+    codegen::{
+        consts,
+        parser::template::{self, block},
+    },
     types::error,
 };
 
@@ -15,9 +18,16 @@ fn test_template_from_content() -> core::result::Result<(), error::Error> {
     let content = "Hello, world!";
     let template = template::Template::from(&content, None)?;
     let block = template.block();
-    assert_eq!(block.has_blocks(), false);
-    assert!(matches!(block.kind(), template::block::Kind::CONTENT));
-    assert_eq!(block.content(), content);
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
+    assert_eq!(block.blocks().len(), 1);
+
+    let content_block = &block.blocks()[0];
+    assert_eq!(content_block.name(), None);
+    assert_eq!(content_block.kind(), block::Kind::CONTENT);
+    assert_eq!(content_block.content(), content);
+    assert_eq!(content_block.has_blocks(), false);
     Ok(())
 }
 
@@ -27,13 +37,16 @@ fn test_template_from_code() -> core::result::Result<(), error::Error> {
     let content = &format!("@{{{}}}", code);
     let template = template::Template::from(&content, None)?;
     let block = template.block();
-    assert_eq!(block.has_blocks(), true);
-    assert!(matches!(block.kind(), template::block::Kind::CONTENT));
-    assert!(matches!(
-        block.blocks()[0].kind(),
-        template::block::Kind::CODE
-    ));
-    assert_eq!(block.blocks()[0].content(), code);
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
+    assert_eq!(block.blocks().len(), 1);
+
+    let content_block = &block.blocks()[0];
+    assert_eq!(content_block.name(), None);
+    assert_eq!(content_block.kind(), block::Kind::CODE);
+    assert_eq!(content_block.content(), code);
+    assert_eq!(content_block.has_blocks(), false);
     Ok(())
 }
 
@@ -46,19 +59,17 @@ fn test_template_from_inline_code_in_content() -> core::result::Result<(), error
     let content = &format!("{}@{}{}", pre_content, code, post_content);
     let template = template::Template::from(&content, None)?;
     let block = template.block();
-    assert_eq!(block.has_blocks(), true);
-    assert!(matches!(block.kind(), template::block::Kind::CONTENT));
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
+    assert_eq!(block.blocks().len(), 3);
 
     let blocks = block.blocks();
-    assert_eq!(blocks.len(), 3);
-    assert!(matches!(blocks[0].kind(), template::block::Kind::CONTENT));
+    assert_eq!(blocks[0].kind(), template::block::Kind::CONTENT);
     assert_eq!(blocks[0].content(), pre_content);
-    assert!(matches!(
-        blocks[1].kind(),
-        template::block::Kind::INLINEDCODE
-    ));
+    assert_eq!(blocks[1].kind(), template::block::Kind::INLINEDCODE);
     assert_eq!(blocks[1].content(), code);
-    assert!(matches!(blocks[2].kind(), template::block::Kind::CONTENT));
+    assert_eq!(blocks[2].kind(), template::block::Kind::CONTENT);
     assert_eq!(blocks[2].content(), post_content);
     Ok(())
 }
@@ -72,19 +83,17 @@ fn test_template_from_inlined_code_in_content2() -> core::result::Result<(), err
     let content = &format!("{}@({}){}", pre_content, code, post_content);
     let template = template::Template::from(&content, None)?;
     let block = template.block();
-    assert_eq!(block.has_blocks(), true);
-    assert!(matches!(block.kind(), template::block::Kind::CONTENT));
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
+    assert_eq!(block.blocks().len(), 3);
 
     let blocks = block.blocks();
-    assert_eq!(blocks.len(), 3);
-    assert!(matches!(blocks[0].kind(), template::block::Kind::CONTENT));
+    assert_eq!(blocks[0].kind(), template::block::Kind::CONTENT);
     assert_eq!(blocks[0].content(), pre_content);
-    assert!(matches!(
-        blocks[1].kind(),
-        template::block::Kind::INLINEDCODE
-    ));
+    assert_eq!(blocks[1].kind(), template::block::Kind::INLINEDCODE);
     assert_eq!(blocks[1].content(), code);
-    assert!(matches!(blocks[2].kind(), template::block::Kind::CONTENT));
+    assert_eq!(blocks[2].kind(), template::block::Kind::CONTENT);
     assert_eq!(blocks[2].content(), post_content);
     Ok(())
 }
@@ -98,16 +107,17 @@ fn test_template_from_code_block_in_content() -> core::result::Result<(), error:
     let content = &format!("{}@{{{}}}{}", pre_content, code, post_content);
     let template = template::Template::from(&content, None)?;
     let block = template.block();
-    assert_eq!(block.has_blocks(), true);
-    assert!(matches!(block.kind(), template::block::Kind::CONTENT));
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
+    assert_eq!(block.blocks().len(), 3);
 
     let blocks = block.blocks();
-    assert_eq!(blocks.len(), 3);
-    assert!(matches!(blocks[0].kind(), template::block::Kind::CONTENT));
+    assert_eq!(blocks[0].kind(), template::block::Kind::CONTENT);
     assert_eq!(blocks[0].content(), pre_content);
-    assert!(matches!(blocks[1].kind(), template::block::Kind::CODE));
+    assert_eq!(blocks[1].kind(), template::block::Kind::CODE);
     assert_eq!(blocks[1].content(), code);
-    assert!(matches!(blocks[2].kind(), template::block::Kind::CONTENT));
+    assert_eq!(blocks[2].kind(), template::block::Kind::CONTENT);
     assert_eq!(blocks[2].content(), post_content);
     Ok(())
 }
@@ -121,20 +131,23 @@ fn test_template_from_inlined_content_in_code() -> core::result::Result<(), erro
     let raw_content = &format!("@{{{}@{}{}}}", pre_code, content, post_code);
     let template = template::Template::from(&raw_content, None)?;
     let block = template.block();
-    assert_eq!(block.has_blocks(), true);
-    assert!(matches!(block.kind(), template::block::Kind::CONTENT));
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
     assert_eq!(block.blocks().len(), 1);
 
-    let blocks = block.blocks()[0].blocks();
-    assert_eq!(blocks.len(), 3);
-    assert!(matches!(blocks[0].kind(), template::block::Kind::CODE));
+    let code_block = &block.blocks()[0];
+    assert_eq!(code_block.name(), None);
+    assert_eq!(code_block.kind(), template::block::Kind::CODE);
+    assert!(code_block.has_blocks());
+    assert_eq!(code_block.blocks().len(), 3);
+
+    let blocks = code_block.blocks();
+    assert_eq!(blocks[0].kind(), template::block::Kind::CODE);
     assert_eq!(blocks[0].content(), pre_code);
-    assert!(matches!(
-        blocks[1].kind(),
-        template::block::Kind::INLINEDCONTENT
-    ));
+    assert_eq!(blocks[1].kind(), template::block::Kind::INLINEDCONTENT);
     assert_eq!(blocks[1].content(), content);
-    assert!(matches!(blocks[2].kind(), template::block::Kind::CODE));
+    assert_eq!(blocks[2].kind(), template::block::Kind::CODE);
     assert_eq!(blocks[2].content(), post_code);
     Ok(())
 }
@@ -148,20 +161,23 @@ fn test_template_from_inlined_content_in_code2() -> core::result::Result<(), err
     let raw_content = &format!("@{{{}@{}{}}}", pre_code, content, post_code);
     let template = template::Template::from(&raw_content, None)?;
     let block = template.block();
-    assert_eq!(block.has_blocks(), true);
-    assert!(matches!(block.kind(), template::block::Kind::CONTENT));
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
     assert_eq!(block.blocks().len(), 1);
 
-    let blocks = block.blocks()[0].blocks();
-    assert_eq!(blocks.len(), 3);
-    assert!(matches!(blocks[0].kind(), template::block::Kind::CODE));
+    let code_block = &block.blocks()[0];
+    assert_eq!(code_block.name(), None);
+    assert_eq!(code_block.kind(), template::block::Kind::CODE);
+    assert!(code_block.has_blocks());
+    assert_eq!(code_block.blocks().len(), 3);
+
+    let blocks = code_block.blocks();
+    assert_eq!(blocks[0].kind(), template::block::Kind::CODE);
     assert_eq!(blocks[0].content(), pre_code);
-    assert!(matches!(
-        blocks[1].kind(),
-        template::block::Kind::INLINEDCONTENT
-    ));
+    assert_eq!(blocks[1].kind(), template::block::Kind::INLINEDCONTENT);
     assert_eq!(blocks[1].content(), content);
-    assert!(matches!(blocks[2].kind(), template::block::Kind::CODE));
+    assert_eq!(blocks[2].kind(), template::block::Kind::CODE);
     assert_eq!(blocks[2].content(), post_code);
     Ok(())
 }
@@ -175,16 +191,23 @@ fn test_template_from_content_block_in_code() -> core::result::Result<(), error:
     let raw_content = &format!("@{{{}@{{{}}}{}}}", pre_code, content, post_code);
     let template = template::Template::from(&raw_content, None)?;
     let block = template.block();
-    assert_eq!(block.has_blocks(), true);
-    assert!(matches!(block.kind(), template::block::Kind::CONTENT));
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
     assert_eq!(block.blocks().len(), 1);
 
-    let blocks = block.blocks()[0].blocks();
-    assert!(matches!(blocks[0].kind(), template::block::Kind::CODE));
+    let code_block = &block.blocks()[0];
+    assert_eq!(code_block.name(), None);
+    assert_eq!(code_block.kind(), template::block::Kind::CODE);
+    assert!(code_block.has_blocks());
+    assert_eq!(code_block.blocks().len(), 3);
+
+    let blocks = code_block.blocks();
+    assert_eq!(blocks[0].kind(), template::block::Kind::CODE);
     assert_eq!(blocks[0].content(), pre_code);
-    assert!(matches!(blocks[1].kind(), template::block::Kind::CONTENT));
+    assert_eq!(blocks[1].kind(), template::block::Kind::CONTENT);
     assert_eq!(blocks[1].content(), content);
-    assert!(matches!(blocks[2].kind(), template::block::Kind::CODE));
+    assert_eq!(blocks[2].kind(), template::block::Kind::CODE);
     assert_eq!(blocks[2].content(), post_code);
     Ok(())
 }
@@ -198,21 +221,23 @@ fn test_template_from_lined_content_in_code() -> core::result::Result<(), error:
     let raw_content = &format!("@{{{}@({}){}}}", pre_code, content, post_code);
     let template = template::Template::from(&raw_content, None)?;
     let block = template.block();
-    assert_eq!(block.has_blocks(), true);
-    assert!(matches!(block.kind(), template::block::Kind::CONTENT));
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
     assert_eq!(block.blocks().len(), 1);
 
-    let blocks = block.blocks()[0].blocks();
-    assert_eq!(blocks.len(), 3);
+    let code_block = &block.blocks()[0];
+    assert_eq!(code_block.name(), None);
+    assert_eq!(code_block.kind(), template::block::Kind::CODE);
+    assert!(code_block.has_blocks());
+    assert_eq!(code_block.blocks().len(), 3);
 
-    assert!(matches!(blocks[0].kind(), template::block::Kind::CODE));
+    let blocks = code_block.blocks();
+    assert_eq!(blocks[0].kind(), template::block::Kind::CODE);
     assert_eq!(blocks[0].content(), pre_code);
-    assert!(matches!(
-        blocks[1].kind(),
-        template::block::Kind::INLINEDCONTENT
-    ));
+    assert_eq!(blocks[1].kind(), template::block::Kind::INLINEDCONTENT);
     assert_eq!(blocks[1].content(), content);
-    assert!(matches!(blocks[2].kind(), template::block::Kind::CODE));
+    assert_eq!(blocks[2].kind(), template::block::Kind::CODE);
     assert_eq!(blocks[2].content(), post_code);
     Ok(())
 }
@@ -238,14 +263,19 @@ fn test_template_from_doc() -> core::result::Result<(), error::Error> {
     let template = template::Template::from(&raw_content, None)?;
     let block = template.block();
 
-    // 1 root - content block.
-    assert_eq!(block.kind(), template::block::Kind::CONTENT);
-    assert_eq!(block.has_blocks(), true);
+    // root
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
     assert_eq!(block.blocks().len(), 9);
 
     // 1st block - layout directive.
     assert_eq!(block.blocks()[0].kind(), template::block::Kind::DIRECTIVE);
     assert_eq!(block.blocks()[0].content(), "test::test");
+    assert_eq!(
+        block.blocks()[0].name(),
+        Some(&consts::DIRECTIVE_KEYWORD_LAYOUT.to_string())
+    );
 
     // 2nd block - code block.
     assert_eq!(block.blocks()[1].kind(), template::block::Kind::CODE);
@@ -289,21 +319,34 @@ fn test_template_from_doc_with_multiple_layouts() -> core::result::Result<(), er
     let template = template::Template::from(&raw_content, None)?;
     let block = template.block();
 
-    // 1 root - content block.
-    assert_eq!(block.kind(), template::block::Kind::CONTENT);
-    assert_eq!(block.has_blocks(), true);
+    // root
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
     assert_eq!(block.blocks().len(), 5);
 
     // 1st block - layout directive.
     assert_eq!(block.blocks()[0].kind(), template::block::Kind::DIRECTIVE);
+    assert_eq!(
+        block.blocks()[0].name(),
+        Some(&consts::DIRECTIVE_KEYWORD_LAYOUT.to_string())
+    );
     assert_eq!(block.blocks()[0].content(), "test::test1");
 
     // 2nd block - content block
     assert_eq!(block.blocks()[2].kind(), template::block::Kind::DIRECTIVE);
+    assert_eq!(
+        block.blocks()[2].name(),
+        Some(&consts::DIRECTIVE_KEYWORD_LAYOUT.to_string())
+    );
     assert_eq!(block.blocks()[2].content(), "test::test2");
 
     // 3rd block - layout directive.
     assert_eq!(block.blocks()[4].kind(), template::block::Kind::DIRECTIVE);
+    assert_eq!(
+        block.blocks()[4].name(),
+        Some(&consts::DIRECTIVE_KEYWORD_LAYOUT.to_string())
+    );
     assert_eq!(block.blocks()[4].content(), "test::test3");
     Ok(())
 }
@@ -323,9 +366,10 @@ fn test_template_from_doc_with_multiple_imports() -> core::result::Result<(), er
     let block = template.block();
     println!("Block: {:#?}", block);
 
-    // 1 root - content block.
-    assert_eq!(block.kind(), template::block::Kind::CONTENT);
-    assert_eq!(block.has_blocks(), true);
+    // root
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
     assert_eq!(block.blocks().len(), 6);
 
     // 1st block - layout directive.
@@ -376,21 +420,19 @@ fn test_template_from_doc_with_section() -> core::result::Result<(), error::Erro
 </html>"#;
     let template = template::Template::from(&raw_content, None)?;
     let block = template.block();
-    println!("Block: {:#?}", block);
-    // 1 root - content block.
-    assert_eq!(block.kind(), template::block::Kind::CONTENT);
-    assert_eq!(block.has_blocks(), true);
+
+    // root
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
     assert_eq!(block.blocks().len(), 2);
 
     // 1st block - section block.
     assert_eq!(block.blocks()[0].kind(), template::block::Kind::SECTION);
+    assert_eq!(block.blocks()[0].name(), Some(&"test1".to_string()));
     assert_eq!(
-        block.blocks()[0].name(),
-        Some(&consts::KEYWORD_SECTION.to_string())
-    );
-    assert_eq!(
-        block.blocks()[0].content(),
-        "this is test1".trim() /* without leading/trailing new lines */
+        block.blocks()[0].content().trim(),
+        "this is test1" /* without leading/trailing new lines */
     );
 
     // 2nd block - content block
@@ -419,12 +461,19 @@ fn test_template_from_doc_with_multiple_sections() -> core::result::Result<(), e
 "#;
     let template = template::Template::from(&raw_content, None)?;
     let block = template.block();
-    println!("Block: {:#?}", block);
+
+    // root
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
+    assert_eq!(block.blocks().len(), 6);
+
     Ok(())
 }
 
 #[test]
-fn test_template_from_doc_with_nested_sections() -> core::result::Result<(), error::Error> {
+#[should_panic]
+fn test_template_from_doc_with_nested_sections() {
     let raw_content = r#"
 @section test1 {
    this is test1
@@ -442,8 +491,11 @@ fn test_template_from_doc_with_nested_sections() -> core::result::Result<(), err
 }
 </html>
 "#;
-    let template = template::Template::from(&raw_content, None)?;
+    let template = template::Template::from(&raw_content, None).unwrap();
     let block = template.block();
-    println!("Block: {:#?}", block);
-    Ok(())
+    // root
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
+    assert_eq!(block.blocks().len(), 4);
 }
