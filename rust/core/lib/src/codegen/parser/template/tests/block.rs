@@ -168,3 +168,42 @@ fn test_block_parse_complex_content_block() -> core::result::Result<(), error::E
     assert!(matches!(blocks[1].kind(), block::Kind::CODE));
     Ok(())
 }
+
+// escape should share the same code logic as they all need escape.
+// escape from content
+#[test]
+fn test_block_parse_escape_from_content() -> core::result::Result<(), error::Error> {
+    let source = r#"@@root"#;
+    let tokenizer = Tokenizer::new(source);
+    let tokens = tokenizer.into_vec();
+    let mut token_stream = TokenSlice::new(&tokens);
+    let block = block::Block::parse(source, &mut token_stream)?;
+    println!("{:#?}", block);
+
+    // root.
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert_eq!(block.blocks().len(), 1);
+
+    //@@exp inside content, @@ => @, "@exp..." as content.
+    Ok(())
+}
+
+// escape from code
+#[test]
+fn test_block_parse_escape_from_code() -> core::result::Result<(), error::Error> {
+    let source = r#"@{@@root}"#;
+    let tokenizer = Tokenizer::new(source);
+    let tokens = tokenizer.into_vec();
+    let mut token_stream = TokenSlice::new(&tokens);
+    let block = block::Block::parse(source, &mut token_stream)?;
+    println!("{:#?}", block);
+
+    // root.
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert_eq!(block.blocks().len(), 1);
+
+    //@@exp inside code, @@ => @, "@exp..." as code, @ is pattern binding in rust so need to escape.
+    Ok(())
+}
