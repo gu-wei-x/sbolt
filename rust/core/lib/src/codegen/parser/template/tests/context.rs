@@ -12,6 +12,19 @@ use crate::{
 use winnow::stream::TokenSlice;
 
 macro_rules! parse_context_test_case {
+    ($case_name:ident, $source:expr, $from_kind: expr) => {
+        #[test]
+        fn $case_name() -> core::result::Result<(), error::Error> {
+            let source = $source;
+            let tokenizer = Tokenizer::new(source);
+            let tokens = tokenizer.into_vec();
+            let mut token_stream = TokenSlice::new(&tokens);
+            let context = ParseContext::new($from_kind);
+            let result = context.switch_if_possible(source, &mut token_stream);
+            assert!(result.is_err());
+            Ok(())
+        }
+    };
     ($case_name:ident, $source:expr, $is_from_content:expr, $from_kind: expr, $expected: expr) => {
         #[test]
         fn $case_name() -> core::result::Result<(), error::Error> {
@@ -54,7 +67,7 @@ parse_context_test_case!(
     test_parse_context_from_content_layout,
     &format!("@{}", consts::DIRECTIVE_KEYWORD_LAYOUT),
     true,
-    Kind::CONTENT,
+    Kind::ROOT,
     true
 );
 
@@ -63,7 +76,7 @@ parse_context_test_case!(
     &format!("@{}", consts::KEYWORD_SECTION),
     true,
     Kind::CONTENT,
-    false
+    true
 );
 
 parse_context_test_case!(
@@ -113,12 +126,11 @@ parse_context_test_case!(
     false
 );
 
+// not allowed.
 parse_context_test_case!(
     test_parse_context_from_code_layout,
     &format!("@{}", consts::DIRECTIVE_KEYWORD_LAYOUT),
-    false,
-    Kind::CODE,
-    false
+    Kind::CODE
 );
 
 parse_context_test_case!(
@@ -126,15 +138,14 @@ parse_context_test_case!(
     &format!("@{}", consts::KEYWORD_SECTION),
     false,
     Kind::CODE,
-    false
+    true
 );
 
+// not allowed.
 parse_context_test_case!(
     test_parse_context_from_code_use,
     &format!("@{}", consts::DIRECTIVE_KEYWORD_USE),
-    false,
-    Kind::CODE,
-    false
+    Kind::CODE
 );
 
 parse_context_test_case!(

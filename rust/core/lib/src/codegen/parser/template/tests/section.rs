@@ -30,6 +30,8 @@ macro_rules! section_test_case {
             let tokens = tokenizer.into_vec();
             let mut token_stream = TokenSlice::new(&tokens);
             let start_token = token_stream.peek_token().unwrap();
+            // consume @
+            token_stream.next_token();
             let block = Block::parse_section(content, start_token, &mut token_stream)?;
             assert_eq!(block.name(), Some(&$section_name.to_string()));
             assert_eq!(block.content(), $section_content);
