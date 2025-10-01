@@ -81,6 +81,10 @@ impl<'a> Block<'a> {
                             }
                         }
                     }
+                    tokenizer::Kind::ASTERISK => {
+                        // comment part.
+                        Self::parse_comment(source, start_token, token_stream)?
+                    }
                     _ => {
                         return Err(error::Error::from_parser(
                             Some(*token),

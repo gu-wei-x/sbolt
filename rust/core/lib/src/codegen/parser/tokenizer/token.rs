@@ -24,7 +24,7 @@ pub enum Kind {
     CCURLYBRACKET = b'}',
     OCURLYBRACKET = b'{',
     SLASH = b'/',
-    STAR = b'*',
+    ASTERISK = b'*',
     WHITESPACE = b' ',
     SEMICOLON = b';',
 }
@@ -64,7 +64,7 @@ pub(crate) fn tokenize(stream: &mut StrStream<'_>) -> Token {
         b'}' => tokenize_symbol(stream, Kind::CCURLYBRACKET),
         b'{' => tokenize_symbol(stream, Kind::OCURLYBRACKET),
         b'/' => tokenize_symbol(stream, Kind::SLASH),
-        b'*' => tokenize_symbol(stream, Kind::STAR),
+        b'*' => tokenize_symbol(stream, Kind::ASTERISK),
         b';' => tokenize_symbol(stream, Kind::SEMICOLON),
         b' ' => tokenize_whitespace(stream),
         b'\r' => tokenize_newline(stream),

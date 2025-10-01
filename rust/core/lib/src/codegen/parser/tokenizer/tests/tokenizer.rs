@@ -49,7 +49,7 @@ tokenizer_test_case!(
         token::Kind::OPARENTHESIS,
         token::Kind::CPARENTHESIS,
         token::Kind::SLASH,
-        token::Kind::STAR,
+        token::Kind::ASTERISK,
         token::Kind::SEMICOLON,
         token::Kind::NEWLINE,
         token::Kind::NEWLINE,

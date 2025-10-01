@@ -176,6 +176,16 @@ impl ParseContext {
                                 return Ok((true, ParseContext::new(block::Kind::CODE)));
                             }
                         }
+                        tokenizer::Kind::ASTERISK => {
+                            if self.kind().is_content_kind() {
+                                return Ok((true, ParseContext::new(block::Kind::COMMENT)));
+                            } else {
+                                return Err(error::Error::from_parser(
+                                    Some(*next_token.1),
+                                    "@* comments are only allowed in content context.",
+                                ));
+                            }
+                        }
                         _ => {
                             // Don't switch context
                             return Ok((false, ParseContext::new(self.kind())));

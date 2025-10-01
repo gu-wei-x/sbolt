@@ -499,3 +499,37 @@ fn test_template_from_doc_with_nested_sections() {
     assert!(block.has_blocks());
     assert_eq!(block.blocks().len(), 4);
 }
+
+// comments.
+#[test]
+fn test_template_from_doc_with_comment_in_content() -> core::result::Result<(), error::Error> {
+    let raw_content = r#"
+<html>
+   <div>Test</div>
+    @* This is a comment *@
+</html>
+"#;
+    let template = template::Template::from(&raw_content, None)?;
+    let block = template.block();
+
+    // root
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
+    assert_eq!(block.blocks().len(), 3);
+
+    assert_eq!(block.blocks()[1].kind(), template::block::Kind::COMMENT);
+    assert_eq!(block.blocks()[1].content(), "@* This is a comment *@");
+    Ok(())
+}
+
+#[test]
+#[should_panic]
+fn test_template_from_doc_with_comment_in_code() {
+    let raw_content = r#"
+@{
+    let x = 10;
+    @* This is a comment *@
+}"#;
+    template::Template::from(&raw_content, None).unwrap();
+}
