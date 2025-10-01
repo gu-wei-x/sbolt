@@ -27,7 +27,7 @@ impl<'a> Block<'a> {
                 match (from_kind, self.kind()) {
                     (Kind::CODE, Kind::CODE) => {
                         // TODO: put in a closure
-                        output.push_str(self.content());
+                        output.push_str(&self.content());
                     }
                     (Kind::CODE, Kind::CONTENT) => {
                         // TODO: from code to content.put in a closure
@@ -65,7 +65,7 @@ impl<'a> Block<'a> {
                     Kind::CODE => {
                         if !self.has_blocks() {
                             //pure code block.
-                            output.push_str(self.content());
+                            output.push_str(&self.content());
                         } else {
                             // TODO: mixed code block. should be FnOnce with output as parameter.
                             for block in self.blocks() {

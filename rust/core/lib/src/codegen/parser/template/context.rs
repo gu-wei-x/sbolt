@@ -4,7 +4,6 @@ use crate::codegen::parser::template::block::{self, Block};
 use crate::codegen::parser::tokenizer::TokenStream;
 use crate::codegen::parser::tokenizer::{self, get_nth_token};
 use crate::types::{error, result};
-use std::ops::Range;
 use winnow::stream::Stream as _;
 
 #[derive(Clone)]
@@ -50,20 +49,13 @@ impl ParseContext {
             return None;
         }
 
-        let length = self.tokens.len();
-        let start = self.tokens[0].range().start;
-        let end = self.tokens[length - 1].range().end;
-        let content = &source[start..end];
+        let mut result = Block::new(None, self.kind(), source);
+        for token in &self.tokens {
+            result.push_token(*token);
+        }
+
         self.tokens.clear();
-        Some(Block::new(
-            None,
-            Range {
-                start: start,
-                end: end,
-            },
-            self.kind(),
-            content,
-        ))
+        Some(result)
     }
 
     pub(crate) fn switch_if_possible(

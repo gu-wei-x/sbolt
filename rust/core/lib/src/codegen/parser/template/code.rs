@@ -1,11 +1,10 @@
 use crate::codegen::consts;
 use crate::codegen::parser::template;
 use crate::codegen::parser::template::block::Block;
-use crate::codegen::parser::tokenizer;
+use crate::codegen::parser::tokenizer::{self, get_nth_token};
 use crate::codegen::parser::tokenizer::{Token, TokenStream};
 use crate::types::error;
 use crate::types::result;
-use std::ops::Range;
 use winnow::stream::Stream;
 
 impl<'a> Block<'a> {
@@ -103,12 +102,12 @@ impl<'a> Block<'a> {
         token: &Token,
         token_stream: &mut TokenStream,
     ) -> result::Result<Block<'a>> {
-        let content = &source[token.range()];
-        let block = Block::new(None, token.range(), template::Kind::INLINEDCODE, content);
+        let mut result = Block::new(None, template::Kind::INLINEDCODE, source);
+        result.push_token(*token);
 
         // consume the expression token.
         token_stream.next_token();
-        Ok(block)
+        Ok(result)
     }
 
     fn parse_directive(
@@ -117,10 +116,10 @@ impl<'a> Block<'a> {
         token_stream: &mut TokenStream,
         directive: &str,
     ) -> result::Result<Block<'a>> {
-        // consume the layout token
+        // consume the directive token
         token_stream.next_token();
 
-        // whitespace after layout token
+        // whitespace after directive token
         if !tokenizer::skip_whitespace(token_stream) {
             return Err(error::Error::from_parser(
                 Some(*token),
@@ -128,45 +127,42 @@ impl<'a> Block<'a> {
             ));
         }
 
-        match token_stream.peek_token() {
-            None => Err(error::Error::from_parser(
+        // validate directive content.
+        let next_token = get_nth_token(token_stream, 0);
+        if None == next_token {
+            return Err(error::Error::from_parser(
                 Some(*token),
                 &format!("Expected {directive} content after '@{directive}'"),
-            )),
-            Some(start_token) => {
-                let end_token = tokenizer::get_next_token_util(token_stream, |k| {
-                    vec![tokenizer::Kind::SEMICOLON, tokenizer::Kind::NEWLINE].contains(&k)
-                });
+            ));
+        }
 
-                match end_token {
-                    None => Err(error::Error::from_parser(
-                        Some(*token),
-                        &format!("Expected {directive} content after '@{directive}'"),
-                    )),
-                    Some(end_token) => {
-                        let start = start_token.range().start;
-                        let end = end_token.range().start;
-                        let exp = source[start..end].trim_end();
-                        if exp.len() <= 0 {
-                            return Err(error::Error::from_parser(
-                                Some(*token),
-                                &format!("Expected {directive} content after '@{directive}'"),
-                            ));
-                        }
-
-                        let block = Block::new(
-                            Some(directive.to_string()),
-                            Range { start, end },
-                            template::Kind::DIRECTIVE,
-                            &exp,
-                        );
-
-                        // consume the end token.
-                        token_stream.next_token();
-                        Ok(block)
-                    }
+        let mut result = Block::new(
+            Some(directive.to_string()),
+            template::Kind::DIRECTIVE,
+            source,
+        );
+        while let Some(token) = token_stream.peek_token() {
+            match token.kind() {
+                tokenizer::Kind::NEWLINE | tokenizer::Kind::SEMICOLON => {
+                    // consume the end token.
+                    token_stream.next_token();
+                    break;
+                }
+                _ => {
+                    result.push_token(*token);
+                    token_stream.next_token();
                 }
             }
         }
+
+        let content = result.content();
+        if content.trim().is_empty() {
+            return Err(error::Error::from_parser(
+                Some(*token),
+                &format!("Expected {directive} content after '@{directive}'"),
+            ));
+        }
+
+        Ok(result)
     }
 }

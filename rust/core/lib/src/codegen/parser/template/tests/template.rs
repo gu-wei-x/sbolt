@@ -267,9 +267,9 @@ fn test_template_from_doc() -> core::result::Result<(), error::Error> {
     assert_eq!(block.name(), None);
     assert_eq!(block.kind(), block::Kind::ROOT);
     assert!(block.has_blocks());
-    assert_eq!(block.blocks().len(), 9);
+    assert_eq!(block.blocks().len(), 10);
 
-    // 1st block - layout directive.
+    // 0
     assert_eq!(block.blocks()[0].kind(), template::block::Kind::DIRECTIVE);
     assert_eq!(block.blocks()[0].content(), "test::test");
     assert_eq!(
@@ -277,32 +277,36 @@ fn test_template_from_doc() -> core::result::Result<(), error::Error> {
         Some(&consts::DIRECTIVE_KEYWORD_LAYOUT.to_string())
     );
 
+    // 1
+    assert_eq!(block.blocks()[1].kind(), template::block::Kind::CONTENT);
+    assert_eq!(block.blocks()[1].content(), "\n");
+
     // 2nd block - code block.
-    assert_eq!(block.blocks()[1].kind(), template::block::Kind::CODE);
+    assert_eq!(block.blocks()[2].kind(), template::block::Kind::CODE);
 
     // 3rd block - content block
-    assert_eq!(block.blocks()[2].kind(), template::block::Kind::CONTENT);
+    assert_eq!(block.blocks()[3].kind(), template::block::Kind::CONTENT);
 
     // 4th block - content block with inlined code and inlined content.
-    assert_eq!(block.blocks()[3].kind(), template::block::Kind::INLINEDCODE);
-    assert_eq!(block.blocks()[3].content(), "msg");
+    assert_eq!(block.blocks()[4].kind(), template::block::Kind::INLINEDCODE);
+    assert_eq!(block.blocks()[4].content(), "msg");
 
     // 5th block - content block
-    assert_eq!(block.blocks()[4].kind(), template::block::Kind::CONTENT);
+    assert_eq!(block.blocks()[5].kind(), template::block::Kind::CONTENT);
 
     // 6th block - content block with inlined code and inlined content.
-    assert_eq!(block.blocks()[5].kind(), template::block::Kind::INLINEDCODE);
-    assert_eq!(block.blocks()[5].content(), "name");
+    assert_eq!(block.blocks()[6].kind(), template::block::Kind::INLINEDCODE);
+    assert_eq!(block.blocks()[6].content(), "name");
 
     // 7th block - content block
-    assert_eq!(block.blocks()[6].kind(), template::block::Kind::CONTENT);
+    assert_eq!(block.blocks()[7].kind(), template::block::Kind::CONTENT);
 
     // 8th block - content block with inlined code and inlined content.
-    assert_eq!(block.blocks()[7].kind(), template::block::Kind::INLINEDCODE);
-    assert_eq!(block.blocks()[7].content(), "age");
+    assert_eq!(block.blocks()[8].kind(), template::block::Kind::INLINEDCODE);
+    assert_eq!(block.blocks()[8].content(), "age");
 
     // 9th block - content block
-    assert_eq!(block.blocks()[8].kind(), template::block::Kind::CONTENT);
+    assert_eq!(block.blocks()[9].kind(), template::block::Kind::CONTENT);
     Ok(())
 }
 
@@ -354,8 +358,7 @@ fn test_template_from_doc_with_multiple_layouts() -> core::result::Result<(), er
 // TODO: should this be allowed?
 #[test]
 fn test_template_from_doc_with_multiple_imports() -> core::result::Result<(), error::Error> {
-    let raw_content = r#"
-@use test::test1;
+    let raw_content = r#"@use test::test1;
 @use test::test2;
 <html>
    <div>Test</div>
@@ -370,7 +373,7 @@ fn test_template_from_doc_with_multiple_imports() -> core::result::Result<(), er
     assert_eq!(block.name(), None);
     assert_eq!(block.kind(), block::Kind::ROOT);
     assert!(block.has_blocks());
-    assert_eq!(block.blocks().len(), 6);
+    assert_eq!(block.blocks().len(), 7);
 
     // 1st block - layout directive.
     assert_eq!(block.blocks()[0].kind(), template::block::Kind::DIRECTIVE);
@@ -381,28 +384,28 @@ fn test_template_from_doc_with_multiple_imports() -> core::result::Result<(), er
     assert_eq!(block.blocks()[0].content(), "test::test1");
 
     // 2nd block - layout directive.
-    assert_eq!(block.blocks()[1].kind(), template::block::Kind::DIRECTIVE);
+    assert_eq!(block.blocks()[2].kind(), template::block::Kind::DIRECTIVE);
     assert_eq!(
-        block.blocks()[1].name(),
+        block.blocks()[2].name(),
         Some(&consts::DIRECTIVE_KEYWORD_USE.to_string())
     );
-    assert_eq!(block.blocks()[1].content(), "test::test2");
+    assert_eq!(block.blocks()[2].content(), "test::test2");
 
     // 4rd block - content block
-    assert_eq!(block.blocks()[3].kind(), template::block::Kind::DIRECTIVE);
+    assert_eq!(block.blocks()[4].kind(), template::block::Kind::DIRECTIVE);
     assert_eq!(
-        block.blocks()[3].name(),
+        block.blocks()[4].name(),
         Some(&consts::DIRECTIVE_KEYWORD_USE.to_string())
     );
-    assert_eq!(block.blocks()[3].content(), "test::test3");
+    assert_eq!(block.blocks()[4].content(), "test::test3");
 
     // 6th block - layout directive.
-    assert_eq!(block.blocks()[5].kind(), template::block::Kind::DIRECTIVE);
+    assert_eq!(block.blocks()[6].kind(), template::block::Kind::DIRECTIVE);
     assert_eq!(
-        block.blocks()[5].name(),
+        block.blocks()[6].name(),
         Some(&consts::DIRECTIVE_KEYWORD_USE.to_string())
     );
-    assert_eq!(block.blocks()[5].content(), "test::test4");
+    assert_eq!(block.blocks()[6].content(), "test::test4");
     Ok(())
 }
 
@@ -442,8 +445,7 @@ fn test_template_from_doc_with_section() -> core::result::Result<(), error::Erro
 
 #[test]
 fn test_template_from_doc_with_multiple_sections() -> core::result::Result<(), error::Error> {
-    let raw_content = r#"
-@section test1 {
+    let raw_content = r#"@section test1 {
    this is test1
 }
 @section test2 {
@@ -457,8 +459,7 @@ fn test_template_from_doc_with_multiple_sections() -> core::result::Result<(), e
 </html>
 @section test4 {
    this is test4
-}
-"#;
+}"#;
     let template = template::Template::from(&raw_content, None)?;
     let block = template.block();
 
@@ -466,7 +467,7 @@ fn test_template_from_doc_with_multiple_sections() -> core::result::Result<(), e
     assert_eq!(block.name(), None);
     assert_eq!(block.kind(), block::Kind::ROOT);
     assert!(block.has_blocks());
-    assert_eq!(block.blocks().len(), 6);
+    assert_eq!(block.blocks().len(), 7);
 
     Ok(())
 }
@@ -474,8 +475,7 @@ fn test_template_from_doc_with_multiple_sections() -> core::result::Result<(), e
 #[test]
 #[should_panic]
 fn test_template_from_doc_with_nested_sections() {
-    let raw_content = r#"
-@section test1 {
+    let raw_content = r#"@section test1 {
    this is test1
    @section test2 {
       this is test2
@@ -489,8 +489,7 @@ fn test_template_from_doc_with_nested_sections() {
       this is test4
    }
 }
-</html>
-"#;
+</html>"#;
     let template = template::Template::from(&raw_content, None).unwrap();
     let block = template.block();
     // root

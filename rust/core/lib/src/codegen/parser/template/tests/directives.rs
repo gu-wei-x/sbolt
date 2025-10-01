@@ -56,8 +56,8 @@ macro_rules! directive_test_case {
                     &mut ParseContext::new($kind),
                 )?;
                 assert_eq!(block.name(), Some(&$directive.to_string()));
-                assert!(matches!(block.kind(), Kind::DIRECTIVE));
-                assert_eq!(block.content(), $statement);
+                assert_eq!(block.kind(), $kind);
+                assert_eq!(block.content().trim(), $statement);
             }
 
             Ok(())
@@ -66,6 +66,7 @@ macro_rules! directive_test_case {
 }
 
 // layout.
+
 directive_test_case!(
     test_parse_directive_layout_illegal,
     consts::DIRECTIVE_KEYWORD_LAYOUT,

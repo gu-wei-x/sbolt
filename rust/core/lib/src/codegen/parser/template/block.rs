@@ -55,37 +55,36 @@ pub(crate) struct Block<'a> {
     // block like use, section could have name.
     name: Option<String>,
     kind: Kind,
-    content: &'a str,
     blocks: Vec<Block<'a>>,
-    // use for error reporting.
+
+    // block content will be generated from source with tokens.
+    source: &'a str,
     span: Range<usize>,
+    tokens: Vec<tokenizer::Token>,
 }
 
 impl<'a> Default for Block<'a> {
     fn default() -> Self {
         Self {
             name: None,
-            span: Range::default(),
             kind: Kind::UNKNOWN,
-            content: "",
             blocks: vec![],
+            source: "",
+            span: Range::<usize>::default(),
+            tokens: vec![],
         }
     }
 }
 
 impl<'a> Block<'a> {
-    pub(crate) fn new(
-        name: Option<String>,
-        span: Range<usize>,
-        kind: Kind,
-        content: &'a str,
-    ) -> Self {
+    pub(crate) fn new(name: Option<String>, kind: Kind, source: &'a str) -> Self {
         Self {
             name,
-            span,
             kind,
-            content,
             blocks: vec![],
+            source,
+            span: Range::<usize>::default(),
+            tokens: vec![],
         }
     }
 
@@ -93,8 +92,15 @@ impl<'a> Block<'a> {
         self.kind
     }
 
-    pub(crate) fn content(&self) -> &'a str {
-        self.content
+    // TODO: implement later, might be use option to ignore some content.
+    // like: optimzed to ignore newline, comments.
+    // html, convert comments to html comments...
+    pub(crate) fn content(&self) -> String {
+        let mut content = String::new();
+        for token in &self.tokens {
+            content.push_str(&self.source[token.range()]);
+        }
+        content
     }
 
     pub(crate) fn name(&self) -> Option<&String> {
@@ -119,6 +125,7 @@ impl<'a> Block<'a> {
         self
     }
 
+    // TODO: push token & push block should not call on the same object.
     pub(crate) fn push_block(&mut self, block: Block<'a>) -> &mut Self {
         // update container kind with first block.
         if matches!(self.kind(), Kind::UNKNOWN) {
@@ -138,6 +145,16 @@ impl<'a> Block<'a> {
         }
 
         self.blocks.push(block);
+        self
+    }
+
+    pub(crate) fn push_token(&mut self, token: tokenizer::Token) -> &mut Self {
+        if self.tokens.is_empty() {
+            self.span = token.range();
+        } else {
+            self.span.end = token.range().end;
+        }
+        self.tokens.push(token);
         self
     }
 }
@@ -187,6 +204,8 @@ impl<'a> Block<'a> {
                     depth -= 1;
                     if depth == 0 {
                         break;
+                    } else {
+                        context.push(*token);
                     }
                 }
                 tokenizer::Kind::AT => {
@@ -268,15 +287,14 @@ impl<'a> Block<'a> {
             }
             Some(_) => {
                 let mut context = ParseContext::new(Kind::ROOT);
-                let mut result = Block::default();
-                result.with_kind(context.kind());
+                let mut result = Block::new(None, Kind::ROOT, source);
                 while let Some(token) = token_stream.peek_token() {
                     match token.kind() {
                         tokenizer::Kind::EOF => break,
                         tokenizer::Kind::NEWLINE => {
                             token_stream.next_token();
                             //for prettry, ignore the newline
-                            //context.push(*token);
+                            context.push(*token);
                         }
                         tokenizer::Kind::AT => {
                             match context.switch_if_possible(source, token_stream) {

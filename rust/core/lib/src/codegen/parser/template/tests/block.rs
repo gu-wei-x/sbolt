@@ -178,7 +178,6 @@ fn test_block_parse_escape_from_content() -> core::result::Result<(), error::Err
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     let block = block::Block::parse(source, &mut token_stream)?;
-    println!("{:#?}", block);
 
     // root.
     assert_eq!(block.name(), None);
@@ -199,7 +198,6 @@ fn test_block_parse_escape_from_code() -> core::result::Result<(), error::Error>
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     let block = block::Block::parse(source, &mut token_stream)?;
-    println!("{:#?}", block);
 
     // root.
     assert_eq!(block.name(), None);

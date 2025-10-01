@@ -1,8 +1,6 @@
-use std::ops::Range;
-
 use crate::codegen::consts;
+use crate::codegen::parser::template::ParseContext;
 use crate::codegen::parser::template::block::{self, Block};
-use crate::codegen::parser::template::{self, ParseContext};
 use crate::codegen::parser::tokenizer::{self, Token, TokenStream};
 use crate::types::{error, result};
 use winnow::stream::Stream as _;
@@ -83,11 +81,15 @@ impl<'a> Block<'a> {
         token: &Token,
         token_stream: &mut TokenStream,
     ) -> result::Result<Block<'a>> {
+        let mut result = Block::new(None, block::Kind::COMMENT, source);
+        result.push_token(*token); // push '@' token
+
         // note: @ was consumed before calling this function.
         // the first is * token
         match token_stream.peek_token() {
             Some(t) if t.kind() == tokenizer::Kind::ASTERISK => {
                 // consume the '*' token
+                result.push_token(*t);
                 token_stream.next_token();
             }
             _ => {
@@ -99,24 +101,29 @@ impl<'a> Block<'a> {
         }
 
         // Consume tokens until we find the closing '*@'
-        let mut end_token = None;
+        let mut is_ended = false;
         while let Some(tok) = token_stream.peek_token() {
             match tok.kind() {
                 tokenizer::Kind::ASTERISK => {
+                    // consume the '*' token
+                    result.push_token(*tok);
+                    token_stream.next_token();
+
                     // check next token
-                    token_stream.next_token(); // consume '*'
                     if let Some(next_tok) = token_stream.peek_token() {
                         if next_tok.kind() == tokenizer::Kind::AT {
-                            // Found the closing '*@', consume '@' and exit the loop
-                            end_token = Some(next_tok);
+                            // Found the closing '@', consume '@' and exit the loop
+                            result.push_token(*next_tok);
                             token_stream.next_token(); // consume '@'
+                            is_ended = true;
                             break;
                         } else {
                             if next_tok.kind() != tokenizer::Kind::ASTERISK {
                                 // consume the token after '*' if it's not another '*'
+                                result.push_token(*next_tok);
                                 token_stream.next_token();
+                                continue;
                             }
-                            continue;
                         }
                     } else {
                         // No more tokens after '*', unterminated comment
@@ -127,25 +134,16 @@ impl<'a> Block<'a> {
                     }
                 }
                 _ => {
+                    result.push_token(*tok);
                     token_stream.next_token();
                     continue;
                 }
             }
         }
 
-        match end_token {
-            Some(t) => {
-                let start = token.range().start;
-                let end = t.range().end;
-                let content = &source[start..end];
-                Ok(Block::new(
-                    None,
-                    Range { start, end },
-                    template::Kind::COMMENT,
-                    content,
-                ))
-            }
-            None => {
+        match is_ended {
+            true => Ok(result),
+            false => {
                 // If we reach here, we didn't find a closing '*@'
                 Err(error::Error::from_parser(
                     Some(*token),
