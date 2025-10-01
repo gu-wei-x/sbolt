@@ -1,146 +1,176 @@
 use crate::codegen::consts;
 use crate::codegen::parser::Token;
 use crate::codegen::parser::template::block::{self, Block};
-use crate::codegen::parser::tokenizer;
 use crate::codegen::parser::tokenizer::TokenStream;
+use crate::codegen::parser::tokenizer::{self, get_nth_token};
 use crate::types::{error, result};
-use std::ops::Range;
 use winnow::stream::Stream as _;
 
-#[derive(PartialEq, Eq)]
-pub(crate) enum Context {
-    Content,
-    Code,
-}
-
+#[derive(Clone)]
 pub(crate) struct ParseContext {
-    kind: Context,
+    kind: block::Kind,
     tokens: Vec<Token>,
 }
 
 impl ParseContext {
-    pub(crate) fn new(kind: Context) -> Self {
+    pub(crate) fn new(kind: block::Kind) -> Self {
         Self {
             kind: kind,
             tokens: Vec::new(),
         }
     }
 
-    pub(crate) fn is_content(&self) -> bool {
-        self.kind == Context::Content
+    pub(crate) fn kind(&self) -> block::Kind {
+        self.kind
     }
 
     pub(crate) fn push(&mut self, token: Token) {
         self.tokens.push(token);
     }
 
-    pub(crate) fn should_switch(
-        &self,
-        source: &str,
-        start_token: &Token,
-        token_stream: &mut TokenStream,
-    ) -> result::Result<bool> {
-        if start_token.kind() != tokenizer::Kind::AT {
-            return Err(error::Error::from_parser(
-                Some(*start_token),
-                "Expected '@' token to start context extraction.",
-            ));
-        }
-
-        let offset = match token_stream.peek_token() {
-            Some(token) => {
-                if token.range() == start_token.range() {
-                    1
-                } else {
-                    // already consumed '@' token
-                    0
-                }
-            }
-            _ => {
-                return Ok(false);
-            }
-        };
-
-        // check token after @, only swith context if legal,
-        // else keeps current context unchanged to fail at compilation stage.
-        match token_stream.offset_at(offset) {
-            Ok(offset) => {
-                if let Some(next_next_token) = token_stream.iter_offsets().nth(offset) {
-                    match next_next_token.1.kind() {
-                        tokenizer::Kind::EXPRESSION => {
-                            let exp = &source[next_next_token.1.range()];
-                            match exp {
-                                consts::DIRECTIVE_KEYWORD_USE
-                                | consts::DIRECTIVE_KEYWORD_LAYOUT => {
-                                    return Ok(self.is_content());
-                                }
-                                consts::KEYWORD_SECTION => {
-                                    // don't switch context
-                                    return Ok(false);
-                                }
-                                _ => {
-                                    // inlined
-                                    return Ok(true);
-                                }
-                            }
-                        }
-                        tokenizer::Kind::OPARENTHESIS => {
-                            // @(), inlined.
-                            return Ok(true);
-                        }
-                        tokenizer::Kind::OCURLYBRACKET => {
-                            // @{}, block.
-                            return Ok(true);
-                        }
-                        _ => {
-                            // don't switch context
-                            return Ok(false);
-                        }
-                    }
-                }
-            }
-            _ => {
-                // don't switch context
-                return Ok(false);
-            }
-        }
-
-        // don't switch context
-        Ok(false)
+    #[allow(dead_code)]
+    pub(crate) fn is_content(&self) -> bool {
+        self.kind == block::Kind::CONTENT
+            || self.kind == block::Kind::ROOT
+            || self.kind == block::Kind::INLINEDCONTENT
     }
 
-    pub(crate) fn to_block<'a>(&mut self, source: &'a str) -> Option<Block<'a>> {
-        // TODO: create block from current context and destruct current data.
+    #[allow(dead_code)]
+    pub(crate) fn is_code(&self) -> bool {
+        self.kind == block::Kind::CODE
+            || self.kind == block::Kind::FUNCTIONS
+            || self.kind == block::Kind::DIRECTIVE
+            || self.kind == block::Kind::INLINEDCODE
+    }
+
+    pub(crate) fn consume<'a>(&mut self, source: &'a str) -> Option<Block<'a>> {
+        // consume current tokens to create a block and destruct current data.
         if self.tokens.is_empty() || self.tokens[0].kind() == tokenizer::Kind::EOF {
             return None;
         }
 
-        let length = self.tokens.len();
-        let start = self.tokens[0].range().start;
-        let end = self.tokens[length - 1].range().end;
-        let content = &source[start..end];
-        let block = match self.kind {
-            Context::Content => Block::new(
-                None,
-                Range {
-                    start: start,
-                    end: end,
-                },
-                block::Kind::CONTENT,
-                content,
-            ),
-            Context::Code => Block::new(
-                None,
-                Range {
-                    start: start,
-                    end: end,
-                },
-                block::Kind::CODE,
-                content,
-            ),
-        };
+        let mut result = Block::new(None, self.kind(), source);
+        for token in &self.tokens {
+            result.push_token(*token);
+        }
 
         self.tokens.clear();
-        Some(block)
+        Some(result)
+    }
+
+    pub(crate) fn switch_if_possible(
+        &self,
+        source: &str,
+        token_stream: &mut TokenStream,
+    ) -> result::Result<(bool, Self)> {
+        // first token must be '@'
+        match token_stream.peek_token() {
+            Some(token) => {
+                if token.kind() != tokenizer::Kind::AT {
+                    return Err(error::Error::from_parser(
+                        None,
+                        "Expecting '@' token to start context extraction.",
+                    ));
+                }
+            }
+            _ => {
+                return Err(error::Error::from_parser(
+                    None,
+                    "Empty token stream when expecting '@' token to start context extraction.",
+                ));
+            }
+        };
+
+        // check the next token after '@'
+        let next_token = get_nth_token(token_stream, 1);
+        if None == next_token {
+            // no token after '@', don't switch context
+            return Ok((false, ParseContext::new(self.kind())));
+        }
+
+        let next_token = next_token.unwrap();
+        match next_token.kind() {
+            tokenizer::Kind::AT => {
+                // @@ to escape @, don't switch context
+                Ok((false, ParseContext::new(self.kind())))
+            }
+            tokenizer::Kind::EXPRESSION => {
+                let exp = &source[next_token.range()];
+                match exp {
+                    consts::DIRECTIVE_KEYWORD_USE => {
+                        // block but not code kind.
+                        if self.kind().is_block_kind() && !self.kind().is_code_kind() {
+                            // switch to code context from root|content.
+                            Ok((true, ParseContext::new(block::Kind::DIRECTIVE)))
+                        } else {
+                            Err(error::Error::from_parser(
+                                Some(*next_token),
+                                "The 'use' directive is only allowed in the block content context.",
+                            ))
+                        }
+                    }
+                    consts::DIRECTIVE_KEYWORD_LAYOUT => {
+                        if self.kind() == block::Kind::ROOT {
+                            // only allowed in root context.
+                            Ok((true, ParseContext::new(block::Kind::DIRECTIVE)))
+                        } else {
+                            Err(error::Error::from_parser(
+                                Some(*next_token),
+                                "The 'layout' directive is only allowed in the root context.",
+                            ))
+                        }
+                    }
+                    consts::KEYWORD_SECTION => {
+                        if self.kind().is_block_kind() && self.kind() != block::Kind::SECTION {
+                            // todo: how to detect nested section in side section?
+                            // do it before parsing end?
+                            Ok((true, ParseContext::new(block::Kind::SECTION)))
+                        } else {
+                            Err(error::Error::from_parser(
+                                Some(*next_token),
+                                "The 'section' is only allowed in the block context.",
+                            ))
+                        }
+                    }
+                    _ => {
+                        // inlined
+                        if self.kind().is_code_kind() {
+                            Ok((true, ParseContext::new(block::Kind::INLINEDCONTENT)))
+                        } else {
+                            Ok((true, ParseContext::new(block::Kind::INLINEDCODE)))
+                        }
+                    }
+                }
+            }
+            tokenizer::Kind::OPARENTHESIS => {
+                // inlined
+                if self.kind().is_code_kind() {
+                    Ok((true, ParseContext::new(block::Kind::INLINEDCONTENT)))
+                } else {
+                    Ok((true, ParseContext::new(block::Kind::INLINEDCODE)))
+                }
+            }
+            tokenizer::Kind::OCURLYBRACKET => {
+                if self.kind().is_code_kind() {
+                    Ok((true, ParseContext::new(block::Kind::CONTENT)))
+                } else {
+                    Ok((true, ParseContext::new(block::Kind::CODE)))
+                }
+            }
+            tokenizer::Kind::ASTERISK => {
+                if self.kind().is_content_kind() {
+                    Ok((true, ParseContext::new(block::Kind::COMMENT)))
+                } else {
+                    Err(error::Error::from_parser(
+                        Some(*next_token),
+                        "@* comments are only allowed in content context.",
+                    ))
+                }
+            }
+            _ => {
+                // Don't switch context
+                Ok((false, ParseContext::new(self.kind())))
+            }
+        }
     }
 }

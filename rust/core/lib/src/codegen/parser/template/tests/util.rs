@@ -1,14 +1,38 @@
 #![cfg(test)]
 use crate::codegen::parser::template::util;
-use crate::{
-    codegen::parser::{
-        template::{Context, ParseContext},
-        tokenizer::{self, Tokenizer},
-    },
-    types::error,
-};
+use crate::codegen::parser::tokenizer::Tokenizer;
 use winnow::stream::TokenSlice;
 
+#[test]
+fn test_is_token_escaped() {
+    // not stated with @
+    let source = "test";
+    let tokenizer = Tokenizer::new(source);
+    let tokens = tokenizer.into_vec();
+    let token_stream = TokenSlice::new(&tokens);
+
+    let result = util::is_token_escaped(&token_stream);
+    assert!(!result);
+
+    // started with single @
+    let source = "@test";
+    let tokenizer = Tokenizer::new(source);
+    let tokens = tokenizer.into_vec();
+    let token_stream = TokenSlice::new(&tokens);
+
+    let result = util::is_token_escaped(&token_stream);
+    assert!(!result);
+
+    // started with @@
+    let source = "@@test";
+    let tokenizer = Tokenizer::new(source);
+    let tokens = tokenizer.into_vec();
+    let token_stream = TokenSlice::new(&tokens);
+    let result = util::is_token_escaped(&token_stream);
+    assert!(result);
+}
+
+/*
 #[test]
 fn get_token_before_transfer_end_with_eof() -> core::result::Result<(), error::Error> {
     let source = "test";
@@ -107,4 +131,4 @@ fn get_token_before_transfer_end_with_non_transfer() -> core::result::Result<(),
     let token = result.unwrap();
     assert_eq!(token.kind(), tokenizer::Kind::EOF);
     Ok(())
-}
+}*/

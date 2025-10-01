@@ -49,7 +49,7 @@ tokenizer_test_case!(
         token::Kind::OPARENTHESIS,
         token::Kind::CPARENTHESIS,
         token::Kind::SLASH,
-        token::Kind::STAR,
+        token::Kind::ASTERISK,
         token::Kind::SEMICOLON,
         token::Kind::NEWLINE,
         token::Kind::NEWLINE,
@@ -69,6 +69,19 @@ tokenizer_test_case!(
     [
         token::Kind::EXPRESSION,
         token::Kind::SEMICOLON,
+        token::Kind::EOF
+    ]
+);
+
+tokenizer_test_case!(
+    test_tokenizer_unicode_stream,
+    vec!["你好", ";", "hello", ")", "世界"],
+    [
+        token::Kind::EXPRESSION,
+        token::Kind::SEMICOLON,
+        token::Kind::EXPRESSION,
+        token::Kind::CPARENTHESIS,
+        token::Kind::EXPRESSION,
         token::Kind::EOF
     ]
 );

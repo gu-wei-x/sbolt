@@ -1,5 +1,4 @@
 use crate::codegen::parser::template::block::Block;
-use crate::codegen::parser::template::{Context, ParseContext};
 use crate::codegen::parser::tokenizer::{self, Tokenizer};
 use crate::types::result;
 use winnow::stream::TokenSlice;
@@ -23,11 +22,11 @@ impl<'a> Template<'a> {
 
         // skip leading whitespace and newlines.
         tokenizer::skip_whitespace_and_newline(&mut token_stream);
-        // begin with content context.
-        let mut context = ParseContext::new(Context::Content);
-        let mut block = Block::parse(source, &mut token_stream, &mut context)?;
-        block.with_kind(super::Kind::CONTENT);
+        let block = Block::parse(source, &mut token_stream)?;
         let template = Template::new(namespace, block);
+        println!("*******************************************");
+        println!("Root block: {:#?}", template.block());
+        println!("*******************************************");
         Ok(template)
     }
 

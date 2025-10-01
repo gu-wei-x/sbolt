@@ -1,7 +1,7 @@
-use crate::codegen::parser::template::ParseContext;
+use crate::codegen::parser::template::{ParseContext, util};
 use crate::codegen::parser::tokenizer::TokenStream;
 use crate::{
-    codegen::parser::tokenizer::{self, Token},
+    codegen::parser::tokenizer,
     types::{error, result},
 };
 use std::ops::Range;
@@ -19,8 +19,35 @@ pub(crate) enum Kind {
     INLINEDCONTENT,
     FUNCTIONS,
     SECTION,
+    ROOT,
     // intermediate kind.
     UNKNOWN,
+}
+
+#[allow(dead_code)]
+impl Kind {
+    pub(crate) fn is_block_kind(&self) -> bool {
+        matches!(
+            self,
+            Kind::CODE | Kind::CONTENT | Kind::ROOT | Kind::FUNCTIONS
+        )
+    }
+
+    pub(crate) fn is_inlined_kind(&self) -> bool {
+        matches!(self, Kind::INLINEDCODE | Kind::INLINEDCONTENT)
+    }
+
+    pub(crate) fn is_code_kind(&self) -> bool {
+        matches!(self, Kind::CODE | Kind::FUNCTIONS | Kind::INLINEDCODE)
+    }
+
+    pub(crate) fn is_content_kind(&self) -> bool {
+        matches!(self, Kind::CONTENT | Kind::INLINEDCONTENT | Kind::ROOT)
+    }
+
+    pub(crate) fn is_directive_kind(&self) -> bool {
+        matches!(self, Kind::DIRECTIVE)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -28,37 +55,36 @@ pub(crate) struct Block<'a> {
     // block like use, section could have name.
     name: Option<String>,
     kind: Kind,
-    content: &'a str,
     blocks: Vec<Block<'a>>,
-    // use for error reporting.
+
+    // block content will be generated from source with tokens.
+    source: &'a str,
     span: Range<usize>,
+    tokens: Vec<tokenizer::Token>,
 }
 
 impl<'a> Default for Block<'a> {
     fn default() -> Self {
         Self {
             name: None,
-            span: Range::default(),
             kind: Kind::UNKNOWN,
-            content: "",
             blocks: vec![],
+            source: "",
+            span: Range::<usize>::default(),
+            tokens: vec![],
         }
     }
 }
 
 impl<'a> Block<'a> {
-    pub(crate) fn new(
-        name: Option<String>,
-        span: Range<usize>,
-        kind: Kind,
-        content: &'a str,
-    ) -> Self {
+    pub(crate) fn new(name: Option<String>, kind: Kind, source: &'a str) -> Self {
         Self {
             name,
-            span,
             kind,
-            content,
             blocks: vec![],
+            source,
+            span: Range::<usize>::default(),
+            tokens: vec![],
         }
     }
 
@@ -66,8 +92,15 @@ impl<'a> Block<'a> {
         self.kind
     }
 
-    pub(crate) fn content(&self) -> &'a str {
-        self.content
+    // TODO: implement later, might be use option to ignore some content.
+    // like: optimzed to ignore newline, comments.
+    // html, convert comments to html comments...
+    pub(crate) fn content(&self) -> String {
+        let mut content = String::new();
+        for token in &self.tokens {
+            content.push_str(&self.source[token.range()]);
+        }
+        content
     }
 
     pub(crate) fn name(&self) -> Option<&String> {
@@ -82,10 +115,6 @@ impl<'a> Block<'a> {
         !self.blocks.is_empty()
     }
 
-    pub(crate) fn is_code(&self) -> bool {
-        matches!(self.kind(), Kind::CODE | Kind::INLINEDCODE)
-    }
-
     pub(crate) fn with_kind(&mut self, kind: Kind) -> &mut Self {
         self.kind = kind;
         self
@@ -96,10 +125,11 @@ impl<'a> Block<'a> {
         self
     }
 
+    // TODO: push token & push block should not call on the same object.
     pub(crate) fn push_block(&mut self, block: Block<'a>) -> &mut Self {
         // update container kind with first block.
         if matches!(self.kind(), Kind::UNKNOWN) {
-            match &block.kind() {
+            match block.kind() {
                 Kind::CODE => {
                     self.kind = Kind::CODE;
                 }
@@ -113,20 +143,29 @@ impl<'a> Block<'a> {
         } else {
             self.span.end = block.span.end;
         }
+
         self.blocks.push(block);
+        self
+    }
+
+    pub(crate) fn push_token(&mut self, token: tokenizer::Token) -> &mut Self {
+        if self.tokens.is_empty() {
+            self.span = token.range();
+        } else {
+            self.span.end = token.range().end;
+        }
+        self.tokens.push(token);
         self
     }
 }
 
-// todo: all branch should use unconsumed stream
 impl<'a> Block<'a> {
-    pub(crate) fn parse_block_within_kind(
+    pub(crate) fn parse_block_within_kinds(
         source: &'a str,
         open_kind: tokenizer::Kind,
         close_kind: tokenizer::Kind,
         token_stream: &mut TokenStream,
-        is_content: bool,
-        is_inlined: bool,
+        context: &mut ParseContext,
     ) -> result::Result<Block<'a>> {
         // validate, first token must be open_kind and consume the token.
         let previous_token = token_stream.previous_tokens().last().copied();
@@ -151,72 +190,64 @@ impl<'a> Block<'a> {
 
         let mut depth = 1;
         let mut result = Block::default();
-        let start = token_stream.peek_token();
-        let mut next_start = token_stream.peek_token();
-        let mut end_token: Option<&Token> = None;
         while let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 k if k == open_kind => {
+                    context.push(*token);
                     token_stream.next_token();
                     depth += 1;
                 }
                 k if k == close_kind => {
+                    // should not push the closing delimiter to context.
+                    // ignore the closing delimiter.
                     token_stream.next_token();
                     depth -= 1;
                     if depth == 0 {
-                        end_token = Some(token);
                         break;
+                    } else {
+                        context.push(*token);
                     }
                 }
                 tokenizer::Kind::AT => {
-                    if is_inlined {
+                    if context.kind().is_inlined_kind() {
                         return Err(error::Error::from_parser(
                             Some(*token),
                             "Inlined block is not allowed to use '@' token",
                         ));
                     }
+                    match context.switch_if_possible(source, token_stream) {
+                        Ok((true, mut new_context)) => {
+                            // 1. consume the current pending tokens belong to current context.
+                            match context.consume(source) {
+                                Some(block) => {
+                                    result.push_block(block);
+                                }
+                                _ => {
+                                    // no-op: as there is no pending tokens belong to current context.
+                                }
+                            }
 
-                    let from_context = if is_content {
-                        ParseContext::new(super::Context::Content)
-                    } else {
-                        ParseContext::new(super::Context::Code)
-                    };
-
-                    // check whether switch context.
-                    if from_context.should_switch(source, token, token_stream)? {
-                        if is_content {
-                            // transfer from content to code.
-                            // 1. consume the tokens before this one as content block and switch to code block.
-                            let content_block =
-                                Self::create_block(source, &next_start, &Some(token), true, false)?;
-                            result.push_block(content_block);
-
-                            // 2. transfer to code.
-                            let code_block = Self::parse_code(source, token, token_stream)?;
-                            result.push_block(code_block);
-                        } else {
-                            // transfer from code to content.
-                            // 1. consume the tokens before this one as code block and switch to content block.
-                            let code_block = Self::create_block(
-                                source,
-                                &next_start,
-                                &Some(token),
-                                false,
-                                false,
-                            )?;
-                            result.push_block(code_block);
-
-                            // 2. transfer to content.
-                            let content_block =
-                                Self::parse_content(source, token, token_stream, false)?;
-                            result.push_block(content_block);
+                            // 2. switch context.
+                            let block =
+                                Block::parse_at_block(source, token_stream, &mut new_context)?;
+                            result.push_block(block);
                         }
+                        Ok((false, _)) => {
+                            if util::is_token_escaped(token_stream) {
+                                // consume 2 @ as one, only push one @ to context.
+                                token_stream.next_token();
+                            }
+                            token_stream.next_token();
+                            context.push(*token);
+                        }
+                        Err(e) => return Err(e),
                     }
-
-                    next_start = token_stream.peek_token();
                 }
                 _ => {
+                    // consume and push to current context.
+                    // TODO: for prettry, ignore the newline when generate code.
                     token_stream.next_token();
+                    context.push(*token);
                 }
             }
         }
@@ -224,128 +255,81 @@ impl<'a> Block<'a> {
         // not balanced.
         if depth != 0 {
             return Err(error::Error::from_parser(
-                Some(*start.unwrap()),
+                previous_token,
                 "Unbalanced delimiters in block",
             ));
         }
 
-        match next_start {
-            Some(token) => {
-                let block =
-                    Self::create_block(source, &Some(token), &end_token, is_content, is_inlined)?;
-                if start == next_start {
-                    return Ok(block);
-                } else {
-                    result.push_block(block);
-                }
-            }
-            None => { /* no-op */ }
+        // consume the context.
+        if let Some(block) = context.consume(source) {
+            result.push_block(block);
         }
 
-        Ok(result)
-    }
-
-    pub(crate) fn create_block(
-        source: &'a str,
-        start_token: &Option<&Token>,
-        end_token: &Option<&Token>,
-        is_content: bool,
-        is_inlined: bool,
-    ) -> result::Result<Block<'a>> {
-        if start_token.is_none() {
-            // not possible here.
-            return Err(error::Error::from_parser(
-                None,
-                "Missing start or end token",
-            ));
+        match result.blocks.len() {
+            0 => Err(error::Error::from_parser(
+                previous_token,
+                "Failed to parser block",
+            )),
+            1 => Ok(result.blocks.pop().unwrap()),
+            _ => Ok(result),
         }
-
-        let start_token = start_token.unwrap();
-        let start = start_token.range().start;
-        let end = match end_token {
-            Some(token) => token.range().start,
-            None => source.len(),
-        };
-
-        if end <= start {
-            return Err(error::Error::from_parser(
-                end_token.cloned(),
-                "Invalid token range",
-            ));
-        }
-
-        let source = &source[start..end];
-        let block = match is_content {
-            true => {
-                if is_inlined {
-                    Block::new(None, Range { start, end }, Kind::INLINEDCONTENT, source)
-                } else {
-                    Block::new(None, Range { start, end }, Kind::CONTENT, source)
-                }
-            }
-            false => {
-                if is_inlined {
-                    Block::new(None, Range { start, end }, Kind::INLINEDCODE, source)
-                } else {
-                    Block::new(None, Range { start, end }, Kind::CODE, source)
-                }
-            }
-        };
-        Ok(block)
     }
 
     pub(crate) fn parse(
         source: &'a str,
         token_stream: &mut TokenStream,
-        context: &mut ParseContext,
     ) -> result::Result<Block<'a>> {
         // skip leading whitespace and linefeeds.
         tokenizer::skip_whitespace_and_newline(token_stream);
-        let mut blocks = Vec::new();
         match token_stream.peek_token() {
             None => {
                 return Err(error::Error::from_parser(None, "Empty stream"));
             }
             Some(_) => {
+                let mut context = ParseContext::new(Kind::ROOT);
+                let mut result = Block::new(None, Kind::ROOT, source);
                 while let Some(token) = token_stream.peek_token() {
                     match token.kind() {
                         tokenizer::Kind::EOF => break,
                         tokenizer::Kind::NEWLINE => {
                             token_stream.next_token();
                             //for prettry, ignore the newline
-                            //context.push(*token);
+                            context.push(*token);
                         }
                         tokenizer::Kind::AT => {
-                            match context.should_switch(source, token, token_stream)? {
-                                false => {
-                                    // consume and push @ current context.
-                                    token_stream.next_token();
-                                    context.push(*token);
-                                }
-                                true => {
-                                    // switch back -- nothing to do as stack was cleared in to_block.
-                                    match context.to_block(source) {
-                                        Some(block) => {
-                                            blocks.push(block);
+                            match context.switch_if_possible(source, token_stream) {
+                                Ok((true, mut new_context)) => {
+                                    // 1. consume the current pending tokens belong to current context.
+                                    match context.consume(source) {
+                                        Some(mut block) => {
+                                            // workaround fix later.
+                                            if block.kind() == Kind::ROOT {
+                                                block.with_kind(Kind::CONTENT);
+                                            }
+                                            result.push_block(block);
                                         }
                                         _ => {
                                             // no-op: as there is no pending tokens belong to current context.
                                         }
                                     }
-                                    let block = match context.is_content() {
-                                        // parse_code. @{}, @exp. @section {}
-                                        true => Block::parse_code(source, token, token_stream)?,
-                                        // parse_content. @{}, @exp. @section {}
-                                        false => Block::parse_content(
-                                            source,
-                                            token,
-                                            token_stream,
-                                            false,
-                                        )?,
-                                    };
 
-                                    blocks.push(block);
+                                    // 2. switch context.
+                                    let block = Block::parse_at_block(
+                                        source,
+                                        token_stream,
+                                        &mut new_context,
+                                    )?;
+                                    result.push_block(block);
                                 }
+                                Ok((false, _)) => {
+                                    if util::is_token_escaped(token_stream) {
+                                        // consume 2 @ as one, only push one @ to context.
+                                        token_stream.next_token();
+                                    }
+                                    token_stream.next_token();
+                                    context.push(*token);
+                                }
+                                Err(e) => return Err(e),
                             }
                         }
                         _ => {
@@ -359,46 +343,21 @@ impl<'a> Block<'a> {
 
                 // consume the context.
                 // TODO: for prettry, ignore the newline when generate code.
-                match context.to_block(source) {
-                    Some(block) => blocks.push(block),
+                match context.consume(source) {
+                    Some(mut block) => {
+                        // workaround fix later.
+                        if block.kind() == Kind::ROOT {
+                            block.with_kind(Kind::CONTENT);
+                        }
+
+                        result.push_block(block);
+                    }
                     _ => { /* no-ops*/ }
                 }
 
-                let mut result = Block::default();
-                match context.is_content() {
-                    true => {
-                        result.with_kind(Kind::CONTENT);
-                    }
-                    false => {
-                        result.with_kind(Kind::CODE);
-                    }
-                }
-
-                match blocks.len() {
-                    0 => Err(error::Error::from_parser(None, "Failed to parser")),
-                    1 => {
-                        let block = blocks.pop().unwrap();
-                        if context.is_content() {
-                            // from content bu have code block.
-                            match block.is_code() {
-                                true => {
-                                    result.push_block(block);
-                                }
-                                false => {
-                                    return Ok(block);
-                                }
-                            }
-                            Ok(result)
-                        } else {
-                            Ok(block)
-                        }
-                    }
-                    _ => {
-                        for block in blocks {
-                            result.push_block(block);
-                        }
-                        Ok(result)
-                    }
+                match result.has_blocks() {
+                    false => Err(error::Error::from_parser(None, "Empty block")),
+                    true => Ok(result),
                 }
             }
         }

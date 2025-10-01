@@ -17,6 +17,7 @@ pub(crate) fn skip_whitespace_and_newline(stream: &mut TokenStream) -> bool {
     })
 }
 
+#[allow(dead_code)]
 pub(crate) fn get_next_token_if<'a, F: Fn(Kind) -> bool>(
     stream: &mut TokenSlice<'a, Token>,
     skip_pred: F,
@@ -32,6 +33,7 @@ pub(crate) fn get_next_token_if<'a, F: Fn(Kind) -> bool>(
     stream.peek_token()
 }
 
+#[allow(dead_code)]
 pub(crate) fn get_next_token_util<'a, F: Fn(Kind) -> bool>(
     stream: &mut TokenSlice<'a, Token>,
     pred: F,
@@ -50,4 +52,14 @@ pub(crate) fn skip_next_token_if<F: Fn(Kind) -> bool>(stream: &mut TokenStream, 
         }
     }
     skipped
+}
+
+pub(crate) fn get_nth_token<'a>(
+    stream: &TokenSlice<'a, Token>,
+    offset: usize,
+) -> Option<&'a Token> {
+    match stream.iter_offsets().nth(offset) {
+        Some((_, token)) => Some(token),
+        None => None,
+    }
 }

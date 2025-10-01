@@ -1,87 +1,12 @@
 use crate::codegen::consts;
-use crate::codegen::parser::template::block::Block;
-use crate::codegen::parser::template::{self, ParseContext, util};
+use crate::codegen::parser::template::ParseContext;
+use crate::codegen::parser::template::block::{self, Block};
 use crate::codegen::parser::tokenizer::{self, Token, TokenStream};
 use crate::types::{error, result};
 use winnow::stream::Stream as _;
 
 impl<'a> Block<'a> {
-    pub(crate) fn parse_content(
-        source: &'a str,
-        start_token: &Token,
-        token_stream: &mut TokenStream,
-        is_inlined: bool,
-    ) -> result::Result<Block<'a>> {
-        if start_token.kind() != tokenizer::Kind::AT {
-            return Err(error::Error::from_parser(
-                Some(*start_token),
-                "Expected '@'",
-            ));
-        }
-        if Some(start_token) == token_stream.peek_token() {
-            // consume @.
-            token_stream.next_token();
-        }
-        match token_stream.peek_token() {
-            None => Err(error::Error::from_parser(
-                Some(*start_token),
-                "Expected content after '@'",
-            )),
-            Some(token) => {
-                match token.kind() {
-                    tokenizer::Kind::OPARENTHESIS if !is_inlined => {
-                        // inlinded.
-                        Self::parse_block_within_kind(
-                            source,
-                            tokenizer::Kind::OPARENTHESIS,
-                            tokenizer::Kind::CPARENTHESIS,
-                            token_stream,
-                            true,
-                            true,
-                        )
-                    }
-                    tokenizer::Kind::OCURLYBRACKET => Self::parse_block_within_kind(
-                        source,
-                        tokenizer::Kind::OCURLYBRACKET,
-                        tokenizer::Kind::CCURLYBRACKET,
-                        token_stream,
-                        true,
-                        false,
-                    ),
-                    tokenizer::Kind::EXPRESSION => {
-                        let exp = &source[token.range()];
-                        match exp {
-                            consts::KEYWORD_SECTION => {
-                                Self::parse_section(source, token, token_stream)
-                            }
-                            _ => {
-                                // consume the exp token.
-                                let start_token = token_stream.next_token();
-
-                                // consume util next transfer @, linefeed or whitespace.
-                                let end_token = util::get_token_before_transfer(
-                                    source,
-                                    token_stream,
-                                    &ParseContext::new(template::Context::Content),
-                                    |k| {
-                                        !vec![tokenizer::Kind::WHITESPACE, tokenizer::Kind::NEWLINE]
-                                            .contains(&k)
-                                    },
-                                );
-                                Block::create_block(source, &start_token, &end_token, true, true)
-                            }
-                        }
-                    }
-                    _ => Err(error::Error::from_parser(
-                        Some(*token),
-                        "Expected '(', '{' or expression after '@'",
-                    )),
-                }
-            }
-        }
-    }
-
-    fn parse_section(
+    pub(crate) fn parse_section(
         source: &'a str,
         token: &Token,
         token_stream: &mut TokenStream,
@@ -118,13 +43,13 @@ impl<'a> Block<'a> {
                         Some(brace_token)
                             if brace_token.kind() == tokenizer::Kind::OCURLYBRACKET =>
                         {
-                            let mut block = Self::parse_block_within_kind(
+                            let mut context = ParseContext::new(block::Kind::SECTION);
+                            let mut block = Self::parse_block_within_kinds(
                                 source,
                                 tokenizer::Kind::OCURLYBRACKET,
                                 tokenizer::Kind::CCURLYBRACKET,
                                 token_stream,
-                                true,
-                                false,
+                                &mut context,
                             )?;
                             block.with_name(name);
                             Ok(block)
@@ -148,6 +73,83 @@ impl<'a> Block<'a> {
                     ),
                 )),
             },
+        }
+    }
+
+    pub(crate) fn parse_comment(
+        source: &'a str,
+        token: &Token,
+        token_stream: &mut TokenStream,
+    ) -> result::Result<Block<'a>> {
+        let mut result = Block::new(None, block::Kind::COMMENT, source);
+        result.push_token(*token); // push '@' token
+
+        // note: @ was consumed before calling this function.
+        // the first is * token
+        match token_stream.peek_token() {
+            Some(t) if t.kind() == tokenizer::Kind::ASTERISK => {
+                // consume the '*' token
+                result.push_token(*t);
+                token_stream.next_token();
+            }
+            _ => {
+                return Err(error::Error::from_parser(
+                    Some(*token),
+                    "Expected '*' after '@' for comment block",
+                ));
+            }
+        }
+
+        // Consume tokens until we find the closing '*@'
+        let mut is_ended = false;
+        while let Some(tok) = token_stream.peek_token() {
+            match tok.kind() {
+                tokenizer::Kind::ASTERISK => {
+                    // consume the '*' token
+                    result.push_token(*tok);
+                    token_stream.next_token();
+
+                    // check next token
+                    if let Some(next_tok) = token_stream.peek_token() {
+                        if next_tok.kind() == tokenizer::Kind::AT {
+                            // Found the closing '@', consume '@' and exit the loop
+                            result.push_token(*next_tok);
+                            token_stream.next_token(); // consume '@'
+                            is_ended = true;
+                            break;
+                        } else {
+                            if next_tok.kind() != tokenizer::Kind::ASTERISK {
+                                // consume the token after '*' if it's not another '*'
+                                result.push_token(*next_tok);
+                                token_stream.next_token();
+                                continue;
+                            }
+                        }
+                    } else {
+                        // No more tokens after '*', unterminated comment
+                        return Err(error::Error::from_parser(
+                            Some(*token),
+                            "Unterminated comment block, expected '*@'",
+                        ));
+                    }
+                }
+                _ => {
+                    result.push_token(*tok);
+                    token_stream.next_token();
+                    continue;
+                }
+            }
+        }
+
+        match is_ended {
+            true => Ok(result),
+            false => {
+                // If we reach here, we didn't find a closing '*@'
+                Err(error::Error::from_parser(
+                    Some(*token),
+                    "Unterminated comment block, expected '*@'",
+                ))
+            }
         }
     }
 }

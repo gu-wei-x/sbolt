@@ -1,9 +1,6 @@
 #![cfg(test)]
 use crate::{
-    codegen::parser::{
-        template::{Context, ParseContext, block},
-        tokenizer::Tokenizer,
-    },
+    codegen::parser::{template::block, tokenizer::Tokenizer},
     types::error,
 };
 use winnow::stream::TokenSlice;
@@ -15,47 +12,26 @@ fn test_block_parse_empty_stream() {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
 
-    // code context.
-    let mut code_context = ParseContext::new(Context::Code);
-    let result = block::Block::parse(source, &mut token_stream, &mut code_context);
-    assert!(result.is_err());
-
-    // content context.
-    let mut content_context = ParseContext::new(Context::Content);
-    let result = block::Block::parse(source, &mut token_stream, &mut content_context);
+    let result = block::Block::parse(source, &mut token_stream);
     assert!(result.is_err());
 }
 
 // type from context.
 #[test]
-fn test_block_parse_implicit_code() -> core::result::Result<(), error::Error> {
+fn test_block_parse_content() -> core::result::Result<(), error::Error> {
     let source = r#"
-         test;
+         test
     "#;
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let mut context = ParseContext::new(Context::Code);
-    let block = block::Block::parse(source, &mut token_stream, &mut context)?;
+    let block = block::Block::parse(source, &mut token_stream)?;
     assert_eq!(block.name(), None);
-    assert!(!block.has_blocks());
-    assert!(matches!(block.kind(), block::Kind::CODE));
-    Ok(())
-}
-
-#[test]
-fn test_block_parse_implicit_content() -> core::result::Result<(), error::Error> {
-    let source = r#"
-         test;
-    "#;
-    let tokenizer = Tokenizer::new(source);
-    let tokens = tokenizer.into_vec();
-    let mut token_stream = TokenSlice::new(&tokens);
-    let mut context = ParseContext::new(Context::Content);
-    let block = block::Block::parse(source, &mut token_stream, &mut context)?;
-    assert_eq!(block.name(), None);
-    assert!(!block.has_blocks());
-    assert!(matches!(block.kind(), block::Kind::CONTENT));
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert!(block.has_blocks());
+    assert_eq!(block.blocks().len(), 1);
+    assert_eq!(block.blocks()[0].kind(), block::Kind::CONTENT);
+    assert_eq!(block.blocks()[0].content().trim(), "test");
     Ok(())
 }
 
@@ -66,54 +42,29 @@ fn test_block_parse_inline_code() -> core::result::Result<(), error::Error> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let mut context = ParseContext::new(Context::Content);
-    let block = block::Block::parse(source, &mut token_stream, &mut context)?;
+    let block = block::Block::parse(source, &mut token_stream)?;
     assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
     assert!(block.has_blocks());
-    assert!(matches!(block.kind(), block::Kind::CONTENT));
-    assert!(matches!(block.blocks()[0].kind(), block::Kind::INLINEDCODE));
+    assert_eq!(block.blocks().len(), 1);
+    assert_eq!(block.blocks()[0].kind(), block::Kind::INLINEDCODE);
+    assert_eq!(block.blocks()[0].content().trim(), "test");
 
     // ending with ;
     let source = r#"@test;"#;
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let mut context = ParseContext::new(Context::Content);
-    let block = block::Block::parse(source, &mut token_stream, &mut context)?;
+    let block = block::Block::parse(source, &mut token_stream)?;
     assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
     assert_eq!(block.blocks().len(), 2);
-    assert!(matches!(block.kind(), block::Kind::CONTENT));
 
     // 0: name, 1:;
     assert!(matches!(block.blocks()[0].kind(), block::Kind::INLINEDCODE));
+    assert_eq!(block.blocks()[0].content().trim(), "test");
     assert!(matches!(block.blocks()[1].kind(), block::Kind::CONTENT));
-    Ok(())
-}
-
-// @exp
-#[test]
-fn test_block_parse_inline_content() -> core::result::Result<(), error::Error> {
-    // no ending.
-    let source = r#"@test"#;
-    let tokenizer = Tokenizer::new(source);
-    let tokens = tokenizer.into_vec();
-    let mut token_stream = TokenSlice::new(&tokens);
-    let mut context = ParseContext::new(Context::Code);
-    let block = block::Block::parse(source, &mut token_stream, &mut context)?;
-    assert_eq!(block.name(), None);
-    assert!(!block.has_blocks());
-    assert!(matches!(block.kind(), block::Kind::INLINEDCONTENT));
-
-    // ending with ;, content is different it will cosume all tokens util linefeed.
-    let source = r#"@test;\n"#;
-    let tokenizer = Tokenizer::new(source);
-    let tokens = tokenizer.into_vec();
-    let mut token_stream = TokenSlice::new(&tokens);
-    let mut context = ParseContext::new(Context::Code);
-    let block = block::Block::parse(source, &mut token_stream, &mut context)?;
-    assert_eq!(block.name(), None);
-    assert!(!block.has_blocks());
-    assert!(matches!(block.kind(), block::Kind::INLINEDCONTENT));
+    assert_eq!(block.blocks()[1].content().trim(), ";");
     Ok(())
 }
 
@@ -125,8 +76,7 @@ fn test_block_parse_code_block() -> core::result::Result<(), error::Error> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let mut context = ParseContext::new(Context::Content);
-    let result = block::Block::parse(source, &mut token_stream, &mut context);
+    let result = block::Block::parse(source, &mut token_stream);
     assert!(result.is_err());
 
     // Non-Empty.
@@ -134,38 +84,12 @@ fn test_block_parse_code_block() -> core::result::Result<(), error::Error> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let mut context = ParseContext::new(Context::Content);
-    let block = block::Block::parse(source, &mut token_stream, &mut context)?;
+    let block = block::Block::parse(source, &mut token_stream)?;
     assert_eq!(block.name(), None);
-
-    assert!(block.has_blocks());
-    assert!(matches!(block.kind(), block::Kind::CONTENT));
-    assert!(matches!(block.blocks()[0].kind(), block::Kind::CODE));
-    Ok(())
-}
-
-// @{}
-#[test]
-fn test_block_parse_content_block() -> core::result::Result<(), error::Error> {
-    // Empty.
-    let source = "@{}";
-    let tokenizer = Tokenizer::new(source);
-    let tokens = tokenizer.into_vec();
-    let mut token_stream = TokenSlice::new(&tokens);
-    let mut context = ParseContext::new(Context::Code);
-    let result = block::Block::parse(source, &mut token_stream, &mut context);
-    assert!(result.is_err());
-
-    // Non-Empty.
-    let source = "@{abc;}";
-    let tokenizer = Tokenizer::new(source);
-    let tokens = tokenizer.into_vec();
-    let mut token_stream = TokenSlice::new(&tokens);
-    let mut context = ParseContext::new(Context::Code);
-    let block = block::Block::parse(source, &mut token_stream, &mut context)?;
-    assert_eq!(block.name(), None);
-    assert!(!block.has_blocks());
-    assert!(matches!(block.kind(), block::Kind::CONTENT));
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert_eq!(block.blocks().len(), 1);
+    assert_eq!(block.blocks()[0].kind(), block::Kind::CODE);
+    assert_eq!(block.blocks()[0].content().trim(), "abc;");
     Ok(())
 }
 
@@ -185,78 +109,38 @@ fn test_block_parse_complex_code_block() -> core::result::Result<(), error::Erro
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let mut context = ParseContext::new(Context::Content);
-    let block = block::Block::parse(source, &mut token_stream, &mut context)?;
+    let block = block::Block::parse(source, &mut token_stream)?;
+
+    // root.
     assert_eq!(block.name(), None);
-    assert!(matches!(block.kind(), block::Kind::CONTENT));
-
-    // pre, child, post: \n
+    assert_eq!(block.kind(), block::Kind::ROOT);
     assert_eq!(block.blocks().len(), 1);
-    let blocks = block.blocks()[0].blocks();
 
-    // l1.
-    assert!(matches!(blocks[0].kind(), block::Kind::CODE));
-    assert!(!blocks[0].has_blocks());
-    assert_eq!(blocks[0].content().trim(), "l1");
+    // l1,
+    let block = &block.blocks()[0];
+    assert_eq!(block.kind(), block::Kind::CODE);
+    assert_eq!(block.blocks().len(), 3);
 
-    // after l1.
-    assert!(matches!(blocks[1].kind(), block::Kind::CONTENT));
-    assert_eq!(blocks[1].blocks().len(), 3);
-    let l1_content_blocks = blocks[1].blocks();
-    assert!(matches!(l1_content_blocks[0].kind(), block::Kind::CONTENT));
-    assert!(matches!(l1_content_blocks[1].kind(), block::Kind::CODE));
-    assert!(matches!(l1_content_blocks[2].kind(), block::Kind::CONTENT));
+    // l1-sub-post(linefeed)
+    // inside
+    let blocks = block.blocks();
+    assert_eq!(block.blocks().len(), 3);
+    assert_eq!(blocks[0].kind(), block::Kind::CODE);
+    assert_eq!(blocks[1].kind(), block::Kind::CONTENT);
+    assert_eq!(blocks[2].kind(), block::Kind::CODE);
 
-    // last contains linefeed.
-    assert!(matches!(blocks[2].kind(), block::Kind::CODE));
+    // l2
+    let block = &blocks[1];
+    assert_eq!(block.kind(), block::Kind::CONTENT);
+    assert_eq!(block.blocks().len(), 3);
+    assert_eq!(block.blocks()[0].kind(), block::Kind::CONTENT);
+    assert_eq!(block.blocks()[1].kind(), block::Kind::CODE);
+    assert_eq!(block.blocks()[2].kind(), block::Kind::CONTENT);
     Ok(())
 }
 
-// @{}
 #[test]
 fn test_block_parse_complex_content_block() -> core::result::Result<(), error::Error> {
-    let source = r#"
-        @{
-           l1
-           @{
-                l2
-                @{
-                    l3
-                }
-           }
-        }"#;
-    let tokenizer = Tokenizer::new(source);
-    let tokens = tokenizer.into_vec();
-    let mut token_stream = TokenSlice::new(&tokens);
-    let mut context = ParseContext::new(Context::Code);
-    let block = block::Block::parse(source, &mut token_stream, &mut context)?;
-    assert_eq!(block.name(), None);
-    assert!(matches!(block.kind(), block::Kind::CONTENT));
-
-    // pre, child, post: \n
-    assert_eq!(block.blocks().len(), 3);
-    let blocks = &block.blocks();
-
-    // l1.
-    assert!(matches!(blocks[0].kind(), block::Kind::CONTENT));
-    assert!(!blocks[0].has_blocks());
-    assert_eq!(blocks[0].content().trim(), "l1");
-
-    // after l1.
-    assert!(matches!(blocks[1].kind(), block::Kind::CODE));
-    assert_eq!(blocks[1].blocks().len(), 3);
-    let l1_content_blocks = blocks[1].blocks();
-    assert!(matches!(l1_content_blocks[0].kind(), block::Kind::CODE));
-    assert!(matches!(l1_content_blocks[1].kind(), block::Kind::CONTENT));
-    assert!(matches!(l1_content_blocks[2].kind(), block::Kind::CODE));
-
-    // last contains linefeed.
-    assert!(matches!(blocks[2].kind(), block::Kind::CONTENT));
-    Ok(())
-}
-
-#[test]
-fn test_block_parse_complex_content_block2() -> core::result::Result<(), error::Error> {
     let source = r#"
          root
         @{
@@ -271,13 +155,56 @@ fn test_block_parse_complex_content_block2() -> core::result::Result<(), error::
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let mut context = ParseContext::new(Context::Content);
-    let block = block::Block::parse(source, &mut token_stream, &mut context)?;
+    let block = block::Block::parse(source, &mut token_stream)?;
+
+    // root.
     assert_eq!(block.name(), None);
-    // pre, child, post: \n
+    assert_eq!(block.kind(), block::Kind::ROOT);
     assert_eq!(block.blocks().len(), 2);
+
+    // pre, child, post: \n
     let blocks = block.blocks();
     assert!(matches!(blocks[0].kind(), block::Kind::CONTENT));
     assert!(matches!(blocks[1].kind(), block::Kind::CODE));
+    Ok(())
+}
+
+// escape should share the same code logic as they all need escape.
+// escape from content
+#[test]
+fn test_block_parse_escape_from_content() -> core::result::Result<(), error::Error> {
+    let source = r#"@@root"#;
+    let tokenizer = Tokenizer::new(source);
+    let tokens = tokenizer.into_vec();
+    let mut token_stream = TokenSlice::new(&tokens);
+    let block = block::Block::parse(source, &mut token_stream)?;
+
+    // root.
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert_eq!(block.blocks().len(), 1);
+
+    assert_eq!(block.blocks()[0].kind(), block::Kind::CONTENT);
+    assert_eq!(block.blocks()[0].content(), "@root");
+
+    Ok(())
+}
+
+// escape from code, @ is valid in Rust as pattern binding so need to escape.
+#[test]
+fn test_block_parse_escape_from_code() -> core::result::Result<(), error::Error> {
+    let source = r#"@{@@root}"#;
+    let tokenizer = Tokenizer::new(source);
+    let tokens = tokenizer.into_vec();
+    let mut token_stream = TokenSlice::new(&tokens);
+    let block = block::Block::parse(source, &mut token_stream)?;
+
+    // root.
+    assert_eq!(block.name(), None);
+    assert_eq!(block.kind(), block::Kind::ROOT);
+    assert_eq!(block.blocks().len(), 1);
+
+    assert_eq!(block.blocks()[0].kind(), block::Kind::CODE);
+    assert_eq!(block.blocks()[0].content(), "@root");
     Ok(())
 }

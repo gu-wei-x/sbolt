@@ -1,12 +1,12 @@
 #![cfg(test)]
 use crate::codegen::consts;
-use crate::codegen::parser::template::{Block, Kind};
+use crate::codegen::parser::template::{Block, Kind, ParseContext};
 use crate::codegen::parser::tokenizer::Tokenizer;
 use crate::types::error;
-use winnow::stream::{Stream, TokenSlice};
+use winnow::stream::TokenSlice;
 
 macro_rules! directive_test_case {
-    ($name:ident, $directive:expr) => {
+    ($name:ident, $directive:expr, $kind:expr) => {
         #[test]
         fn $name() {
             let contents = [
@@ -24,13 +24,16 @@ macro_rules! directive_test_case {
                 let tokenizer = Tokenizer::new(statement);
                 let tokens = tokenizer.into_vec();
                 let mut token_stream = TokenSlice::new(&tokens);
-                let start_token = token_stream.peek_token().unwrap();
-                let result = Block::parse_code(statement, start_token, &mut token_stream);
+                let result = Block::parse_at_block(
+                    statement,
+                    &mut token_stream,
+                    &mut ParseContext::new($kind),
+                );
                 assert!(result.is_err());
             }
         }
     };
-    ($name:ident, $statement:expr, $directive:expr) => {
+    ($name:ident, $statement:expr, $directive:expr, $kind:expr) => {
         #[test]
         fn $name() -> core::result::Result<(), error::Error> {
             let contents = [
@@ -47,13 +50,14 @@ macro_rules! directive_test_case {
                 let tokenizer = Tokenizer::new(statement);
                 let tokens = tokenizer.into_vec();
                 let mut token_stream = TokenSlice::new(&tokens);
-                let start_token = token_stream
-                    .peek_token()
-                    .ok_or_else(|| error::Error::from_parser(None, "Expected '@'"))?;
-                let block = Block::parse_code(statement, start_token, &mut token_stream)?;
+                let block = Block::parse_at_block(
+                    statement,
+                    &mut token_stream,
+                    &mut ParseContext::new($kind),
+                )?;
                 assert_eq!(block.name(), Some(&$directive.to_string()));
-                assert!(matches!(block.kind(), Kind::DIRECTIVE));
-                assert_eq!(block.content(), $statement);
+                assert_eq!(block.kind(), $kind);
+                assert_eq!(block.content().trim(), $statement);
             }
 
             Ok(())
@@ -62,23 +66,28 @@ macro_rules! directive_test_case {
 }
 
 // layout.
+
 directive_test_case!(
     test_parse_directive_layout_illegal,
-    consts::DIRECTIVE_KEYWORD_LAYOUT
+    consts::DIRECTIVE_KEYWORD_LAYOUT,
+    Kind::DIRECTIVE
 );
 directive_test_case!(
     test_parse_directive_layout,
     "abc:test",
-    consts::DIRECTIVE_KEYWORD_LAYOUT
+    consts::DIRECTIVE_KEYWORD_LAYOUT,
+    Kind::DIRECTIVE
 );
 
 // use.
 directive_test_case!(
     test_parse_directive_use_illegal,
-    consts::DIRECTIVE_KEYWORD_USE
+    consts::DIRECTIVE_KEYWORD_USE,
+    Kind::DIRECTIVE
 );
 directive_test_case!(
     test_parse_directive_use,
     "abc:test",
-    consts::DIRECTIVE_KEYWORD_USE
+    consts::DIRECTIVE_KEYWORD_USE,
+    Kind::DIRECTIVE
 );
