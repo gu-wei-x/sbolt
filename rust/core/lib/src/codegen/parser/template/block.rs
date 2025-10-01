@@ -4,6 +4,7 @@ use crate::{
     codegen::parser::tokenizer,
     types::{error, result},
 };
+use std::fmt::Debug;
 use std::ops::Range;
 use winnow::stream::Stream;
 
@@ -50,7 +51,7 @@ impl Kind {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(crate) struct Block<'a> {
     // block like use, section could have name.
     name: Option<String>,
@@ -73,6 +74,22 @@ impl<'a> Default for Block<'a> {
             span: Range::<usize>::default(),
             tokens: vec![],
         }
+    }
+}
+
+impl Debug for Block<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut debug_struct = f.debug_struct("Block");
+        debug_struct
+            .field("name", &self.name)
+            .field("kind", &self.kind)
+            .field("blocks", &self.blocks)
+            .field("span", &self.span)
+            .field("content", &self.content());
+        if matches!(self.kind(), Kind::UNKNOWN | Kind::ROOT) {
+            debug_struct.field("source", &self.source);
+        }
+        debug_struct.finish()
     }
 }
 
