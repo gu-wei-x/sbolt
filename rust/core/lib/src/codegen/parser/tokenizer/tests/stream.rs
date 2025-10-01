@@ -1,4 +1,5 @@
 #![cfg(test)]
+use winnow::stream::Stream;
 use winnow::stream::TokenSlice;
 
 use crate::codegen::parser::tokenizer;
@@ -67,4 +68,55 @@ fn test_skip_next_token_if() {
     let mut stream = TokenSlice::new(&tokens);
     let result = stream::skip_next_token_if(&mut stream, |k| tokenizer::Kind::NEWLINE == k);
     assert!(result)
+}
+
+#[test]
+fn test_get_nth_token() {
+    let source = "\n123@*\n";
+    let tokenizer = Tokenizer::new(source);
+    let tokens: Vec<tokenizer::Token> = tokenizer.into_vec();
+    let stream = TokenSlice::new(&tokens);
+    let first = stream::get_nth_token(&stream, 0);
+
+    // first token is newline
+    assert!(first.is_some());
+    let first_token = first.unwrap();
+    assert_eq!(first_token.kind(), tokenizer::Kind::NEWLINE);
+
+    // second token is expression
+    let second = stream::get_nth_token(&stream, 1);
+    assert!(second.is_some());
+    let token = second.unwrap();
+    assert_eq!(token.kind(), tokenizer::Kind::EXPRESSION);
+
+    // 3rd token is @
+    let third = stream::get_nth_token(&stream, 2);
+    assert!(third.is_some());
+    let token = third.unwrap();
+    assert_eq!(token.kind(), tokenizer::Kind::AT);
+
+    // 4th token is *
+    let fourth = stream::get_nth_token(&stream, 3);
+    assert!(fourth.is_some());
+    let token = fourth.unwrap();
+    assert_eq!(token.kind(), tokenizer::Kind::ASTERISK);
+
+    // 5th token is newline
+    let fifth = stream::get_nth_token(&stream, 4);
+    assert!(fifth.is_some());
+    let token = fifth.unwrap();
+    assert_eq!(token.kind(), tokenizer::Kind::NEWLINE);
+
+    // 6th token is EOF
+    let sixth = stream::get_nth_token(&stream, 5);
+    assert!(sixth.is_some());
+    let token = sixth.unwrap();
+    assert_eq!(token.kind(), tokenizer::Kind::EOF);
+
+    // unconsumed token
+    let unconsumed = stream.peek_token();
+    assert!(unconsumed.is_some());
+    let token = unconsumed.unwrap();
+    assert_eq!(token.kind(), tokenizer::Kind::NEWLINE);
+    assert_eq!(token, first_token);
 }

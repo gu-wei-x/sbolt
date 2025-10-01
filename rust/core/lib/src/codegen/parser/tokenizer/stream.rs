@@ -51,3 +51,13 @@ pub(crate) fn skip_next_token_if<F: Fn(Kind) -> bool>(stream: &mut TokenStream, 
     }
     skipped
 }
+
+pub(crate) fn get_nth_token<'a>(
+    stream: &TokenSlice<'a, Token>,
+    offset: usize,
+) -> Option<&'a Token> {
+    match stream.iter_offsets().nth(offset) {
+        Some((_, token)) => Some(token),
+        None => None,
+    }
+}

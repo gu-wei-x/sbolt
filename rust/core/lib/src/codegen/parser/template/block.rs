@@ -1,4 +1,4 @@
-use crate::codegen::parser::template::ParseContext;
+use crate::codegen::parser::template::{ParseContext, util};
 use crate::codegen::parser::tokenizer::TokenStream;
 use crate::{
     codegen::parser::tokenizer,
@@ -214,6 +214,10 @@ impl<'a> Block<'a> {
                             result.push_block(block);
                         }
                         Ok((false, _)) => {
+                            if util::is_token_escaped(token_stream) {
+                                // consume 2 @ as one, only push one @ to context.
+                                token_stream.next_token();
+                            }
                             token_stream.next_token();
                             context.push(*token);
                         }
@@ -300,6 +304,10 @@ impl<'a> Block<'a> {
                                     result.push_block(block);
                                 }
                                 Ok((false, _)) => {
+                                    if util::is_token_escaped(token_stream) {
+                                        // consume 2 @ as one, only push one @ to context.
+                                        token_stream.next_token();
+                                    }
                                     token_stream.next_token();
                                     context.push(*token);
                                 }

@@ -185,11 +185,13 @@ fn test_block_parse_escape_from_content() -> core::result::Result<(), error::Err
     assert_eq!(block.kind(), block::Kind::ROOT);
     assert_eq!(block.blocks().len(), 1);
 
-    //@@exp inside content, @@ => @, "@exp..." as content.
+    assert_eq!(block.blocks()[0].kind(), block::Kind::CONTENT);
+    assert_eq!(block.blocks()[0].content(), "@root");
+
     Ok(())
 }
 
-// escape from code
+// escape from code, @ is valid in Rust as pattern binding so need to escape.
 #[test]
 fn test_block_parse_escape_from_code() -> core::result::Result<(), error::Error> {
     let source = r#"@{@@root}"#;
@@ -204,6 +206,7 @@ fn test_block_parse_escape_from_code() -> core::result::Result<(), error::Error>
     assert_eq!(block.kind(), block::Kind::ROOT);
     assert_eq!(block.blocks().len(), 1);
 
-    //@@exp inside code, @@ => @, "@exp..." as code, @ is pattern binding in rust so need to escape.
+    assert_eq!(block.blocks()[0].kind(), block::Kind::CODE);
+    assert_eq!(block.blocks()[0].content(), "@root");
     Ok(())
 }

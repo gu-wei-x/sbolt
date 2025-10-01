@@ -1,8 +1,8 @@
 use crate::codegen::consts;
 use crate::codegen::parser::Token;
 use crate::codegen::parser::template::block::{self, Block};
-use crate::codegen::parser::tokenizer;
 use crate::codegen::parser::tokenizer::TokenStream;
+use crate::codegen::parser::tokenizer::{self, get_nth_token};
 use crate::types::{error, result};
 use std::ops::Range;
 use winnow::stream::Stream as _;
@@ -90,116 +90,95 @@ impl ParseContext {
         };
 
         // check the next token after '@'
-        let offset = 1;
-        match token_stream.offset_at(offset) {
-            Ok(offset) => {
-                if let Some(next_token) = token_stream.iter_offsets().nth(offset) {
-                    match next_token.1.kind() {
-                        tokenizer::Kind::AT => {
-                            // @@ to escape @, don't switch context
-                            return Ok((false, ParseContext::new(self.kind())));
+        let next_token = get_nth_token(token_stream, 1);
+        if None == next_token {
+            // no token after '@', don't switch context
+            return Ok((false, ParseContext::new(self.kind())));
+        }
+
+        let next_token = next_token.unwrap();
+        match next_token.kind() {
+            tokenizer::Kind::AT => {
+                // @@ to escape @, don't switch context
+                Ok((false, ParseContext::new(self.kind())))
+            }
+            tokenizer::Kind::EXPRESSION => {
+                let exp = &source[next_token.range()];
+                match exp {
+                    consts::DIRECTIVE_KEYWORD_USE => {
+                        // block but not code kind.
+                        if self.kind().is_block_kind() && !self.kind().is_code_kind() {
+                            // switch to code context from root|content.
+                            Ok((true, ParseContext::new(block::Kind::DIRECTIVE)))
+                        } else {
+                            Err(error::Error::from_parser(
+                                Some(*next_token),
+                                "The 'use' directive is only allowed in the block content context.",
+                            ))
                         }
-                        tokenizer::Kind::EXPRESSION => {
-                            let exp = &source[next_token.1.range()];
-                            match exp {
-                                consts::DIRECTIVE_KEYWORD_USE => {
-                                    // block but not code kind.
-                                    if self.kind().is_block_kind() && !self.kind().is_code_kind() {
-                                        // switch to code context from root|content.
-                                        return Ok((
-                                            true,
-                                            ParseContext::new(block::Kind::DIRECTIVE),
-                                        ));
-                                    } else {
-                                        return Err(error::Error::from_parser(
-                                            Some(*next_token.1),
-                                            "The 'use' directive is only allowed in the block content context.",
-                                        ));
-                                    }
-                                }
-                                consts::DIRECTIVE_KEYWORD_LAYOUT => {
-                                    if self.kind() == block::Kind::ROOT {
-                                        // only allowed in root context.
-                                        return Ok((
-                                            true,
-                                            ParseContext::new(block::Kind::DIRECTIVE),
-                                        ));
-                                    } else {
-                                        return Err(error::Error::from_parser(
-                                            Some(*next_token.1),
-                                            "The 'layout' directive is only allowed in the root context.",
-                                        ));
-                                    }
-                                }
-                                consts::KEYWORD_SECTION => {
-                                    if self.kind().is_block_kind()
-                                        && self.kind() != block::Kind::SECTION
-                                    {
-                                        // todo: how to detect nested section in side section?
-                                        // do it before parsing end?
-                                        return Ok((true, ParseContext::new(block::Kind::SECTION)));
-                                    } else {
-                                        return Err(error::Error::from_parser(
-                                            Some(*next_token.1),
-                                            "The 'section' is only allowed in the block context.",
-                                        ));
-                                    }
-                                }
-                                _ => {
-                                    // inlined
-                                    if self.kind().is_code_kind() {
-                                        return Ok((
-                                            true,
-                                            ParseContext::new(block::Kind::INLINEDCONTENT),
-                                        ));
-                                    } else {
-                                        return Ok((
-                                            true,
-                                            ParseContext::new(block::Kind::INLINEDCODE),
-                                        ));
-                                    }
-                                }
-                            }
+                    }
+                    consts::DIRECTIVE_KEYWORD_LAYOUT => {
+                        if self.kind() == block::Kind::ROOT {
+                            // only allowed in root context.
+                            Ok((true, ParseContext::new(block::Kind::DIRECTIVE)))
+                        } else {
+                            Err(error::Error::from_parser(
+                                Some(*next_token),
+                                "The 'layout' directive is only allowed in the root context.",
+                            ))
                         }
-                        tokenizer::Kind::OPARENTHESIS => {
-                            // inlined
-                            if self.kind().is_code_kind() {
-                                return Ok((true, ParseContext::new(block::Kind::INLINEDCONTENT)));
-                            } else {
-                                return Ok((true, ParseContext::new(block::Kind::INLINEDCODE)));
-                            }
+                    }
+                    consts::KEYWORD_SECTION => {
+                        if self.kind().is_block_kind() && self.kind() != block::Kind::SECTION {
+                            // todo: how to detect nested section in side section?
+                            // do it before parsing end?
+                            Ok((true, ParseContext::new(block::Kind::SECTION)))
+                        } else {
+                            Err(error::Error::from_parser(
+                                Some(*next_token),
+                                "The 'section' is only allowed in the block context.",
+                            ))
                         }
-                        tokenizer::Kind::OCURLYBRACKET => {
-                            if self.kind().is_code_kind() {
-                                return Ok((true, ParseContext::new(block::Kind::CONTENT)));
-                            } else {
-                                return Ok((true, ParseContext::new(block::Kind::CODE)));
-                            }
-                        }
-                        tokenizer::Kind::ASTERISK => {
-                            if self.kind().is_content_kind() {
-                                return Ok((true, ParseContext::new(block::Kind::COMMENT)));
-                            } else {
-                                return Err(error::Error::from_parser(
-                                    Some(*next_token.1),
-                                    "@* comments are only allowed in content context.",
-                                ));
-                            }
-                        }
-                        _ => {
-                            // Don't switch context
-                            return Ok((false, ParseContext::new(self.kind())));
+                    }
+                    _ => {
+                        // inlined
+                        if self.kind().is_code_kind() {
+                            Ok((true, ParseContext::new(block::Kind::INLINEDCONTENT)))
+                        } else {
+                            Ok((true, ParseContext::new(block::Kind::INLINEDCODE)))
                         }
                     }
                 }
             }
+            tokenizer::Kind::OPARENTHESIS => {
+                // inlined
+                if self.kind().is_code_kind() {
+                    Ok((true, ParseContext::new(block::Kind::INLINEDCONTENT)))
+                } else {
+                    Ok((true, ParseContext::new(block::Kind::INLINEDCODE)))
+                }
+            }
+            tokenizer::Kind::OCURLYBRACKET => {
+                if self.kind().is_code_kind() {
+                    Ok((true, ParseContext::new(block::Kind::CONTENT)))
+                } else {
+                    Ok((true, ParseContext::new(block::Kind::CODE)))
+                }
+            }
+            tokenizer::Kind::ASTERISK => {
+                if self.kind().is_content_kind() {
+                    Ok((true, ParseContext::new(block::Kind::COMMENT)))
+                } else {
+                    Err(error::Error::from_parser(
+                        Some(*next_token),
+                        "@* comments are only allowed in content context.",
+                    ))
+                }
+            }
             _ => {
-                // token after '@' not found, don't switch context
-                return Ok((false, ParseContext::new(self.kind())));
+                // Don't switch context
+                Ok((false, ParseContext::new(self.kind())))
             }
         }
-
-        // no token after '@', don't switch context
-        Ok((false, ParseContext::new(self.kind())))
     }
 }
