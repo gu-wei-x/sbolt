@@ -34,7 +34,7 @@ fn test_is_token_escaped() {
 
 /*
 #[test]
-fn get_token_before_transfer_end_with_eof() -> core::result::Result<(), error::Error> {
+fn get_token_before_transfer_end_with_eof() -> core::result::Result<(), error::CompileError> {
     let source = "test";
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
@@ -54,7 +54,7 @@ fn get_token_before_transfer_end_with_eof() -> core::result::Result<(), error::E
 }
 
 #[test]
-fn get_token_before_transfer_end_with_whitespace() -> core::result::Result<(), error::Error> {
+fn get_token_before_transfer_end_with_whitespace() -> core::result::Result<(), error::CompileError> {
     let source = "test ";
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
@@ -74,7 +74,7 @@ fn get_token_before_transfer_end_with_whitespace() -> core::result::Result<(), e
 }
 
 #[test]
-fn get_token_before_transfer_end_with_ln() -> core::result::Result<(), error::Error> {
+fn get_token_before_transfer_end_with_ln() -> core::result::Result<(), error::CompileError> {
     let source = "test\n";
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
@@ -94,7 +94,7 @@ fn get_token_before_transfer_end_with_ln() -> core::result::Result<(), error::Er
 }
 
 #[test]
-fn get_token_before_transfer_end_with_transfer() -> core::result::Result<(), error::Error> {
+fn get_token_before_transfer_end_with_transfer() -> core::result::Result<(), error::CompileError> {
     let source = "test@123";
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
@@ -114,7 +114,7 @@ fn get_token_before_transfer_end_with_transfer() -> core::result::Result<(), err
 }
 
 #[test]
-fn get_token_before_transfer_end_with_non_transfer() -> core::result::Result<(), error::Error> {
+fn get_token_before_transfer_end_with_non_transfer() -> core::result::Result<(), error::CompileError> {
     let source = "test@@123";
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();

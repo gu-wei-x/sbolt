@@ -19,7 +19,7 @@ macro_rules! section_test_case {
     };
     ($case_name:ident, $section_name:expr, $section_content:expr) => {
         #[test]
-        fn $case_name() -> core::result::Result<(), error::Error> {
+        fn $case_name() -> core::result::Result<(), error::CompileError> {
             let content = &format!(
                 "@{} {}{{{}}}",
                 consts::KEYWORD_SECTION,
@@ -46,7 +46,7 @@ section_test_case!(test_parse_section_no_brace, "@section test <div>test</div>")
 
 // comments.
 #[test]
-fn test_block_parse_comment() -> core::result::Result<(), error::Error> {
+fn test_block_parse_comment() -> core::result::Result<(), error::CompileError> {
     let source = r#"@****test****@"#;
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();

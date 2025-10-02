@@ -128,6 +128,10 @@ impl<'a> Block<'a> {
         &self.blocks
     }
 
+    pub(crate) fn span(&self) -> Range<usize> {
+        self.span.clone()
+    }
+
     pub(crate) fn has_blocks(&self) -> bool {
         !self.blocks.is_empty()
     }
@@ -189,7 +193,7 @@ impl<'a> Block<'a> {
         match token_stream.peek_token() {
             Some(token) => {
                 if token.kind() != open_kind {
-                    return Err(error::Error::from_parser(
+                    return Err(error::CompileError::from_parser(
                         previous_token,
                         "Expected opening delimiter",
                     ));
@@ -198,7 +202,7 @@ impl<'a> Block<'a> {
                 }
             }
             _ => {
-                return Err(error::Error::from_parser(
+                return Err(error::CompileError::from_parser(
                     previous_token,
                     "Expected opening delimiter",
                 ));
@@ -227,7 +231,7 @@ impl<'a> Block<'a> {
                 }
                 tokenizer::Kind::AT => {
                     if context.kind().is_inlined_kind() {
-                        return Err(error::Error::from_parser(
+                        return Err(error::CompileError::from_parser(
                             Some(*token),
                             "Inlined block is not allowed to use '@' token",
                         ));
@@ -271,7 +275,7 @@ impl<'a> Block<'a> {
 
         // not balanced.
         if depth != 0 {
-            return Err(error::Error::from_parser(
+            return Err(error::CompileError::from_parser(
                 previous_token,
                 "Unbalanced delimiters in block",
             ));
@@ -283,7 +287,7 @@ impl<'a> Block<'a> {
         }
 
         match result.blocks.len() {
-            0 => Err(error::Error::from_parser(
+            0 => Err(error::CompileError::from_parser(
                 previous_token,
                 "Failed to parser block",
             )),
@@ -300,7 +304,7 @@ impl<'a> Block<'a> {
         tokenizer::skip_whitespace_and_newline(token_stream);
         match token_stream.peek_token() {
             None => {
-                return Err(error::Error::from_parser(None, "Empty stream"));
+                return Err(error::CompileError::from_parser(None, "Empty stream"));
             }
             Some(_) => {
                 let mut context = ParseContext::new(Kind::ROOT);
@@ -373,7 +377,7 @@ impl<'a> Block<'a> {
                 }
 
                 match result.has_blocks() {
-                    false => Err(error::Error::from_parser(None, "Empty block")),
+                    false => Err(error::CompileError::from_parser(None, "Empty block")),
                     true => Ok(result),
                 }
             }

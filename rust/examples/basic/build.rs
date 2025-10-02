@@ -8,5 +8,5 @@ fn main() {
         .with_mod_name(&mod_name);
 
     let compiler = disguise::codegen::Compiler::new(option);
-    compiler.compile().unwrap();
+    compiler.compile();
 }

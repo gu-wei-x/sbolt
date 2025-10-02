@@ -64,12 +64,7 @@ impl Module {
                         ) {
                             Ok(t) => t,
                             Err(e) => {
-                                return Err(format!(
-                                    "Failed to parse template '{}': {}",
-                                    entry.path().display(),
-                                    e
-                                )
-                                .into());
+                                return Err(e.with_file(&entry.path()));
                             }
                         };
 
@@ -81,12 +76,7 @@ impl Module {
                                 c_result.merge_into(&mut result);
                             }
                             Err(e) => {
-                                return Err(format!(
-                                    "Failed to compile template '{}': {}",
-                                    entry.path().display(),
-                                    e
-                                )
-                                .into());
+                                return Err(e.with_file(&entry.path()));
                             }
                         }
 

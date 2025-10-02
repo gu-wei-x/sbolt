@@ -35,7 +35,7 @@ macro_rules! directive_test_case {
     };
     ($name:ident, $statement:expr, $directive:expr, $kind:expr) => {
         #[test]
-        fn $name() -> core::result::Result<(), error::Error> {
+        fn $name() -> core::result::Result<(), error::CompileError> {
             let contents = [
                 &format!("{} {}", $directive, $statement),
                 &format!("{} {};", $directive, $statement),
