@@ -1,5 +1,6 @@
+use crate::codegen::compiler::{fsutil, name};
 use crate::codegen::consts;
-use crate::utils;
+use crate::types::error::CompileError;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use std::collections::HashMap;
@@ -9,15 +10,15 @@ pub(crate) fn generate_registry(
     file_path: &PathBuf,
     mode_name: &str,
     view_name_mapping: &HashMap<String, String>,
-) -> Result<(), String> {
+) -> Result<(), CompileError> {
     let view_types_content = view_name_mapping
         .iter()
         .map(|(name, view_name)| {
             format!(
                 "K{}(crate::{}::{}::{}),",
-                utils::name::normalize_to_type_name(&name),
+                name::normalize_to_type_name(&name),
                 mode_name,
-                utils::name::create_mode_prefix(&name),
+                name::create_mode_prefix(&name),
                 view_name
             )
         })
@@ -30,7 +31,7 @@ pub(crate) fn generate_registry(
             format!(
                 "{}::K{}({}) => {}.render(output),",
                 consts::TEMPLATE_TYPE_NAME,
-                utils::name::normalize_to_type_name(&name),
+                name::normalize_to_type_name(&name),
                 view_name.to_lowercase(),
                 view_name.to_lowercase()
             )
@@ -64,7 +65,7 @@ pub(crate) fn generate_registry(
         }
     };
 
-    utils::fs::generate_code_with_content(file_path, &content)
+    fsutil::write_code_to_file(file_path, &content)
 }
 
 fn generate_registry_method(
@@ -77,7 +78,7 @@ fn generate_registry_method(
             let prefix = format!(
                 "crate::{}::{}::{}",
                 mode_name,
-                utils::name::create_mode_prefix(name),
+                name::create_mode_prefix(name),
                 view_name
             );
             format!(

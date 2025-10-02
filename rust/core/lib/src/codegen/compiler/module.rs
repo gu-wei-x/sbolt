@@ -1,7 +1,10 @@
 use crate::{
-    codegen::{CompileResult, consts},
+    codegen::{
+        CompileResult,
+        compiler::{fsutil, name},
+        consts,
+    },
     types::result,
-    utils,
 };
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
@@ -34,15 +37,15 @@ impl Module {
             .into());
         }
 
-        let dir_name = utils::fs::get_dir_name(&self.source).ok_or(format!(
+        let dir_name = fsutil::get_dir_name(&self.source).ok_or(format!(
             "Failed to get directory name from {}",
             self.source.display()
         ))?;
 
-        let target_dir = utils::fs::create_target_dir(&self.target, &dir_name);
+        let target_dir = fsutil::create_target_dir(&self.target, &dir_name);
         let mut result = CompileResult::default();
         if let Ok(read_dir) = fs::read_dir(&self.source) {
-            let full_name = &Some(utils::name::create_full_name(&self.namespace, &dir_name));
+            let full_name = &Some(name::create_full_name(&self.namespace, &dir_name));
             for entry in read_dir.flatten() {
                 let entry = &entry;
                 if let Ok(meta) = entry.metadata() {
@@ -52,10 +55,7 @@ impl Module {
                             .merge_into(&mut result);
                         result.add_mod(entry.file_name().to_str().unwrap_or_default());
                     } else if meta.is_file()
-                        && utils::fs::match_file_with_ext(
-                            &entry.path(),
-                            &compiler_options.extensions,
-                        )
+                        && fsutil::match_file_with_ext(&entry.path(), &compiler_options.extensions)
                     {
                         let content = fs::read_to_string(entry.path()).unwrap_or_default();
                         let template = match crate::codegen::parser::template::Template::from(
@@ -68,7 +68,7 @@ impl Module {
                             }
                         };
 
-                        let file_name = utils::fs::get_file_name(&entry.path()).unwrap_or_default();
+                        let file_name = fsutil::get_file_name(&entry.path()).unwrap_or_default();
                         let file_name = format!("{}{}", file_name, consts::RS_FILE_EXTENSION);
                         let target_file = target_dir.join(&file_name);
                         match template.compile(target_file) {
@@ -80,8 +80,7 @@ impl Module {
                             }
                         }
 
-                        result
-                            .add_mod(&utils::fs::get_file_name(&entry.path()).unwrap_or_default());
+                        result.add_mod(&fsutil::get_file_name(&entry.path()).unwrap_or_default());
                     }
                 }
             }
@@ -89,7 +88,7 @@ impl Module {
             // generate the mod.rs file.
             let ts = Self::generate_sub_mod_ts(result.mods());
             let mod_file = target_dir.join(consts::TEMPLATES_MOD_FILE_NAME);
-            utils::fs::generate_code_with_content(&mod_file, &ts)?;
+            fsutil::write_code_to_file(&mod_file, &ts)?;
         }
         Ok(result)
     }
@@ -148,7 +147,7 @@ impl Module {
                     }
 
                     fn resolve(&self, name: &str) -> Option<fn(context: disguise::types::DefaultViewContext) -> #viewtypes_ident_ts> {
-                        let normalized_name: &str = &disguise::utils::name::normalize_name(name);
+                        let normalized_name: &str = &name.replace("/", "::");
                         self.view_creators.get(normalized_name).map(|f| *f)
                     }
                 }

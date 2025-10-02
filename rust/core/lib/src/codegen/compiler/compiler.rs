@@ -1,10 +1,10 @@
 use crate::codegen::CompileResult;
 use crate::codegen::CompilerOptions;
+use crate::codegen::compiler::fsutil;
+use crate::codegen::compiler::module::Module;
+use crate::codegen::compiler::registry;
 use crate::codegen::consts;
-use crate::codegen::module::Module;
-use crate::codegen::registry;
 use crate::types::result;
-use crate::utils;
 use std::env;
 use std::path::PathBuf;
 
@@ -54,7 +54,7 @@ impl Compiler {
                 .process(&self.options)?
                 .merge_into(&mut compiler_result);
             compiler_result.add_mod(
-                &utils::fs::get_dir_name(dir)
+                &fsutil::get_dir_name(dir)
                     .ok_or(format!("Unable to generate mod name for dir: {dir}"))?,
             );
         }
@@ -72,7 +72,7 @@ impl Compiler {
         let root_mod_file_path = PathBuf::from(target_dir).join(consts::TEMPLATES_MOD_FILE_NAME);
         let root_mod_ts =
             Module::generate_root_mod_ts(&self.options.mod_name, compiler_result.mods());
-        utils::fs::generate_code_with_content(&root_mod_file_path, &root_mod_ts)?;
+        fsutil::write_code_to_file(&root_mod_file_path, &root_mod_ts)?;
 
         // Tell cargo to rerun the build script if any of the source directories change.
         for dir in &self.options.source_dirs {
