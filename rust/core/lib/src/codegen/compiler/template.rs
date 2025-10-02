@@ -1,6 +1,6 @@
 use crate::{
     codegen::{CompileResult, consts, parser::template::Template},
-    types::{error::Error, result},
+    types::result,
     utils,
 };
 use quote::format_ident;
@@ -11,9 +11,7 @@ impl<'a> Template<'a> {
     pub(crate) fn compile(&self, target: PathBuf) -> result::Result<CompileResult> {
         match utils::fs::get_file_name(&target) {
             None => {
-                return Err(Error::from_str(
-                    format!("Failed to read template file: {}", target.display()).as_str(),
-                ));
+                return Err(format!("Failed to read template file: {}", target.display()).into());
             }
             Some(name) => {
                 let mut result = CompileResult::default();

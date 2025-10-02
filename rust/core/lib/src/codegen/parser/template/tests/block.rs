@@ -18,7 +18,7 @@ fn test_block_parse_empty_stream() {
 
 // type from context.
 #[test]
-fn test_block_parse_content() -> core::result::Result<(), error::Error> {
+fn test_block_parse_content() -> core::result::Result<(), error::CompileError> {
     let source = r#"
          test
     "#;
@@ -36,7 +36,7 @@ fn test_block_parse_content() -> core::result::Result<(), error::Error> {
 }
 
 #[test]
-fn test_block_parse_inline_code() -> core::result::Result<(), error::Error> {
+fn test_block_parse_inline_code() -> core::result::Result<(), error::CompileError> {
     // no ending.
     let source = r#"@test"#;
     let tokenizer = Tokenizer::new(source);
@@ -70,7 +70,7 @@ fn test_block_parse_inline_code() -> core::result::Result<(), error::Error> {
 
 // @{}
 #[test]
-fn test_block_parse_code_block() -> core::result::Result<(), error::Error> {
+fn test_block_parse_code_block() -> core::result::Result<(), error::CompileError> {
     // Empty.
     let source = "@{}";
     let tokenizer = Tokenizer::new(source);
@@ -95,7 +95,7 @@ fn test_block_parse_code_block() -> core::result::Result<(), error::Error> {
 
 // @{}
 #[test]
-fn test_block_parse_complex_code_block() -> core::result::Result<(), error::Error> {
+fn test_block_parse_complex_code_block() -> core::result::Result<(), error::CompileError> {
     let source = r#"
         @{
            l1
@@ -140,7 +140,7 @@ fn test_block_parse_complex_code_block() -> core::result::Result<(), error::Erro
 }
 
 #[test]
-fn test_block_parse_complex_content_block() -> core::result::Result<(), error::Error> {
+fn test_block_parse_complex_content_block() -> core::result::Result<(), error::CompileError> {
     let source = r#"
          root
         @{
@@ -172,7 +172,7 @@ fn test_block_parse_complex_content_block() -> core::result::Result<(), error::E
 // escape should share the same code logic as they all need escape.
 // escape from content
 #[test]
-fn test_block_parse_escape_from_content() -> core::result::Result<(), error::Error> {
+fn test_block_parse_escape_from_content() -> core::result::Result<(), error::CompileError> {
     let source = r#"@@root"#;
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
@@ -192,7 +192,7 @@ fn test_block_parse_escape_from_content() -> core::result::Result<(), error::Err
 
 // escape from code, @ is valid in Rust as pattern binding so need to escape.
 #[test]
-fn test_block_parse_escape_from_code() -> core::result::Result<(), error::Error> {
+fn test_block_parse_escape_from_code() -> core::result::Result<(), error::CompileError> {
     let source = r#"@{@@root}"#;
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();

@@ -2,7 +2,8 @@ use crate::types::error;
 use std::collections::HashMap;
 
 pub struct CompileResult {
-    errors: Vec<error::Error>,
+    // errors which won't stop build.
+    warnings: Vec<error::CompileError>,
     view_name_mapping: HashMap<String, String>,
     mods: Vec<String>,
 }
@@ -16,22 +17,22 @@ impl Default for CompileResult {
 impl CompileResult {
     pub fn new() -> Self {
         Self {
-            errors: Vec::new(),
+            warnings: Vec::new(),
             view_name_mapping: HashMap::new(),
             mods: Vec::new(),
         }
     }
 
-    pub fn add_error(&mut self, error: error::Error) {
-        self.errors.push(error);
+    pub fn add_warning(&mut self, error: error::CompileError) {
+        self.warnings.push(error);
     }
 
     pub fn is_success(&self) -> bool {
-        self.errors.is_empty()
+        self.warnings.is_empty()
     }
 
-    pub fn errors(&self) -> &[error::Error] {
-        &self.errors
+    pub fn warnings(&self) -> &[error::CompileError] {
+        &self.warnings
     }
 }
 
@@ -56,12 +57,9 @@ impl CompileResult {
     }
 
     pub(crate) fn merge_without_mods(&mut self, other: CompileResult) {
-        self.errors.extend(other.errors);
+        self.warnings.extend(other.warnings);
         self.view_name_mapping
             .extend(other.view_name_mapping.into_iter());
-        /*for m in other.mods {
-            self.add_mod(&m);
-        }*/
     }
 
     pub(crate) fn merge_into(self, other: &mut CompileResult) {

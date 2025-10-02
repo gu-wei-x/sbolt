@@ -14,7 +14,7 @@ fn test_template_from_empty() {
 }
 
 #[test]
-fn test_template_from_content() -> core::result::Result<(), error::Error> {
+fn test_template_from_content() -> core::result::Result<(), error::CompileError> {
     let content = "Hello, world!";
     let template = template::Template::from(&content, None)?;
     let block = template.block();
@@ -32,7 +32,7 @@ fn test_template_from_content() -> core::result::Result<(), error::Error> {
 }
 
 #[test]
-fn test_template_from_code() -> core::result::Result<(), error::Error> {
+fn test_template_from_code() -> core::result::Result<(), error::CompileError> {
     let code = "let x = 10;";
     let content = &format!("@{{{}}}", code);
     let template = template::Template::from(&content, None)?;
@@ -51,7 +51,7 @@ fn test_template_from_code() -> core::result::Result<(), error::Error> {
 }
 
 #[test]
-fn test_template_from_inline_code_in_content() -> core::result::Result<(), error::Error> {
+fn test_template_from_inline_code_in_content() -> core::result::Result<(), error::CompileError> {
     let pre_content = "Hello!";
     let code = "name";
     let post_content = "!";
@@ -75,7 +75,7 @@ fn test_template_from_inline_code_in_content() -> core::result::Result<(), error
 }
 
 #[test]
-fn test_template_from_inlined_code_in_content2() -> core::result::Result<(), error::Error> {
+fn test_template_from_inlined_code_in_content2() -> core::result::Result<(), error::CompileError> {
     let pre_content = "Hello!";
     let code = "name";
     let post_content = "!";
@@ -99,7 +99,7 @@ fn test_template_from_inlined_code_in_content2() -> core::result::Result<(), err
 }
 
 #[test]
-fn test_template_from_code_block_in_content() -> core::result::Result<(), error::Error> {
+fn test_template_from_code_block_in_content() -> core::result::Result<(), error::CompileError> {
     let pre_content = "Hello!";
     let code = "name";
     let post_content = "!";
@@ -123,7 +123,7 @@ fn test_template_from_code_block_in_content() -> core::result::Result<(), error:
 }
 
 #[test]
-fn test_template_from_inlined_content_in_code() -> core::result::Result<(), error::Error> {
+fn test_template_from_inlined_content_in_code() -> core::result::Result<(), error::CompileError> {
     let pre_code = "let name = '';";
     let content = "test";
     let post_code = "\nprintln!(\"Hello, {}!\", name);";
@@ -153,7 +153,7 @@ fn test_template_from_inlined_content_in_code() -> core::result::Result<(), erro
 }
 
 #[test]
-fn test_template_from_inlined_content_in_code2() -> core::result::Result<(), error::Error> {
+fn test_template_from_inlined_content_in_code2() -> core::result::Result<(), error::CompileError> {
     let pre_code = "let name = '';";
     let content = "test";
     let post_code = " println!(\"Hello, {}!\", name);";
@@ -183,7 +183,7 @@ fn test_template_from_inlined_content_in_code2() -> core::result::Result<(), err
 }
 
 #[test]
-fn test_template_from_content_block_in_code() -> core::result::Result<(), error::Error> {
+fn test_template_from_content_block_in_code() -> core::result::Result<(), error::CompileError> {
     let pre_code = "let name = '';";
     let content = "test";
     let post_code = "println!(\"Hello, {}!\", name);";
@@ -213,7 +213,7 @@ fn test_template_from_content_block_in_code() -> core::result::Result<(), error:
 }
 
 #[test]
-fn test_template_from_lined_content_in_code() -> core::result::Result<(), error::Error> {
+fn test_template_from_lined_content_in_code() -> core::result::Result<(), error::CompileError> {
     let pre_code = "let name = '';";
     let content = "test";
     let post_code = "println!(\"Hello, {}!\", name);";
@@ -243,7 +243,7 @@ fn test_template_from_lined_content_in_code() -> core::result::Result<(), error:
 }
 
 #[test]
-fn test_template_from_doc() -> core::result::Result<(), error::Error> {
+fn test_template_from_doc() -> core::result::Result<(), error::CompileError> {
     let raw_content = r#"
 @layout test::test;
 @{
@@ -312,7 +312,7 @@ fn test_template_from_doc() -> core::result::Result<(), error::Error> {
 
 // TODO: should this be allowed?
 #[test]
-fn test_template_from_doc_with_multiple_layouts() -> core::result::Result<(), error::Error> {
+fn test_template_from_doc_with_multiple_layouts() -> core::result::Result<(), error::CompileError> {
     let raw_content = r#"
 @layout test::test1;
 <html>
@@ -357,7 +357,7 @@ fn test_template_from_doc_with_multiple_layouts() -> core::result::Result<(), er
 
 // TODO: should this be allowed?
 #[test]
-fn test_template_from_doc_with_multiple_imports() -> core::result::Result<(), error::Error> {
+fn test_template_from_doc_with_multiple_imports() -> core::result::Result<(), error::CompileError> {
     let raw_content = r#"@use test::test1;
 @use test::test2;
 <html>
@@ -413,7 +413,7 @@ fn test_template_from_doc_with_multiple_imports() -> core::result::Result<(), er
 // TODO: add codeblock, nested code block mixed with content tests
 /*********************************************************************************************/
 #[test]
-fn test_template_from_doc_with_section() -> core::result::Result<(), error::Error> {
+fn test_template_from_doc_with_section() -> core::result::Result<(), error::CompileError> {
     let raw_content = r#"
 @section test1 {
    this is test1
@@ -444,7 +444,8 @@ fn test_template_from_doc_with_section() -> core::result::Result<(), error::Erro
 }
 
 #[test]
-fn test_template_from_doc_with_multiple_sections() -> core::result::Result<(), error::Error> {
+fn test_template_from_doc_with_multiple_sections() -> core::result::Result<(), error::CompileError>
+{
     let raw_content = r#"@section test1 {
    this is test1
 }
@@ -501,7 +502,8 @@ fn test_template_from_doc_with_nested_sections() {
 
 // comments.
 #[test]
-fn test_template_from_doc_with_comment_in_content() -> core::result::Result<(), error::Error> {
+fn test_template_from_doc_with_comment_in_content() -> core::result::Result<(), error::CompileError>
+{
     let raw_content = r#"
 <html>
    <div>Test</div>

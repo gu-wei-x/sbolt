@@ -7,7 +7,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 impl<'a> Block<'a> {
-    pub(crate) fn generate_code(&self) -> Result<cgresult::CodeGenResult, error::Error> {
+    pub(crate) fn generate_code(&self) -> Result<cgresult::CodeGenResult, error::CompileError> {
         let mut result = cgresult::CodeGenResult::new();
         let imports = Self::generate_imports(self)?;
         result = result.with_imports(imports);
@@ -99,7 +99,7 @@ impl<'a> Block<'a> {
         }
     }
 
-    fn generate_imports(block: &Block) -> Result<Option<TokenStream>, error::Error> {
+    fn generate_imports(block: &Block) -> Result<Option<TokenStream>, error::CompileError> {
         let imports_content = match block.kind() {
             Kind::CODE if block.name() == Some(&consts::DIRECTIVE_KEYWORD_USE.to_string()) => {
                 format!("{} {};", consts::DIRECTIVE_KEYWORD_USE, block.content())
@@ -127,14 +127,14 @@ impl<'a> Block<'a> {
         let ts = imports_content.parse::<TokenStream>();
         match ts {
             Ok(ts) => Ok(Some(ts)),
-            Err(e) => Err(error::Error::CodeGen(format!(
-                "Failed to parse imports: {}",
-                e
-            ))),
+            Err(e) => Err(error::CompileError::from_codegn(
+                block,
+                &format!("Failed to parse imports: {}", e),
+            )),
         }
     }
 
-    fn generate_layout(block: &Block) -> Result<Option<TokenStream>, error::Error> {
+    fn generate_layout(block: &Block) -> Result<Option<TokenStream>, error::CompileError> {
         let none_layout = "fn layout() -> Option<String> {None}".to_string();
         let layout_content = match block.kind() {
             Kind::CODE if block.name() == Some(&consts::DIRECTIVE_KEYWORD_LAYOUT.to_string()) => {
@@ -157,8 +157,9 @@ impl<'a> Block<'a> {
                         )
                     }
                     _ => {
-                        return Err(error::Error::CodeGen(
-                            "Multiple layout directives found".to_string(),
+                        return Err(error::CompileError::from_codegn(
+                            block,
+                            "Multiple layout directives found",
                         ));
                     }
                 }
@@ -169,18 +170,19 @@ impl<'a> Block<'a> {
         let ts = layout_content.parse::<TokenStream>();
         match ts {
             Ok(ts) => Ok(Some(ts)),
-            Err(e) => Err(error::Error::CodeGen(format!(
-                "Failed to parse layout: {}",
-                e
-            ))),
+            Err(e) => Err(error::CompileError::from_codegn(
+                block,
+                &format!("Failed to parse layout: {}", e),
+            )),
         }
     }
 
-    fn generate_render(block: &Block) -> Result<TokenStream, error::Error> {
+    fn generate_render(block: &Block) -> Result<TokenStream, error::CompileError> {
         // block can only be from root.
         if !matches!(block.kind(), Kind::ROOT) {
-            return Err(error::Error::CodeGen(
-                "Only root block can be rendered".to_string(),
+            return Err(error::CompileError::from_codegn(
+                block,
+                "Only root block can be rendered",
             ));
         }
 
@@ -206,10 +208,10 @@ impl<'a> Block<'a> {
                     #ts
                 }
             }),
-            Err(e) => Err(error::Error::CodeGen(format!(
-                "Failed to parse main content: {}",
-                e
-            ))),
+            Err(e) => Err(error::CompileError::from_codegn(
+                block,
+                &format!("Failed to parse main content: {}", e),
+            )),
         }
     }
 }

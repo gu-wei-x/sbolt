@@ -67,14 +67,14 @@ impl ParseContext {
         match token_stream.peek_token() {
             Some(token) => {
                 if token.kind() != tokenizer::Kind::AT {
-                    return Err(error::Error::from_parser(
+                    return Err(error::CompileError::from_parser(
                         None,
                         "Expecting '@' token to start context extraction.",
                     ));
                 }
             }
             _ => {
-                return Err(error::Error::from_parser(
+                return Err(error::CompileError::from_parser(
                     None,
                     "Empty token stream when expecting '@' token to start context extraction.",
                 ));
@@ -103,7 +103,7 @@ impl ParseContext {
                             // switch to code context from root|content.
                             Ok((true, ParseContext::new(block::Kind::DIRECTIVE)))
                         } else {
-                            Err(error::Error::from_parser(
+                            Err(error::CompileError::from_parser(
                                 Some(*next_token),
                                 "The 'use' directive is only allowed in the block content context.",
                             ))
@@ -114,7 +114,7 @@ impl ParseContext {
                             // only allowed in root context.
                             Ok((true, ParseContext::new(block::Kind::DIRECTIVE)))
                         } else {
-                            Err(error::Error::from_parser(
+                            Err(error::CompileError::from_parser(
                                 Some(*next_token),
                                 "The 'layout' directive is only allowed in the root context.",
                             ))
@@ -126,7 +126,7 @@ impl ParseContext {
                             // do it before parsing end?
                             Ok((true, ParseContext::new(block::Kind::SECTION)))
                         } else {
-                            Err(error::Error::from_parser(
+                            Err(error::CompileError::from_parser(
                                 Some(*next_token),
                                 "The 'section' is only allowed in the block context.",
                             ))
@@ -161,7 +161,7 @@ impl ParseContext {
                 if self.kind().is_content_kind() {
                     Ok((true, ParseContext::new(block::Kind::COMMENT)))
                 } else {
-                    Err(error::Error::from_parser(
+                    Err(error::CompileError::from_parser(
                         Some(*next_token),
                         "@* comments are only allowed in content context.",
                     ))

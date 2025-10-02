@@ -16,14 +16,14 @@ impl<'a> Block<'a> {
 
         // whitespace after layout token
         if !tokenizer::skip_whitespace(token_stream) {
-            return Err(error::Error::from_parser(
+            return Err(error::CompileError::from_parser(
                 Some(*token),
                 &format!("Expected whitespace after '@{}'", consts::KEYWORD_SECTION),
             ));
         }
 
         match token_stream.peek_token() {
-            None => Err(error::Error::from_parser(
+            None => Err(error::CompileError::from_parser(
                 Some(*token),
                 &format!(
                     "Expected {} name after '@{}'",
@@ -54,7 +54,7 @@ impl<'a> Block<'a> {
                             block.with_name(name);
                             Ok(block)
                         }
-                        _ => Err(error::Error::from_parser(
+                        _ => Err(error::CompileError::from_parser(
                             Some(*token),
                             &format!(
                                 "Expected '{{' after '@{} {}'",
@@ -64,7 +64,7 @@ impl<'a> Block<'a> {
                         )),
                     }
                 }
-                _ => Err(error::Error::from_parser(
+                _ => Err(error::CompileError::from_parser(
                     Some(*token),
                     &format!(
                         "Expected {} name after '@{}'",
@@ -93,7 +93,7 @@ impl<'a> Block<'a> {
                 token_stream.next_token();
             }
             _ => {
-                return Err(error::Error::from_parser(
+                return Err(error::CompileError::from_parser(
                     Some(*token),
                     "Expected '*' after '@' for comment block",
                 ));
@@ -127,7 +127,7 @@ impl<'a> Block<'a> {
                         }
                     } else {
                         // No more tokens after '*', unterminated comment
-                        return Err(error::Error::from_parser(
+                        return Err(error::CompileError::from_parser(
                             Some(*token),
                             "Unterminated comment block, expected '*@'",
                         ));
@@ -145,7 +145,7 @@ impl<'a> Block<'a> {
             true => Ok(result),
             false => {
                 // If we reach here, we didn't find a closing '*@'
-                Err(error::Error::from_parser(
+                Err(error::CompileError::from_parser(
                     Some(*token),
                     "Unterminated comment block, expected '*@'",
                 ))
