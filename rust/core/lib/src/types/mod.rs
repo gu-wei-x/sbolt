@@ -13,26 +13,44 @@ pub use template::Template;
 pub use writer::*;
 
 pub mod error {
-    use std::ops::Range;
     use std::path::PathBuf;
 
     #[derive(Clone)]
     pub enum CompileError {
-        CodeGen(Range<usize>, String),
-        Parser(Option<Range<usize>>, String),
+        CodeGen(
+            super::Location,
+            /*summary*/ String,
+            /*detail*/ String,
+        ),
+        Parser(
+            Option<super::Location>,
+            /*summary*/ String,
+            /*detail*/ String,
+        ),
         String(String),
-        FileError(PathBuf, Option<Range<usize>>, String),
+        FileError(
+            PathBuf,
+            Option<super::Location>,
+            /*summary*/ String,
+            /*detail*/ Option<String>,
+        ),
     }
 
     // TODO:
     #[allow(dead_code)]
     pub enum RuntimeError {
         // could not find view
-        NotFound(String),
+        NotFound(/*summary*/ String, /*detail*/ String),
         // todo: add other types
     }
 }
 
 pub mod result {
     pub type Result<T> = core::result::Result<T, super::error::CompileError>;
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub struct Location {
+    pub line: usize,
+    pub column: usize,
 }
