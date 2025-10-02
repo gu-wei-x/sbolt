@@ -1,7 +1,3 @@
-pub fn normalize_name(name: &str) -> String {
-    name.replace("/", "::")
-}
-
 pub(crate) fn normalize_to_type_name(name: &str) -> String {
     let prefix = name
         .split("::")

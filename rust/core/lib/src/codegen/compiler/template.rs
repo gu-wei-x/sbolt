@@ -1,7 +1,11 @@
 use crate::{
-    codegen::{CompileResult, consts, parser::template::Template},
+    codegen::{
+        CompileResult,
+        compiler::{fsutil, name},
+        consts,
+        parser::template::Template,
+    },
     types::result,
-    utils,
 };
 use quote::format_ident;
 use quote::quote;
@@ -9,16 +13,16 @@ use std::path::PathBuf;
 
 impl<'a> Template<'a> {
     pub(crate) fn compile(&self, target: PathBuf) -> result::Result<CompileResult> {
-        match utils::fs::get_file_name(&target) {
+        match fsutil::get_file_name(&target) {
             None => {
                 return Err(format!("Failed to read template file: {}", target.display()).into());
             }
             Some(name) => {
                 let mut result = CompileResult::default();
                 let namespace = self.namespace().cloned();
-                let full_view_name = utils::name::create_full_name(&namespace, &name);
-                let view_name = utils::name::normalize_to_type_name(&name);
-                let view_type = utils::name::normalize_to_type_name(&full_view_name);
+                let full_view_name = name::create_full_name(&namespace, &name);
+                let view_name = name::normalize_to_type_name(&name);
+                let view_type = name::normalize_to_type_name(&full_view_name);
                 result.add_view_mapping(full_view_name.to_string(), view_name.clone());
 
                 let view_name = format_ident!("{}", view_name);
@@ -67,7 +71,7 @@ impl<'a> Template<'a> {
                     }
                 };
 
-                utils::fs::generate_code_with_content(&target, &view_content)?;
+                fsutil::write_code_to_file(&target, &view_content)?;
                 Ok(result)
             }
         }

@@ -2,12 +2,13 @@ Parser:
 
 syntax:
 @functions{} --- define functions in view
-@layout --- define layout of a view
-@use --- define import mod
 @*EXP --- derefrence 
 @&EXP --- borrow
 @customerview --- render another view
-@* --- comments
+layout rendering
+
+**Token with line:column info
+*future*plugin parser like: htmlparser, jsonparser to parse tokens to html/json tree with code inside for envaluation.
 
 
 

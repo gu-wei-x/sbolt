@@ -1,6 +1,6 @@
 mod span;
-pub(crate) mod template;
+pub(in crate::codegen) mod template;
 mod tokenizer;
 
-pub(crate) use span::Span;
-pub(crate) use tokenizer::Token;
+pub(in crate::codegen) use span::Span;
+pub(in crate::codegen) use tokenizer::Token;

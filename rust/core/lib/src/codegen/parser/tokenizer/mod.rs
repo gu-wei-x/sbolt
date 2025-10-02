@@ -3,10 +3,9 @@ mod token;
 mod tokenizer;
 
 #[cfg(test)]
-pub(crate) mod tests;
+mod tests;
 
-pub(crate) use stream::*;
-pub(crate) use token::*;
-pub(crate) use tokenizer::*;
-
-pub(crate) type Token = crate::codegen::parser::Span<Kind>;
+pub(in crate::codegen) use stream::*;
+pub(in crate::codegen) use token::*;
+pub(in crate::codegen) use tokenizer::*;
+pub(in crate::codegen) type Token = crate::codegen::parser::Span<Kind>;

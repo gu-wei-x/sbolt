@@ -1,5 +1,6 @@
+use crate::codegen::compiler::cgresult;
 use crate::codegen::{
-    cgresult, consts,
+    consts,
     parser::template::{Block, Kind},
 };
 use crate::types::error;
@@ -135,12 +136,8 @@ impl<'a> Block<'a> {
     }
 
     fn generate_layout(block: &Block) -> Result<Option<TokenStream>, error::CompileError> {
-        let none_layout = "fn layout() -> Option<String> {None}".to_string();
-        let layout_content = match block.kind() {
-            Kind::CODE if block.name() == Some(&consts::DIRECTIVE_KEYWORD_LAYOUT.to_string()) => {
-                none_layout
-            }
-            Kind::CONTENT if block.has_blocks() => {
+        match block.kind() {
+            Kind::ROOT if block.has_blocks() => {
                 let items = block
                     .blocks()
                     .iter()
@@ -148,32 +145,31 @@ impl<'a> Block<'a> {
                     .collect::<Vec<_>>();
                 let layout_count = items.len();
                 match layout_count {
+                    usize::MIN..=0 => Ok(None),
                     1 => {
                         let layout_block = items[0];
                         let layout_name = layout_block.content();
-                        format!(
+                        let layout_content = format!(
                             r#"fn layout() -> Option<String> {{Some("{}".to_string())}}"#,
                             layout_name
-                        )
+                        );
+
+                        let ts = layout_content.parse::<TokenStream>();
+                        match ts {
+                            Ok(ts) => Ok(Some(ts)),
+                            Err(e) => Err(error::CompileError::from_codegn(
+                                block,
+                                &format!("Failed to parse layout: {}", e),
+                            )),
+                        }
                     }
-                    _ => {
-                        return Err(error::CompileError::from_codegn(
-                            block,
-                            "Multiple layout directives found",
-                        ));
-                    }
+                    _ => Err(error::CompileError::from_codegn(
+                        block,
+                        "Multiple layout directives found",
+                    )),
                 }
             }
-            _ => none_layout,
-        };
-
-        let ts = layout_content.parse::<TokenStream>();
-        match ts {
-            Ok(ts) => Ok(Some(ts)),
-            Err(e) => Err(error::CompileError::from_codegn(
-                block,
-                &format!("Failed to parse layout: {}", e),
-            )),
+            _ => Ok(None),
         }
     }
 
