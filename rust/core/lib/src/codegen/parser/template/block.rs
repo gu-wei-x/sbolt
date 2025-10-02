@@ -2,7 +2,7 @@ use crate::codegen::parser::template::{ParseContext, util};
 use crate::codegen::parser::tokenizer::TokenStream;
 use crate::{
     codegen::parser::tokenizer,
-    types::{error, result},
+    types::{Location, error, result},
 };
 use std::fmt::Debug;
 use std::ops::Range;
@@ -61,7 +61,7 @@ pub(crate) struct Block<'a> {
     // block content will be generated from source with tokens.
     source: &'a str,
     span: Range<usize>,
-    coordinate: (usize, usize),
+    location: Location,
     tokens: Vec<tokenizer::Token>,
 }
 
@@ -73,7 +73,7 @@ impl<'a> Default for Block<'a> {
             blocks: vec![],
             source: "",
             span: Range::<usize>::default(),
-            coordinate: (0, 0),
+            location: Location::default(),
             tokens: vec![],
         }
     }
@@ -87,7 +87,7 @@ impl Debug for Block<'_> {
             .field("kind", &self.kind)
             .field("blocks", &self.blocks)
             .field("span", &self.span)
-            .field("coordinate", &self.coordinate)
+            .field("location", &self.location)
             .field("content", &self.content());
         if matches!(self.kind(), Kind::UNKNOWN | Kind::ROOT) {
             debug_struct.field("source", &self.source);
@@ -104,7 +104,7 @@ impl<'a> Block<'a> {
             blocks: vec![],
             source,
             span: Range::<usize>::default(),
-            coordinate: (0, 0),
+            location: Location::default(),
             tokens: vec![],
         }
     }
@@ -137,11 +137,15 @@ impl<'a> Block<'a> {
         self.span.clone()
     }
 
-    pub(crate) fn coordinate(&self) -> (usize, usize) {
+    pub(crate) fn location(&self) -> Location {
         if self.has_blocks() {
-            self.blocks.first().map_or((0, 0), |b| b.coordinate())
+            self.blocks
+                .first()
+                .map_or(Location::default(), |b| b.location())
         } else {
-            self.tokens.first().map_or((0, 0), |t| t.coordinate())
+            self.tokens
+                .first()
+                .map_or(Location::default(), |t| t.location())
         }
     }
 
@@ -207,6 +211,7 @@ impl<'a> Block<'a> {
             Some(token) => {
                 if token.kind() != open_kind {
                     return Err(error::CompileError::from_parser(
+                        source,
                         previous_token,
                         "Expected opening delimiter",
                     ));
@@ -216,6 +221,7 @@ impl<'a> Block<'a> {
             }
             _ => {
                 return Err(error::CompileError::from_parser(
+                    source,
                     previous_token,
                     "Expected opening delimiter",
                 ));
@@ -245,6 +251,7 @@ impl<'a> Block<'a> {
                 tokenizer::Kind::AT => {
                     if context.kind().is_inlined_kind() {
                         return Err(error::CompileError::from_parser(
+                            source,
                             Some(*token),
                             "Inlined block is not allowed to use '@' token",
                         ));
@@ -289,6 +296,7 @@ impl<'a> Block<'a> {
         // not balanced.
         if depth != 0 {
             return Err(error::CompileError::from_parser(
+                source,
                 previous_token,
                 "Unbalanced delimiters in block",
             ));
@@ -301,6 +309,7 @@ impl<'a> Block<'a> {
 
         match result.blocks.len() {
             0 => Err(error::CompileError::from_parser(
+                source,
                 previous_token,
                 "Failed to parser block",
             )),
@@ -317,7 +326,11 @@ impl<'a> Block<'a> {
         tokenizer::skip_whitespace_and_newline(token_stream);
         match token_stream.peek_token() {
             None => {
-                return Err(error::CompileError::from_parser(None, "Empty stream"));
+                return Err(error::CompileError::from_parser(
+                    source,
+                    None,
+                    "Empty stream",
+                ));
             }
             Some(_) => {
                 let mut context = ParseContext::new(Kind::ROOT);
@@ -390,7 +403,11 @@ impl<'a> Block<'a> {
                 }
 
                 match result.has_blocks() {
-                    false => Err(error::CompileError::from_parser(None, "Empty block")),
+                    false => Err(error::CompileError::from_parser(
+                        source,
+                        None,
+                        "Empty block",
+                    )),
                     true => Ok(result),
                 }
             }

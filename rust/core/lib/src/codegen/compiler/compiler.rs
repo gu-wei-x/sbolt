@@ -26,7 +26,7 @@ impl Compiler {
                  * cargo:error= is not impled for build scripts to report issues
                  * change in future with cargo:error format to let ide highlight issue.
                  */
-                eprintln!("\x1b[0;31merror\x1b[0m={err:#}");
+                eprintln!("\x1b[0;31merror\x1b[0m:{err:#}");
                 std::process::exit(1);
             }
         }

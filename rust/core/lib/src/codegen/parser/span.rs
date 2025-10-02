@@ -1,12 +1,25 @@
+use crate::types::Location;
+use std::ops::Range;
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub(crate) struct Span<T: Copy> {
     kind: T,
     start: usize,
     end: usize,
-    coordinate: (usize, usize),
+    location: Location,
 }
 
-use std::ops::Range;
+impl Default for Location {
+    fn default() -> Self {
+        Self { line: 0, column: 0 }
+    }
+}
+
+impl Location {
+    pub(crate) fn new(line: usize, column: usize) -> Self {
+        Self { line, column }
+    }
+}
 
 impl<T: Default + Copy> Default for Span<T> {
     fn default() -> Self {
@@ -14,18 +27,18 @@ impl<T: Default + Copy> Default for Span<T> {
             kind: T::default(),
             start: 0,
             end: 0,
-            coordinate: (0, 0),
+            location: Location::default(),
         }
     }
 }
 
 impl<T: Copy> Span<T> {
-    pub(crate) fn new(kind: T, start: usize, end: usize, coordinate: (usize, usize)) -> Self {
+    pub(crate) fn new(kind: T, start: usize, end: usize, location: Location) -> Self {
         Self {
             kind,
             start,
             end,
-            coordinate: coordinate,
+            location,
         }
     }
 
@@ -38,7 +51,7 @@ impl<T: Copy> Span<T> {
         self.start..self.end
     }
 
-    pub(crate) fn coordinate(&self) -> (usize, usize) {
-        self.coordinate
+    pub(crate) fn location(&self) -> Location {
+        self.location
     }
 }

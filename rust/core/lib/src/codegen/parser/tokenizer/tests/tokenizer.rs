@@ -2,6 +2,7 @@
 use crate::codegen::parser::tokenizer;
 use crate::codegen::parser::tokenizer::Tokenizer;
 use crate::codegen::parser::tokenizer::token;
+use crate::types::Location;
 
 macro_rules! tokenizer_test_case {
     ($name:ident, $input:expr, $expected:expr) => {
@@ -115,61 +116,61 @@ fn test_tokenizer_stream_with_lines() {
     let token = &tokens[index];
     assert_eq!(token.kind(), token::Kind::EXPRESSION);
     assert_eq!(&tokenizer_input[token.range()], token_parts[index]);
-    assert_eq!(token.coordinate(), (0, 0));
+    assert_eq!(token.location(), Location::new(0, 0));
 
     // second token.
     let index = 1;
     let token = &tokens[index];
     assert_eq!(token.kind(), token::Kind::NEWLINE);
     assert_eq!(&tokenizer_input[token.range()], token_parts[index]);
-    assert_eq!(token.coordinate(), (0, 6));
+    assert_eq!(token.location(), Location::new(0, 6));
 
     // third token.
     let index = 2;
     let token = &tokens[index];
     assert_eq!(token.kind(), token::Kind::EXPRESSION);
     assert_eq!(&tokenizer_input[token.range()], token_parts[index]);
-    assert_eq!(token.coordinate(), (1, 0));
+    assert_eq!(token.location(), Location::new(1, 0));
 
     // fourth token.
     let index = 3;
     let token = &tokens[index];
     assert_eq!(token.kind(), token::Kind::ASTERISK);
     assert_eq!(&tokenizer_input[token.range()], token_parts[index]);
-    assert_eq!(token.coordinate(), (1, 5));
+    assert_eq!(token.location(), Location::new(1, 5));
 
     // fifth token.
     let index = 4;
     let token = &tokens[index];
     assert_eq!(token.kind(), token::Kind::EXPRESSION);
     assert_eq!(&tokenizer_input[token.range()], token_parts[index]);
-    assert_eq!(token.coordinate(), (1, 6));
+    assert_eq!(token.location(), Location::new(1, 6));
 
     // sixth token.
     let index = 5;
     let token = &tokens[index];
     assert_eq!(token.kind(), token::Kind::NEWLINE);
     assert_eq!(&tokenizer_input[token.range()], token_parts[index]);
-    assert_eq!(token.coordinate(), (1, 11));
+    assert_eq!(token.location(), Location::new(1, 11));
 
     // seventh token.
     let index = 6;
     let token = &tokens[index];
     assert_eq!(token.kind(), token::Kind::EXPRESSION);
     assert_eq!(&tokenizer_input[token.range()], token_parts[index]);
-    assert_eq!(token.coordinate(), (2, 0));
+    assert_eq!(token.location(), Location::new(2, 0));
 
     // eighth token.
     let index = 7;
     let token = &tokens[index];
     assert_eq!(token.kind(), token::Kind::NEWLINE);
     assert_eq!(&tokenizer_input[token.range()], token_parts[index]);
-    assert_eq!(token.coordinate(), (2, 6));
+    assert_eq!(token.location(), Location::new(2, 6));
 
     // ninth token (EOF).
     let index = 8;
     let token = &tokens[index];
     assert_eq!(token.kind(), token::Kind::EOF);
     assert_eq!(tokenizer_input.len()..tokenizer_input.len(), token.range());
-    assert_eq!(token.coordinate(), (3, 0));
+    assert_eq!(token.location(), Location::new(3, 0));
 }

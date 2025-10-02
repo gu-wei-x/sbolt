@@ -19,6 +19,7 @@ impl<'a> Block<'a> {
             Some(token) => {
                 if token.kind() != tokenizer::Kind::AT {
                     return Err(error::CompileError::from_parser(
+                        source,
                         None,
                         "Expecting '@' token to start context extraction.",
                     ));
@@ -27,6 +28,7 @@ impl<'a> Block<'a> {
             }
             _ => {
                 return Err(error::CompileError::from_parser(
+                    source,
                     None,
                     "Empty token stream when expecting '@' token to start context extraction.",
                 ));
@@ -37,6 +39,7 @@ impl<'a> Block<'a> {
         token_stream.next_token();
         match token_stream.peek_token() {
             None => Err(error::CompileError::from_parser(
+                source,
                 Some(*start_token),
                 "Expected content after '@'",
             )),
@@ -86,6 +89,7 @@ impl<'a> Block<'a> {
                     }
                     _ => {
                         return Err(error::CompileError::from_parser(
+                            source,
                             Some(*token),
                             "Expected '(', '{' or expression after '@'",
                         ));
@@ -122,6 +126,7 @@ impl<'a> Block<'a> {
         // whitespace after directive token
         if !tokenizer::skip_whitespace(token_stream) {
             return Err(error::CompileError::from_parser(
+                source,
                 Some(*token),
                 &format!("Expected whitespace name after '@{directive}'"),
             ));
@@ -131,6 +136,7 @@ impl<'a> Block<'a> {
         let next_token = get_nth_token(token_stream, 0);
         if None == next_token {
             return Err(error::CompileError::from_parser(
+                source,
                 Some(*token),
                 &format!("Expected {directive} content after '@{directive}'"),
             ));
@@ -158,6 +164,7 @@ impl<'a> Block<'a> {
         let content = result.content();
         if content.trim().is_empty() {
             return Err(error::CompileError::from_parser(
+                source,
                 Some(*token),
                 &format!("Expected {directive} content after '@{directive}'"),
             ));

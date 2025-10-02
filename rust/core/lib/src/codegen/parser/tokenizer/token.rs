@@ -1,10 +1,11 @@
 use winnow::stream::AsBStr as _;
 use winnow::stream::ContainsToken as _;
-use winnow::stream::Location;
+use winnow::stream::Location as _;
 use winnow::stream::Stream as _;
 
 use crate::codegen::parser::tokenizer::Token;
 use crate::codegen::parser::tokenizer::stream::StrStream;
+use crate::types::Location;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[repr(u8)]
@@ -40,42 +41,38 @@ impl std::fmt::Display for Token {
     }
 }
 
-pub(crate) fn tokenize(stream: &mut StrStream<'_>, line: &mut usize, column: &mut usize) -> Token {
+pub(crate) fn tokenize(stream: &mut StrStream<'_>, location: &mut Location) -> Token {
     let Some(peeked_byte) = stream.as_bstr().first() else {
         let start = stream.current_token_start();
-        let token = Token::new(Kind::EOF, start, start, (*line, start - *column));
+        let loc = Location::new(location.line, start - location.column);
+        let token = Token::new(Kind::EOF, start, start, loc);
         return token;
     };
 
     let token = match peeked_byte {
-        b'@' => tokenize_symbol(stream, Kind::AT, *line, *column),
-        b'=' => tokenize_symbol(stream, Kind::EQUALS, *line, *column),
-        b'!' => tokenize_symbol(stream, Kind::EXCLAMATION, *line, *column),
-        b'-' => tokenize_symbol(stream, Kind::HYPHEN, *line, *column),
-        b'<' => tokenize_symbol(stream, Kind::LESSTHAN, *line, *column),
-        b'>' => tokenize_symbol(stream, Kind::GREATTHAN, *line, *column),
-        b')' => tokenize_symbol(stream, Kind::CPARENTHESIS, *line, *column),
-        b'(' => tokenize_symbol(stream, Kind::OPARENTHESIS, *line, *column),
-        b'}' => tokenize_symbol(stream, Kind::CCURLYBRACKET, *line, *column),
-        b'{' => tokenize_symbol(stream, Kind::OCURLYBRACKET, *line, *column),
-        b'/' => tokenize_symbol(stream, Kind::SLASH, *line, *column),
-        b'*' => tokenize_symbol(stream, Kind::ASTERISK, *line, *column),
-        b';' => tokenize_symbol(stream, Kind::SEMICOLON, *line, *column),
-        b' ' => tokenize_whitespace(stream, *line, *column),
-        b'\r' => tokenize_newline(stream, line, column),
-        b'\n' => tokenize_newline(stream, line, column),
-        _ => tokenize_expression(stream, *line, *column),
+        b'@' => tokenize_symbol(stream, Kind::AT, location),
+        b'=' => tokenize_symbol(stream, Kind::EQUALS, location),
+        b'!' => tokenize_symbol(stream, Kind::EXCLAMATION, location),
+        b'-' => tokenize_symbol(stream, Kind::HYPHEN, location),
+        b'<' => tokenize_symbol(stream, Kind::LESSTHAN, location),
+        b'>' => tokenize_symbol(stream, Kind::GREATTHAN, location),
+        b')' => tokenize_symbol(stream, Kind::CPARENTHESIS, location),
+        b'(' => tokenize_symbol(stream, Kind::OPARENTHESIS, location),
+        b'}' => tokenize_symbol(stream, Kind::CCURLYBRACKET, location),
+        b'{' => tokenize_symbol(stream, Kind::OCURLYBRACKET, location),
+        b'/' => tokenize_symbol(stream, Kind::SLASH, location),
+        b'*' => tokenize_symbol(stream, Kind::ASTERISK, location),
+        b';' => tokenize_symbol(stream, Kind::SEMICOLON, location),
+        b' ' => tokenize_whitespace(stream, location),
+        b'\r' => tokenize_newline(stream, location),
+        b'\n' => tokenize_newline(stream, location),
+        _ => tokenize_expression(stream, location),
     };
 
     token
 }
 
-fn tokenize_symbol(
-    stream: &mut StrStream<'_>,
-    token_type: Kind,
-    line: usize,
-    column: usize,
-) -> Token {
+fn tokenize_symbol(stream: &mut StrStream<'_>, token_type: Kind, location: &Location) -> Token {
     let start = stream.current_token_start();
 
     // symbol is a single character token.
@@ -83,10 +80,11 @@ fn tokenize_symbol(
     stream.next_slice(offset);
 
     let end = stream.previous_token_end();
-    Token::new(token_type, start, end, (line, start - column))
+    let loc = Location::new(location.line, start - location.column);
+    Token::new(token_type, start, end, loc)
 }
 
-fn tokenize_whitespace(stream: &mut StrStream<'_>, line: usize, column: usize) -> Token {
+fn tokenize_whitespace(stream: &mut StrStream<'_>, location: &Location) -> Token {
     let start = stream.current_token_start();
     let offset = stream
         .as_bstr()
@@ -94,10 +92,11 @@ fn tokenize_whitespace(stream: &mut StrStream<'_>, line: usize, column: usize) -
         .unwrap_or(stream.eof_offset());
     stream.next_slice(offset);
     let end = stream.previous_token_end();
-    Token::new(Kind::WHITESPACE, start, end, (line, start - column))
+    let loc = Location::new(location.line, start - location.column);
+    Token::new(Kind::WHITESPACE, start, end, loc)
 }
 
-fn tokenize_newline(stream: &mut StrStream<'_>, line: &mut usize, column: &mut usize) -> Token {
+fn tokenize_newline(stream: &mut StrStream<'_>, location: &mut Location) -> Token {
     let start = stream.current_token_start();
     let mut offset = '\r'.len_utf8();
     let has_lf = stream.as_bstr().get(1) == Some(&b'\n');
@@ -106,13 +105,13 @@ fn tokenize_newline(stream: &mut StrStream<'_>, line: &mut usize, column: &mut u
     }
     stream.next_slice(offset);
     let end = stream.previous_token_end();
-    let coordinate = (*line, start - *column);
-    *line += 1;
-    *column = end;
-    Token::new(Kind::NEWLINE, start, end, coordinate)
+    let loc = Location::new(location.line, start - location.column);
+    location.line += 1;
+    location.column = end;
+    Token::new(Kind::NEWLINE, start, end, loc)
 }
 
-fn tokenize_expression(stream: &mut StrStream<'_>, line: usize, column: usize) -> Token {
+fn tokenize_expression(stream: &mut StrStream<'_>, location: &Location) -> Token {
     let start = stream.current_token_start();
     const TOKEN_START: &[u8] = b"@=!-<>(){}/*; \r\n";
     let offset = stream
@@ -121,5 +120,6 @@ fn tokenize_expression(stream: &mut StrStream<'_>, line: usize, column: usize) -
         .unwrap_or_else(|| stream.eof_offset());
     stream.next_slice(offset);
     let end = stream.previous_token_end();
-    Token::new(Kind::EXPRESSION, start, end, (line, start - column))
+    let loc = Location::new(location.line, start - location.column);
+    Token::new(Kind::EXPRESSION, start, end, loc)
 }

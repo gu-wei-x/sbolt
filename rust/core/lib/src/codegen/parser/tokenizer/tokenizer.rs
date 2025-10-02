@@ -1,12 +1,12 @@
 use crate::codegen::parser::tokenizer;
 use crate::codegen::parser::tokenizer::Token;
 use crate::codegen::parser::tokenizer::stream::StrStream;
+use crate::types::Location;
 use winnow::stream::Stream as _;
 
 pub(crate) struct Tokenizer<'a> {
     stream: StrStream<'a>,
-    current_line: usize,
-    current_column: usize,
+    location: Location,
     eof: bool,
 }
 
@@ -19,8 +19,7 @@ impl<'a> Tokenizer<'a> {
         }
         Self {
             stream: StrStream::new(input),
-            current_line: 0,
-            current_column: 0,
+            location: Location::default(),
             eof: false,
         }
     }
@@ -45,11 +44,7 @@ impl<'a> Iterator for Tokenizer<'a> {
             return None;
         }
 
-        let token = tokenizer::token::tokenize(
-            &mut self.stream,
-            &mut self.current_line,
-            &mut self.current_column,
-        );
+        let token = tokenizer::token::tokenize(&mut self.stream, &mut self.location);
         match token.kind() {
             tokenizer::token::Kind::EOF => {
                 self.eof = true;
