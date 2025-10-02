@@ -5,6 +5,8 @@ use winnow::stream::Stream as _;
 
 pub(crate) struct Tokenizer<'a> {
     stream: StrStream<'a>,
+    current_line: usize,
+    current_column: usize,
     eof: bool,
 }
 
@@ -17,6 +19,8 @@ impl<'a> Tokenizer<'a> {
         }
         Self {
             stream: StrStream::new(input),
+            current_line: 0,
+            current_column: 0,
             eof: false,
         }
     }
@@ -41,8 +45,12 @@ impl<'a> Iterator for Tokenizer<'a> {
             return None;
         }
 
-        let token = tokenizer::token::tokenize(&mut self.stream);
-        match token.kind {
+        let token = tokenizer::token::tokenize(
+            &mut self.stream,
+            &mut self.current_line,
+            &mut self.current_column,
+        );
+        match token.kind() {
             tokenizer::token::Kind::EOF => {
                 self.eof = true;
                 Some(token)

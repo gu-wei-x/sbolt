@@ -13,15 +13,14 @@ pub use template::Template;
 pub use writer::*;
 
 pub mod error {
-    use std::ops::Range;
     use std::path::PathBuf;
 
     #[derive(Clone)]
     pub enum CompileError {
-        CodeGen(Range<usize>, String),
-        Parser(Option<Range<usize>>, String),
+        CodeGen((usize, usize), String),
+        Parser(Option<(usize, usize)>, String),
         String(String),
-        FileError(PathBuf, Option<Range<usize>>, String),
+        FileError(PathBuf, Option<(usize, usize)>, String),
     }
 
     // TODO:

@@ -6,20 +6,20 @@ use std::path::PathBuf;
 
 impl error::CompileError {
     pub(in crate::codegen) fn from_parser(token: Option<parser::Token>, str: &str) -> Self {
-        error::CompileError::Parser(token.map(|t| t.range()), str.to_string())
+        error::CompileError::Parser(token.map(|t| t.coordinate()), str.to_string())
     }
 
     pub(in crate::codegen) fn from_codegn(block: &Block<'_>, str: &str) -> Self {
-        error::CompileError::CodeGen(block.span(), str.to_string())
+        error::CompileError::CodeGen(block.coordinate(), str.to_string())
     }
 
     pub(in crate::codegen) fn with_file(&self, file: &PathBuf) -> Self {
         match self {
-            error::CompileError::CodeGen(range, _) => {
-                error::CompileError::FileError(file.clone(), Some(range.clone()), self.to_string())
+            error::CompileError::CodeGen(coordinate, _) => {
+                error::CompileError::FileError(file.clone(), Some(*coordinate), self.to_string())
             }
-            error::CompileError::Parser(range, _) => {
-                error::CompileError::FileError(file.clone(), range.clone(), self.to_string())
+            error::CompileError::Parser(coordinate, _) => {
+                error::CompileError::FileError(file.clone(), coordinate.clone(), self.to_string())
             }
             error::CompileError::String(_) => {
                 error::CompileError::FileError(file.clone(), None, self.to_string())
@@ -35,13 +35,13 @@ impl error::CompileError {
             error::CompileError::CodeGen(range, str) => {
                 write!(f, "CodeGen Err({:?}, {:?})", range, str)
             }
-            error::CompileError::FileError(path, range, str) => {
+            error::CompileError::FileError(path, coordinate, str) => {
                 // todo: format to build error which is same as rustc for ide to highlight issue in related file.
                 let mut err_struct = f.debug_struct("Error");
                 err_struct
                     .field("file", path)
                     //.field("kind", [cg|generic|parser])
-                    .field("postion", range)
+                    .field("postion", coordinate)
                     .field("detail", &str)
                     .finish()
             }

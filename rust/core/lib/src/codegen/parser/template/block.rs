@@ -61,6 +61,7 @@ pub(crate) struct Block<'a> {
     // block content will be generated from source with tokens.
     source: &'a str,
     span: Range<usize>,
+    coordinate: (usize, usize),
     tokens: Vec<tokenizer::Token>,
 }
 
@@ -72,6 +73,7 @@ impl<'a> Default for Block<'a> {
             blocks: vec![],
             source: "",
             span: Range::<usize>::default(),
+            coordinate: (0, 0),
             tokens: vec![],
         }
     }
@@ -85,6 +87,7 @@ impl Debug for Block<'_> {
             .field("kind", &self.kind)
             .field("blocks", &self.blocks)
             .field("span", &self.span)
+            .field("coordinate", &self.coordinate)
             .field("content", &self.content());
         if matches!(self.kind(), Kind::UNKNOWN | Kind::ROOT) {
             debug_struct.field("source", &self.source);
@@ -101,6 +104,7 @@ impl<'a> Block<'a> {
             blocks: vec![],
             source,
             span: Range::<usize>::default(),
+            coordinate: (0, 0),
             tokens: vec![],
         }
     }
@@ -128,8 +132,17 @@ impl<'a> Block<'a> {
         &self.blocks
     }
 
+    #[allow(dead_code)]
     pub(crate) fn span(&self) -> Range<usize> {
         self.span.clone()
+    }
+
+    pub(crate) fn coordinate(&self) -> (usize, usize) {
+        if self.has_blocks() {
+            self.blocks.first().map_or((0, 0), |b| b.coordinate())
+        } else {
+            self.tokens.first().map_or((0, 0), |t| t.coordinate())
+        }
     }
 
     pub(crate) fn has_blocks(&self) -> bool {
