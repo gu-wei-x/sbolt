@@ -45,12 +45,12 @@ impl Module {
         let target_dir = fsutil::create_target_dir(&self.target, &dir_name);
         let mut result = CompileResult::default();
         if let Ok(read_dir) = fs::read_dir(&self.source) {
-            let full_name = &Some(name::create_full_name(&self.namespace, &dir_name));
+            let name_space = name::create_name_space(&self.namespace, &dir_name);
             for entry in read_dir.flatten() {
                 let entry = &entry;
                 if let Ok(meta) = entry.metadata() {
                     if meta.is_dir() {
-                        Module::new(entry.path(), target_dir.clone(), full_name.clone())
+                        Module::new(entry.path(), target_dir.clone(), Some(name_space.clone()))
                             .process(compiler_options)?
                             .merge_into(&mut result);
                         result.add_mod(entry.file_name().to_str().unwrap_or_default());
@@ -60,7 +60,7 @@ impl Module {
                         let content = fs::read_to_string(entry.path()).unwrap_or_default();
                         let template = match crate::codegen::parser::template::Template::from(
                             &content,
-                            full_name.clone(),
+                            Some(name_space.clone()),
                         ) {
                             Ok(t) => t,
                             Err(e) => {
@@ -147,8 +147,8 @@ impl Module {
                     }
 
                     fn resolve(&self, name: &str) -> Option<fn(context: disguise::types::DefaultViewContext) -> #viewtypes_ident_ts> {
-                        let normalized_name: &str = &name.replace("/", "::");
-                        self.view_creators.get(normalized_name).map(|f| *f)
+                        let key = disguise::types::normalize_path_to_view_key(name);
+                        self.view_creators.get(&key).map(|f| *f)
                     }
                 }
 
@@ -156,11 +156,17 @@ impl Module {
                     TemplateResolver::new()
                 });
 
-                pub(crate) fn render(name: &str, context: disguise::types::DefaultViewContext, output: &mut impl disguise::types::Writer) {
-                     if let Some(creator) = TEMPLATE_RESOLVER.resolve(name) {
+                pub(crate) fn render(name: &str, context: disguise::types::DefaultViewContext) -> disguise::types::result::RenderResult<String> {
+                    if let Some(creator) = TEMPLATE_RESOLVER.resolve(name) {
                         let view = creator(context);
-                        view.render(output);
-                     }
+                        view.render()
+                    } else {
+                        Err(disguise::types::error::RuntimeError::view_not_found(name))
+                    }
+                }
+
+                pub(crate) fn resolve_view_creator(name: &str) -> Option<fn(context: disguise::types::DefaultViewContext) -> #viewtypes_ident_ts> {
+                    TEMPLATE_RESOLVER.resolve(name)
                 }
             }
         }

@@ -36,21 +36,21 @@ impl<'a> Block<'a> {
                         // or content block.
                         println!("???????????????????exepected: {}", self.content());
                         output
-                            .push_str(&format!(r####"output.write(r#"{}"#);"####, self.content()));
+                            .push_str(&format!(r####"writer.write(r#"{}"#);"####, self.content()));
                     }
                     (Kind::CONTENT, Kind::INLINEDCODE) => {
                         // code inside content.
                         // todo: check whether type is inlined.
                         // or block: block should be closure with output as parameter.
                         output.push_str(&format!(
-                            r####"output.writefn(||({}).to_string());"####,
+                            r####"writer.writefn(||({}).to_string());"####,
                             self.content()
                         ));
                     }
                     (Kind::CONTENT, Kind::CONTENT) => {
                         // from content to content.
                         output
-                            .push_str(&format!(r####"output.write(r#"{}"#);"####, self.content()));
+                            .push_str(&format!(r####"writer.write(r#"{}"#);"####, self.content()));
                     }
                     (_, _) => {
                         println!(
@@ -78,7 +78,7 @@ impl<'a> Block<'a> {
                         if !self.has_blocks() {
                             //pure content block.
                             output.push_str(&format!(
-                                r####"output.write(r#"{}"#);"####,
+                                r####"writer.write(r#"{}"#);"####,
                                 self.content()
                             ));
                         } else {
@@ -89,10 +89,17 @@ impl<'a> Block<'a> {
                         }
                     }
                     Kind::INLINEDCODE => {
-                        output.push_str(&format!(
-                            r####"output.writefn(||({}).to_string());"####,
-                            self.content()
-                        ));
+                        if self.name() == Some(&consts::KEYWORD_RENDER_SECTION.to_string()) {
+                            output.push_str(&format!(
+                                r####"writer.write(&self.{}?);"####,
+                                self.content()
+                            ));
+                        } else {
+                            output.push_str(&format!(
+                                r####"writer.writefn(||({}).to_string());"####,
+                                self.content()
+                            ));
+                        }
                     }
                     _ => {}
                 }
@@ -185,12 +192,14 @@ impl<'a> Block<'a> {
         let mut content = String::new();
         match block.has_blocks() {
             false => {
-                content.push_str(&format!(r####"output.write(r#"{}"#);"####, block.content()));
+                content.push_str(&format!(r####"writer.write(r#"{}"#);"####, block.content()));
             }
             true => {
                 // use, content, put layout to context.
                 for b in block.blocks() {
-                    if b.name().is_none() {
+                    if b.name().is_none()
+                        || b.name() == Some(&consts::KEYWORD_RENDER_SECTION.to_string())
+                    {
                         b.generate_main(None, &mut content);
                     }
                 }
@@ -200,8 +209,34 @@ impl<'a> Block<'a> {
         let main_ts = content.parse::<TokenStream>();
         match main_ts {
             Ok(ts) => Ok(quote! {
-                fn render(&self, output: &mut impl disguise::types::Writer) {
+                fn render(&self) -> disguise::types::result::RenderResult<String> {
+                    // create output writer here and pass to render function.
+                    // todo: create based on type of view
+                    // rshtml::HtmlWriter
+                    // rsjson::JsonWriter
+                    // will be populated by render process.
+                    let sections = std::collections::HashMap::<String, String>::new();
+                    let mut writer = disguise::types::HtmlWriter::new();
                     #ts
+
+                    // todo: move to lib
+                    match Self::layout() {
+                        Some(layout) => {
+                            // todo: resolve layout with current path.
+                            // ~render_section should output sections from context.
+                            let new_context = disguise::context! {
+                                sections: sections
+                            };
+                            for key in disguise::types::resolve_layout_to_view_keys(&layout, &Self::name()) {
+                                if let Some(creator) = crate::basic_views::resolve_view_creator(&key) {
+                                    let view = creator(new_context);
+                                    return view.render()
+                                }
+                            }
+                            Err(disguise::types::error::RuntimeError::layout_not_found(&layout, &Self::name()))
+                        },
+                        None => {Ok(writer.into_string())}
+                    }
                 }
             }),
             Err(e) => Err(error::CompileError::from_codegn(

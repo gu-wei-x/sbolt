@@ -1,5 +1,6 @@
 mod context;
 mod data_store;
+mod functions;
 mod macros;
 mod template;
 mod writer;
@@ -9,6 +10,7 @@ mod tests;
 
 pub use context::*;
 pub use data_store::*;
+pub use functions::*;
 pub use template::Template;
 pub use writer::*;
 
@@ -36,8 +38,7 @@ pub mod error {
         ),
     }
 
-    // TODO:
-    #[allow(dead_code)]
+    #[derive(Debug)]
     pub enum RuntimeError {
         // could not find view
         NotFound(/*summary*/ String, /*detail*/ String),
@@ -46,7 +47,8 @@ pub mod error {
 }
 
 pub mod result {
-    pub type Result<T> = core::result::Result<T, super::error::CompileError>;
+    pub type Result<T> = std::result::Result<T, super::error::CompileError>;
+    pub type RenderResult<T> = std::result::Result<T, super::error::RuntimeError>;
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]

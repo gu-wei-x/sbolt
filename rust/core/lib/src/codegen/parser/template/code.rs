@@ -67,9 +67,24 @@ impl<'a> Block<'a> {
                     }
                     tokenizer::Kind::EXPRESSION => {
                         let exp = &source[token.range()];
+                        // todo: create a map for directive keywords.
                         match exp {
                             consts::DIRECTIVE_KEYWORD_LAYOUT | consts::DIRECTIVE_KEYWORD_USE => {
                                 Self::parse_directive(source, token, token_stream, exp)?
+                            }
+                            consts::KEYWORD_RENDER_SECTION => {
+                                if context.is_code() {
+                                    Self::parse_render_section(source, token, token_stream, exp)?
+                                } else {
+                                    return Err(error::CompileError::from_parser(
+                                        source,
+                                        Some(*token),
+                                        &format!(
+                                            "'@{}' can only be used in content block.",
+                                            consts::KEYWORD_RENDER_SECTION
+                                        ),
+                                    ));
+                                }
                             }
                             consts::KEYWORD_SECTION => {
                                 Self::parse_section(source, token, token_stream)?
@@ -168,6 +183,56 @@ impl<'a> Block<'a> {
                 Some(*token),
                 &format!("Expected {directive} content after '@{directive}'"),
             ));
+        }
+
+        Ok(result)
+    }
+
+    fn parse_render_section(
+        source: &'a str,
+        token: &Token,
+        token_stream: &mut TokenStream,
+        directive: &str,
+    ) -> result::Result<Block<'a>> {
+        // todo: parse parameters within () to generic block.
+        // for now, just return the directive block.
+        let mut result = Block::new(
+            Some(directive.to_string()),
+            /*directive?*/ template::Kind::INLINEDCODE,
+            source,
+        );
+
+        // consume the directive token
+        result.push_token(*token);
+        token_stream.next_token();
+
+        let mut closed = false;
+        while let Some(token) = token_stream.peek_token() {
+            match token.kind() {
+                tokenizer::Kind::EOF => {
+                    break;
+                }
+                tokenizer::Kind::CPARENTHESIS => {
+                    result.push_token(*token);
+                    closed = true;
+                    break;
+                }
+                _ => {
+                    result.push_token(*token);
+                    token_stream.next_token();
+                }
+            }
+        }
+
+        if !closed {
+            return Err(error::CompileError::from_parser(
+                source,
+                Some(*token),
+                &format!("Expected ')' to close '@{directive}' parameters"),
+            ));
+        } else {
+            // consume the end token.
+            token_stream.next_token();
         }
 
         Ok(result)
