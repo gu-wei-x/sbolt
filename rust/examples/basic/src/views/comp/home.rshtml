@@ -1,0 +1,16 @@
+@**layout ~/layout;**@
+@layout layout;
+@section title{
+  <title>Home</title>
+}
+@section menu{
+    <ul>
+        <li>menu 1</li>
+        <li>menu 2</li>
+        <li>menu 3</li>
+    </ul>
+}
+@section footer{
+    this is footer
+}
+<div>Hello world!<div>

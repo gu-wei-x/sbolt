@@ -1,3 +1,4 @@
+use crate::codegen::CompilerOptions;
 use crate::codegen::compiler::cgresult;
 use crate::codegen::{
     consts,
@@ -5,10 +6,13 @@ use crate::codegen::{
 };
 use crate::types::error;
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 
 impl<'a> Block<'a> {
-    pub(crate) fn generate_code(&self) -> Result<cgresult::CodeGenResult, error::CompileError> {
+    pub(crate) fn generate_code(
+        &self,
+        compiler_options: &CompilerOptions,
+    ) -> Result<cgresult::CodeGenResult, error::CompileError> {
         let mut result = cgresult::CodeGenResult::new();
         let imports = Self::generate_imports(self)?;
         result = result.with_imports(imports);
@@ -16,7 +20,7 @@ impl<'a> Block<'a> {
         let layout = Self::generate_layout(self)?;
         result = result.with_layout(layout);
 
-        let render = Self::generate_render(self)?;
+        let render = Self::generate_render(self, compiler_options)?;
         result = result.with_code(Some(render));
 
         Ok(result)
@@ -36,21 +40,21 @@ impl<'a> Block<'a> {
                         // or content block.
                         println!("???????????????????exepected: {}", self.content());
                         output
-                            .push_str(&format!(r####"output.write(r#"{}"#);"####, self.content()));
+                            .push_str(&format!(r####"writer.write(r#"{}"#);"####, self.content()));
                     }
                     (Kind::CONTENT, Kind::INLINEDCODE) => {
                         // code inside content.
                         // todo: check whether type is inlined.
                         // or block: block should be closure with output as parameter.
                         output.push_str(&format!(
-                            r####"output.writefn(||({}).to_string());"####,
+                            r####"writer.writefn(||({}).to_string());"####,
                             self.content()
                         ));
                     }
                     (Kind::CONTENT, Kind::CONTENT) => {
                         // from content to content.
                         output
-                            .push_str(&format!(r####"output.write(r#"{}"#);"####, self.content()));
+                            .push_str(&format!(r####"writer.write(r#"{}"#);"####, self.content()));
                     }
                     (_, _) => {
                         println!(
@@ -78,7 +82,7 @@ impl<'a> Block<'a> {
                         if !self.has_blocks() {
                             //pure content block.
                             output.push_str(&format!(
-                                r####"output.write(r#"{}"#);"####,
+                                r####"writer.write(r#"{}"#);"####,
                                 self.content()
                             ));
                         } else {
@@ -89,10 +93,17 @@ impl<'a> Block<'a> {
                         }
                     }
                     Kind::INLINEDCODE => {
-                        output.push_str(&format!(
-                            r####"output.writefn(||({}).to_string());"####,
-                            self.content()
-                        ));
+                        if self.name() == Some(&consts::KEYWORD_RENDER_SECTION.to_string()) {
+                            output.push_str(&format!(
+                                r####"writer.write(&self.{}?);"####,
+                                self.content()
+                            ));
+                        } else {
+                            output.push_str(&format!(
+                                r####"writer.writefn(||({}).to_string());"####,
+                                self.content()
+                            ));
+                        }
                     }
                     _ => {}
                 }
@@ -173,7 +184,10 @@ impl<'a> Block<'a> {
         }
     }
 
-    fn generate_render(block: &Block) -> Result<TokenStream, error::CompileError> {
+    fn generate_render(
+        block: &Block,
+        compiler_options: &CompilerOptions,
+    ) -> Result<TokenStream, error::CompileError> {
         // block can only be from root.
         if !matches!(block.kind(), Kind::ROOT) {
             return Err(error::CompileError::from_codegn(
@@ -185,23 +199,53 @@ impl<'a> Block<'a> {
         let mut content = String::new();
         match block.has_blocks() {
             false => {
-                content.push_str(&format!(r####"output.write(r#"{}"#);"####, block.content()));
+                content.push_str(&format!(r####"writer.write(r#"{}"#);"####, block.content()));
             }
             true => {
                 // use, content, put layout to context.
                 for b in block.blocks() {
-                    if b.name().is_none() {
+                    if b.name().is_none()
+                        || b.name() == Some(&consts::KEYWORD_RENDER_SECTION.to_string())
+                    {
                         b.generate_main(None, &mut content);
                     }
                 }
             }
         }
 
+        let mod_name_id = format_ident!("{}", compiler_options.mod_name);
         let main_ts = content.parse::<TokenStream>();
         match main_ts {
             Ok(ts) => Ok(quote! {
-                fn render(&self, output: &mut impl disguise::types::Writer) {
+                fn render(&self) -> disguise::types::result::RenderResult<String> {
+                    // create output writer here and pass to render function.
+                    // todo: create based on type of view
+                    // rshtml::HtmlWriter
+                    // rsjson::JsonWriter
+                    // will be populated by render process.
+                    let mut sections = std::collections::HashMap::<String, String>::new();
+                    let mut writer = disguise::types::HtmlWriter::new();
                     #ts
+
+                    // todo: move to lib
+                    match Self::layout() {
+                        Some(layout) => {
+                            // todo: resolve layout with current path.
+                            // ~render_section should output sections from context.
+                            sections.insert("default".to_string(), writer.into_string());
+                            let new_context = disguise::context! {
+                                sections: sections
+                            };
+                            for key in disguise::types::resolve_layout_to_view_keys(&layout, &Self::name()) {
+                                if let Some(creator) = crate::#mod_name_id::resolve_view_creator(&key) {
+                                    let view = creator(new_context);
+                                    return view.render()
+                                }
+                            }
+                            Err(disguise::types::error::RuntimeError::layout_not_found(&layout, &Self::name()))
+                        },
+                        None => {Ok(writer.into_string())}
+                    }
                 }
             }),
             Err(e) => Err(error::CompileError::from_codegn(

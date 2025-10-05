@@ -24,9 +24,6 @@ impl<'a> Template<'a> {
         tokenizer::skip_whitespace_and_newline(&mut token_stream);
         let block = Block::parse(source, &mut token_stream)?;
         let template = Template::new(namespace, block);
-        println!("*******************************************");
-        println!("Root block: {:#?}", template.block());
-        println!("*******************************************");
         Ok(template)
     }
 

@@ -7,12 +7,13 @@ pub trait Writer {
     fn writefn(&mut self, content_fn: impl FnOnce() -> String) {
         self.write(&content_fn());
     }
+
+    // convert to String by consuming self.
+    fn into_string(self) -> String;
 }
 
-impl Writer for String {
-    fn write(&mut self, content: &str) {
-        self.push_str(content);
-    }
+pub struct HtmlWriter {
+    pub(crate) content: String,
 }
 
 // Wrapper type for Option<&T> and Option<T> to implement Display trait.

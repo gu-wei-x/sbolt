@@ -1,4 +1,3 @@
-@layout test::test;
 @{
     let name = match self.get_data::<String>("name") {
         Some(str) => str,

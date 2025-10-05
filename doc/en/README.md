@@ -74,9 +74,11 @@ fn main() {
         age: 1,
         msg: "Hello world!".to_string()
     };
-    let mut output = String::new();
-    basic_views::render("views/comp/index", context, &mut output);
-    println!("{}", output);
+    let output = basic_views::render("views/comp/index", context).unwrap_or_else(|e| {
+        eprintln!("Error: {e:?}");
+        std::process::exit(1);
+    });
+    println!("{output}");
 }
 ```
 

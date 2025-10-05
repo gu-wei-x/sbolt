@@ -13,13 +13,11 @@ pub(crate) fn generate_registry(
 ) -> Result<(), CompileError> {
     let view_types_content = view_name_mapping
         .iter()
-        .map(|(name, view_name)| {
+        .map(|(name, _view_name)| {
             format!(
-                "K{}(crate::{}::{}::{}),",
-                name::normalize_to_type_name(&name),
-                mode_name,
-                name::create_mode_prefix(&name),
-                view_name
+                "K{}({}),",
+                name::create_view_type_name(&name),
+                name::create_type_full_name(name, mode_name)
             )
         })
         .collect::<Vec<String>>()
@@ -29,9 +27,9 @@ pub(crate) fn generate_registry(
         .iter()
         .map(|(name, view_name)| {
             format!(
-                "{}::K{}({}) => {}.render(output),",
+                "{}::K{}({}) => {}.render(),",
                 consts::TEMPLATE_TYPE_NAME,
-                name::normalize_to_type_name(&name),
+                name::create_view_type_name(&name),
                 view_name.to_lowercase(),
                 view_name.to_lowercase()
             )
@@ -55,7 +53,7 @@ pub(crate) fn generate_registry(
         }
 
         impl #type_ident {
-            pub(crate) fn render(&self, output: &mut impl disguise::types::Writer) {
+            pub(crate) fn render(&self) -> disguise::types::result::RenderResult<String> {
                 match self {
                    #view_unpack_content_ts
                 }
@@ -74,20 +72,15 @@ fn generate_registry_method(
 ) -> Result<TokenStream, String> {
     let view_reg_content = view_name_mapping
         .iter()
-        .map(|(name, view_name)| {
-            let prefix = format!(
-                "crate::{}::{}::{}",
-                mode_name,
-                name::create_mode_prefix(name),
-                view_name
-            );
+        .map(|(name, _)| {
+            let full_type_name = name::create_type_full_name(name, mode_name);
             format!(
                 r#"view_reg_creator.insert({}::name(), {}::create);"#,
-                prefix, prefix
+                full_type_name, full_type_name
             )
         })
         .collect::<Vec<String>>()
-        .join("\n        ");
+        .join("\n");
 
     let view_reg_content_ts = view_reg_content
         .parse::<proc_macro2::TokenStream>()
