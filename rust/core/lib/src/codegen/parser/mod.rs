@@ -1,3 +1,4 @@
+mod doc;
 mod span;
 pub(in crate::codegen) mod template;
 mod tokenizer;
