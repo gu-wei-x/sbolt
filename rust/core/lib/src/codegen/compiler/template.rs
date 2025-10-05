@@ -1,7 +1,7 @@
 use crate::{
     codegen::{
         CompileResult,
-        compiler::{fsutil, name},
+        compiler::{CompilerOptions, fsutil, name},
         consts,
         parser::template::Template,
     },
@@ -12,7 +12,11 @@ use quote::quote;
 use std::path::PathBuf;
 
 impl<'a> Template<'a> {
-    pub(crate) fn compile(&self, target: PathBuf) -> result::Result<CompileResult> {
+    pub(crate) fn compile(
+        &self,
+        target: PathBuf,
+        compiler_options: &CompilerOptions,
+    ) -> result::Result<CompileResult> {
         match fsutil::get_file_name(&target) {
             None => {
                 return Err(format!("Failed to read template file: {}", target.display()).into());
@@ -31,7 +35,7 @@ impl<'a> Template<'a> {
                 let view_type = format_ident!("K{}", view_type);
                 let template_type = format_ident!("{}", consts::TEMPLATE_TYPE_NAME);
 
-                let cgresult = self.block().generate_code()?;
+                let cgresult = self.block().generate_code(compiler_options)?;
                 let imports_content = cgresult.imports;
                 let layout_content = cgresult.layout;
                 let render_content = cgresult.code;
@@ -73,8 +77,6 @@ impl<'a> Template<'a> {
                         #render_content
                     }
                 };
-
-                println!("******************************{}", view_content.to_string());
                 fsutil::write_code_to_file(&target, &view_content)?;
                 Ok(result)
             }

@@ -71,7 +71,7 @@ impl Module {
                         let file_name = fsutil::get_file_name(&entry.path()).unwrap_or_default();
                         let file_name = format!("{}{}", file_name, consts::RS_FILE_EXTENSION);
                         let target_file = target_dir.join(&file_name);
-                        match template.compile(target_file) {
+                        match template.compile(target_file, compiler_options) {
                             Ok(c_result) => {
                                 c_result.merge_into(&mut result);
                             }

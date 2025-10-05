@@ -1,3 +1,4 @@
+use crate::codegen::CompilerOptions;
 use crate::codegen::compiler::cgresult;
 use crate::codegen::{
     consts,
@@ -5,10 +6,13 @@ use crate::codegen::{
 };
 use crate::types::error;
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 
 impl<'a> Block<'a> {
-    pub(crate) fn generate_code(&self) -> Result<cgresult::CodeGenResult, error::CompileError> {
+    pub(crate) fn generate_code(
+        &self,
+        compiler_options: &CompilerOptions,
+    ) -> Result<cgresult::CodeGenResult, error::CompileError> {
         let mut result = cgresult::CodeGenResult::new();
         let imports = Self::generate_imports(self)?;
         result = result.with_imports(imports);
@@ -16,7 +20,7 @@ impl<'a> Block<'a> {
         let layout = Self::generate_layout(self)?;
         result = result.with_layout(layout);
 
-        let render = Self::generate_render(self)?;
+        let render = Self::generate_render(self, compiler_options)?;
         result = result.with_code(Some(render));
 
         Ok(result)
@@ -180,7 +184,10 @@ impl<'a> Block<'a> {
         }
     }
 
-    fn generate_render(block: &Block) -> Result<TokenStream, error::CompileError> {
+    fn generate_render(
+        block: &Block,
+        compiler_options: &CompilerOptions,
+    ) -> Result<TokenStream, error::CompileError> {
         // block can only be from root.
         if !matches!(block.kind(), Kind::ROOT) {
             return Err(error::CompileError::from_codegn(
@@ -206,6 +213,7 @@ impl<'a> Block<'a> {
             }
         }
 
+        let mod_name_id = format_ident!("{}", compiler_options.mod_name);
         let main_ts = content.parse::<TokenStream>();
         match main_ts {
             Ok(ts) => Ok(quote! {
@@ -215,7 +223,7 @@ impl<'a> Block<'a> {
                     // rshtml::HtmlWriter
                     // rsjson::JsonWriter
                     // will be populated by render process.
-                    let sections = std::collections::HashMap::<String, String>::new();
+                    let mut sections = std::collections::HashMap::<String, String>::new();
                     let mut writer = disguise::types::HtmlWriter::new();
                     #ts
 
@@ -224,11 +232,12 @@ impl<'a> Block<'a> {
                         Some(layout) => {
                             // todo: resolve layout with current path.
                             // ~render_section should output sections from context.
+                            sections.insert("default".to_string(), writer.into_string());
                             let new_context = disguise::context! {
                                 sections: sections
                             };
                             for key in disguise::types::resolve_layout_to_view_keys(&layout, &Self::name()) {
-                                if let Some(creator) = crate::basic_views::resolve_view_creator(&key) {
+                                if let Some(creator) = crate::#mod_name_id::resolve_view_creator(&key) {
                                     let view = creator(new_context);
                                     return view.render()
                                 }
