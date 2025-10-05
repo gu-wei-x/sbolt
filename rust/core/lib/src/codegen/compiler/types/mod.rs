@@ -1,5 +1,4 @@
 mod block;
-mod context;
-mod template;
+mod directives;
 #[cfg(test)]
 mod tests;

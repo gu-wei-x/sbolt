@@ -9,6 +9,7 @@ mod options;
 mod registry;
 mod result;
 mod template;
+mod types;
 
 #[cfg(test)]
 mod tests;
