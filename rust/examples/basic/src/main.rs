@@ -8,7 +8,7 @@ fn main() {
         age: 1,
         msg: "Hello world!".to_string()
     };
-    let output = basic_views::render("views/comp/home", context).unwrap_or_else(|e| {
+    let output = basic_views::render("views/comp/index", context).unwrap_or_else(|e| {
         eprintln!("Error: {e:?}");
         std::process::exit(1);
     });
