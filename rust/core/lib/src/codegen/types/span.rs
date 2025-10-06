@@ -4,7 +4,7 @@ use crate::codegen::types::Block;
 use crate::types::Location;
 use std::ops::Range;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(in crate::codegen) struct Span<'a> {
     blocks: Vec<Block<'a>>,
     location: Location,
@@ -56,5 +56,16 @@ impl<'a> Span<'a> {
     pub(in crate::codegen) fn push_token(&mut self, token: Token) -> &mut Self {
         self.tokens.push(token);
         self
+    }
+
+    // TODO: implement later, might be use option to ignore some content.
+    // like: optimzed to ignore newline, comments.
+    // html, convert comments to html comments...
+    pub(in crate::codegen) fn content(&self) -> String {
+        let mut content = String::new();
+        for token in &self.tokens {
+            content.push_str(&self.source[token.range()]);
+        }
+        content
     }
 }

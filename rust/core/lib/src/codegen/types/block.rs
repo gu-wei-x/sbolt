@@ -2,7 +2,7 @@
 use crate::codegen::types::Span;
 use crate::types::Location;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(in crate::codegen) enum Block<'a> {
     KCODE(Span<'a>),
     KCOMMENT(Span<'a>),
@@ -76,5 +76,21 @@ impl<'a> Block<'a> {
 
     pub(in crate::codegen) fn new_use(span: Span<'a>) -> Self {
         Block::KUSE(span)
+    }
+
+    pub(in crate::codegen) fn content(&self) -> String {
+        match self {
+            Block::KCODE(span) => span.content(),
+            Block::KCOMMENT(span) => span.content(),
+            Block::KCONTENT(span) => span.content(),
+            Block::KFUNCTIONS(span) => span.content(),
+            Block::KINLINEDCODE(span) => span.content(),
+            Block::KINLINEDCONTENT(span) => span.content(),
+            Block::KLAYOUT(span) => span.content(),
+            Block::KRENDER(span) => span.content(),
+            Block::KROOT(span) => span.content(),
+            Block::KSECTION(_, span) => span.content(),
+            Block::KUSE(span) => span.content(),
+        }
     }
 }
