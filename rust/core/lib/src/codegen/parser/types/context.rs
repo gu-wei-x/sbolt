@@ -63,6 +63,10 @@ impl ParseContext {
         )
     }
 
+    pub(in crate::codegen) fn is_inline(&self) -> bool {
+        matches!(self.kind, Kind::KINLINEDCODE | Kind::KINLINEDCONTENT)
+    }
+
     pub(in crate::codegen) fn consume<'a>(
         &mut self,
         source: &'a str,
