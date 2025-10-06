@@ -11,7 +11,7 @@ fn block_parse_empty_stream() {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
 
-    let result = Block::parse_root(source, &mut token_stream);
+    let result = Block::parse(source, &mut token_stream);
     assert!(result.is_err());
 }
 
@@ -23,7 +23,7 @@ fn block_parse_content() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse_root(source, &mut token_stream)?;
+    let block = Block::parse(source, &mut token_stream)?;
     assert!(matches!(block, Block::KROOT(_)));
     match block {
         Block::KROOT(span) => {
@@ -45,7 +45,7 @@ fn block_parse_inline_code() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse_root(source, &mut token_stream)?;
+    let block = Block::parse(source, &mut token_stream)?;
     assert!(matches!(block, Block::KROOT(_)));
     match block {
         Block::KROOT(span) => {
@@ -62,7 +62,7 @@ fn block_parse_inline_code() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse_root(source, &mut token_stream)?;
+    let block = Block::parse(source, &mut token_stream)?;
     assert!(matches!(block, Block::KROOT(_)));
     match block {
         Block::KROOT(span) => {
@@ -89,7 +89,7 @@ fn block_parse_code_block() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse_root(source, &mut token_stream)?;
+    let block = Block::parse(source, &mut token_stream)?;
     assert!(matches!(block, Block::KROOT(_)));
     match block {
         Block::KROOT(span) => {
@@ -106,7 +106,7 @@ fn block_parse_code_block() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse_root(source, &mut token_stream)?;
+    let block = Block::parse(source, &mut token_stream)?;
     assert!(matches!(block, Block::KROOT(_)));
     match block {
         Block::KROOT(span) => {
@@ -136,7 +136,7 @@ fn block_parse_complex_code_block() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse_root(source, &mut token_stream)?;
+    let block = Block::parse(source, &mut token_stream)?;
 
     // root.
     assert!(matches!(block, Block::KROOT(_)));
@@ -201,7 +201,7 @@ fn block_parse_complex_content_block() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse_root(source, &mut token_stream)?;
+    let block = Block::parse(source, &mut token_stream)?;
 
     // root.
     assert!(matches!(block, Block::KROOT(_)));
@@ -225,7 +225,7 @@ fn block_parse_escape_from_content() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse_root(source, &mut token_stream)?;
+    let block = Block::parse(source, &mut token_stream)?;
 
     // root.
     assert!(matches!(block, Block::KROOT(_)));
@@ -249,7 +249,7 @@ fn block_parse_escape_from_code() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse_root(source, &mut token_stream)?;
+    let block = Block::parse(source, &mut token_stream)?;
 
     // root.
     // root.

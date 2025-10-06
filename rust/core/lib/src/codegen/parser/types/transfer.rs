@@ -72,7 +72,7 @@ impl<'a> Block<'a> {
                             consts::DIRECTIVE_KEYWORD_LAYOUT | consts::DIRECTIVE_KEYWORD_USE => {
                                 Self::parse_directive(source, exp, token_stream)?
                             }
-                            consts::KEYWORD_RENDER_SECTION => {
+                            consts::KEYWORD_RENDER => {
                                 if context.is_code() {
                                     Self::parse_render(source, token_stream)?
                                 } else {
@@ -81,7 +81,7 @@ impl<'a> Block<'a> {
                                         Some(*token),
                                         &format!(
                                             "'@{}' can only be used in content block.",
-                                            consts::KEYWORD_RENDER_SECTION
+                                            consts::KEYWORD_RENDER
                                         ),
                                     ));
                                 }
