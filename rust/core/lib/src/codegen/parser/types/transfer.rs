@@ -1,14 +1,15 @@
 #![allow(dead_code)]
 use crate::codegen::consts;
-use crate::codegen::parser::tokenizer;
 use crate::codegen::parser::types::context::ParseContext;
+use crate::codegen::parser::{Token, tokenizer};
+use crate::codegen::types::Span;
 use crate::codegen::{parser::tokenizer::TokenStream, types::Block};
 use crate::types::{error, result};
 use winnow::stream::Stream as _;
 
 impl<'a> Block<'a> {
     // @exp, @{}, @()
-    pub(crate) fn parse_at_block(
+    pub(in crate::codegen) fn parse_transfer_block(
         source: &'a str,
         token_stream: &mut TokenStream,
         context: &mut ParseContext,
@@ -85,29 +86,20 @@ impl<'a> Block<'a> {
                                     ));
                                 }
                             }
-                            _ => {
-                                // todo:
-                                return Err(error::CompileError::from_parser(
-                                    source,
-                                    Some(*token),
-                                    &format!(
-                                        "'@{}' can only be used in content block.",
-                                        consts::KEYWORD_RENDER_SECTION
-                                    ),
-                                ));
+                            consts::KEYWORD_SECTION => {
+                                Self::parse_section(source, token, token_stream)?
                             }
+                            _ => Self::create_inlined_code_block(
+                                source,
+                                token,
+                                token_stream,
+                                context,
+                            )?,
                         }
                     }
                     tokenizer::Kind::ASTERISK => {
-                        // todo:
-                        return Err(error::CompileError::from_parser(
-                            source,
-                            Some(*token),
-                            &format!(
-                                "'@{}' can only be used in content block.",
-                                consts::KEYWORD_RENDER_SECTION
-                            ),
-                        ));
+                        // comment part.
+                        Self::parse_comment(source, start_token, token_stream)?
                     }
                     _ => {
                         return Err(error::CompileError::from_parser(
@@ -120,5 +112,19 @@ impl<'a> Block<'a> {
                 Ok(block)
             }
         }
+    }
+
+    fn create_inlined_code_block(
+        source: &'a str,
+        token: &Token,
+        token_stream: &mut TokenStream,
+        context: &ParseContext,
+    ) -> result::Result<Block<'a>> {
+        // consume the expression token.
+        token_stream.next_token();
+        let mut span = Span::new(source);
+        span.push_token(*token);
+        let block = ParseContext::create_block(&context, None, span)?;
+        Ok(block)
     }
 }

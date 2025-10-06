@@ -11,7 +11,7 @@ use crate::{
 use winnow::stream::Stream as _;
 
 impl<'a> Block<'a> {
-    pub(in crate::codegen) fn from(
+    pub(in crate::codegen) fn parse_root(
         source: &'a str,
         token_stream: &mut TokenStream,
     ) -> result::Result<Block<'a>> {
@@ -26,40 +26,30 @@ impl<'a> Block<'a> {
             }
             Some(_) => {
                 let mut context = ParseContext::new(Kind::KROOT);
-                let mut result = Span::new(source);
+                let mut span = Span::new(source);
                 while let Some(token) = token_stream.peek_token() {
                     match token.kind() {
                         tokenizer::Kind::EOF => break,
                         tokenizer::Kind::NEWLINE => {
-                            token_stream.next_token();
                             // todo: whether to ignore the lf
+                            token_stream.next_token();
                             context.push(*token);
                         }
                         tokenizer::Kind::AT => {
                             match context.switch_if_possible(source, token_stream) {
                                 Ok((true, mut new_context)) => {
                                     // 1. consume the current pending tokens belong to current context.
-                                    let current_block = context.consume(source)?;
-                                    match current_block {
-                                        Some(block) => {
-                                            // workaround fix later.
-                                            /*if block.kind() == Kind::ROOT {
-                                                block.with_kind(Kind::CONTENT);
-                                            }*/
-                                            result.push_block(block);
-                                        }
-                                        _ => {
-                                            // no-op: as there is no pending tokens belong to current context.
-                                        }
+                                    if let Some(block) = context.consume(source)? {
+                                        span.push_block(block);
                                     }
 
                                     // 2. switch context.
-                                    let block = Block::parse_at_block(
+                                    let block = Block::parse_transfer_block(
                                         source,
                                         token_stream,
                                         &mut new_context,
                                     )?;
-                                    result.push_block(block);
+                                    span.push_block(block);
                                 }
                                 Ok((false, _)) => {
                                     if util::is_token_escaped(token_stream) {
@@ -74,7 +64,7 @@ impl<'a> Block<'a> {
                         }
                         _ => {
                             // consume and push to current context.
-                            // TODO: for prettry, ignore the newline when generate code.
+                            // todo: whether to ignore the lf
                             token_stream.next_token();
                             context.push(*token);
                         }
@@ -82,28 +72,19 @@ impl<'a> Block<'a> {
                 }
 
                 // consume the context.
-                // TODO: for prettry, ignore the newline when generate code.
-                let pending_block = context.consume(source)?;
-                match pending_block {
-                    Some(block) => {
-                        // workaround fix later.
-                        /*if block.kind() == Kind::ROOT {
-                            block.with_kind(Kind::CONTENT);
-                        }*/
-
-                        result.push_block(block);
-                    }
-                    _ => { /* no-ops*/ }
+                // todo: whether to ignore the lf
+                if let Some(block) = context.consume(source)? {
+                    span.push_block(block);
                 }
 
-                match result.has_blocks() {
+                match span.has_blocks() {
                     false => Err(error::CompileError::from_parser(
                         source,
                         None,
                         "Empty block",
                     )),
                     true => {
-                        let block = ParseContext::create_block(&context, None, result)?;
+                        let block = ParseContext::create_block(&context, None, span)?;
                         Ok(block)
                     }
                 }
@@ -113,7 +94,7 @@ impl<'a> Block<'a> {
 }
 
 impl<'a> Block<'a> {
-    pub(crate) fn parse_block_within_kinds(
+    pub(in crate::codegen) fn parse_block_within_kinds(
         source: &'a str,
         open_kind: tokenizer::Kind,
         close_kind: tokenizer::Kind,
@@ -144,7 +125,7 @@ impl<'a> Block<'a> {
         }
 
         let mut depth = 1;
-        let mut result = Span::new(source);
+        let mut span = Span::new(source);
         while let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 k if k == open_kind => {
@@ -175,20 +156,17 @@ impl<'a> Block<'a> {
                     match context.switch_if_possible(source, token_stream) {
                         Ok((true, mut new_context)) => {
                             // 1. consume the current pending tokens belong to current context.
-                            let current_block = context.consume(source)?;
-                            match current_block {
-                                Some(block) => {
-                                    result.push_block(block);
-                                }
-                                _ => {
-                                    // no-op: as there is no pending tokens belong to current context.
-                                }
+                            if let Some(block) = context.consume(source)? {
+                                span.push_block(block);
                             }
 
                             // 2. switch context.
-                            let block =
-                                Block::parse_at_block(source, token_stream, &mut new_context)?;
-                            result.push_block(block);
+                            let block = Block::parse_transfer_block(
+                                source,
+                                token_stream,
+                                &mut new_context,
+                            )?;
+                            span.push_block(block);
                         }
                         Ok((false, _)) => {
                             if util::is_token_escaped(token_stream) {
@@ -220,25 +198,17 @@ impl<'a> Block<'a> {
         }
 
         // consume the context.
-        let pending_block = context.consume(source)?;
-        if let Some(block) = pending_block {
-            result.push_block(block);
+        if let Some(block) = context.consume(source)? {
+            span.push_block(block);
         }
 
-        match result.blocks().len() {
-            0 => Err(error::CompileError::from_parser(
-                source,
-                previous_token,
-                "Failed to parser block",
-            )),
+        // if only one block, return the block directly.
+        match span.blocks().len() {
             1 => {
-                let block = result.blocks().last().unwrap();
-                Ok(block.clone())
+                let only_block = span.blocks().into_iter().next().unwrap();
+                Ok(only_block.clone())
             }
-            _ => {
-                let block = ParseContext::create_block(context, None, result)?;
-                Ok(block)
-            }
+            _ => Ok(ParseContext::create_block(context, None, span)?),
         }
     }
 }

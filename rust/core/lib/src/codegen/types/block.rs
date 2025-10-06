@@ -78,6 +78,18 @@ impl<'a> Block<'a> {
         Block::KUSE(span)
     }
 
+    pub(in crate::codegen) fn with_name(&mut self, name: &str) -> &mut Self {
+        match self {
+            Block::KSECTION(_, span) => {
+                *self = Block::KSECTION(name.to_string(), span.clone());
+                self
+            }
+            _ => {
+                panic!("Only section block can have name");
+            }
+        }
+    }
+
     pub(in crate::codegen) fn content(&self) -> String {
         match self {
             Block::KCODE(span) => span.content(),

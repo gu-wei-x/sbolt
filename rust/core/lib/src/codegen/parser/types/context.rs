@@ -82,9 +82,14 @@ impl ParseContext {
         }
 
         self.tokens.clear();
+        // workaround fix later.
+        let context = if matches!(self.kind, Kind::KROOT) {
+            &ParseContext::new(Kind::KCONTENT)
+        } else {
+            self
+        };
 
-        // convert to block.
-        Ok(Some(Self::create_block(self, None, span)?))
+        Ok(Some(Self::create_block(context, None, span)?))
     }
 }
 
@@ -232,11 +237,7 @@ impl ParseContext {
                     Kind::KLAYOUT => Ok(Block::new_layout(span)),
                     Kind::KRENDER => Ok(Block::new_render(span)),
                     Kind::KROOT => Ok(Block::new_root(span)),
-                    Kind::KSECTION => Err(error::CompileError::from_parser(
-                        "",
-                        None,
-                        "Wrong type for crating block",
-                    )),
+                    Kind::KSECTION => Ok(Block::new_section("", span)),
                     Kind::KUSE => Ok(Block::new_use(span)),
                 }
             }
