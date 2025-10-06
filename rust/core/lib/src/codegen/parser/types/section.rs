@@ -8,7 +8,7 @@ use crate::types::{error, result};
 use winnow::stream::Stream as _;
 
 impl<'a> Block<'a> {
-    pub(in crate::codegen) fn parse_section(
+    pub(in crate::codegen::parser::types) fn parse_section(
         source: &'a str,
         token: &Token,
         token_stream: &mut TokenStream,

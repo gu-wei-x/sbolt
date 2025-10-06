@@ -11,7 +11,7 @@ use crate::{
 use winnow::stream::Stream as _;
 
 impl<'a> Block<'a> {
-    pub(in crate::codegen) fn parse_root(
+    pub(in crate::codegen::parser::types) fn parse_root(
         source: &'a str,
         token_stream: &mut TokenStream,
     ) -> result::Result<Block<'a>> {
@@ -94,7 +94,7 @@ impl<'a> Block<'a> {
 }
 
 impl<'a> Block<'a> {
-    pub(in crate::codegen) fn parse_block_within_kinds(
+    pub(in crate::codegen::parser::types) fn parse_block_within_kinds(
         source: &'a str,
         open_kind: tokenizer::Kind,
         close_kind: tokenizer::Kind,

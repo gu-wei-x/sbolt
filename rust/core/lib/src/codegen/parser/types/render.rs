@@ -6,7 +6,7 @@ use crate::types::{error, result};
 use winnow::stream::Stream as _;
 
 impl<'a> Block<'a> {
-    pub(in crate::codegen) fn parse_render(
+    pub(in crate::codegen::parser::types) fn parse_render(
         source: &'a str,
         token_stream: &mut TokenStream,
     ) -> result::Result<Block<'a>> {

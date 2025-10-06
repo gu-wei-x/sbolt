@@ -2,7 +2,7 @@
 use crate::codegen::consts;
 use crate::codegen::parser::tokenizer::Tokenizer;
 use crate::codegen::types::Block;
-use crate::types::error;
+use crate::types::result;
 use winnow::stream::TokenSlice;
 
 macro_rules! directive_test_case {
@@ -29,7 +29,7 @@ macro_rules! directive_test_case {
     };
     ($name:ident, $statement:expr, $directive:expr, $type_func: expr) => {
         #[test]
-        fn $name() -> core::result::Result<(), error::CompileError> {
+        fn $name() -> result::Result<()> {
             let statements = [
                 &format!("{} {}", $directive, $statement),
                 &format!("{} {};", $directive, $statement),
