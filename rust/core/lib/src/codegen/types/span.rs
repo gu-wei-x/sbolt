@@ -1,9 +1,9 @@
-#![allow(dead_code)]
 use crate::codegen::parser::Token;
 use crate::codegen::types::Block;
 use crate::types::Location;
 use std::ops::Range;
 
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub(in crate::codegen) struct Span<'a> {
     blocks: Vec<Block<'a>>,
@@ -32,6 +32,7 @@ impl<'a> Span<'a> {
         self.blocks.len() == 0
     }
 
+    #[allow(dead_code)]
     pub(in crate::codegen) fn range(&self) -> Range<usize> {
         self.range.clone()
     }

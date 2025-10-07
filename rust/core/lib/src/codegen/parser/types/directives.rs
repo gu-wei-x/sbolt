@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use crate::codegen::consts;
 use crate::codegen::parser::tokenizer::{self, TokenStream, get_nth_token};
 use crate::codegen::types::Block;

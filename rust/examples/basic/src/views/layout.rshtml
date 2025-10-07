@@ -7,7 +7,7 @@
            @render(menu, true)
         </div>
         <div class="main">
-           @render()
+           @render
         </div>
         <div class="footer">
            @render(footer, false)

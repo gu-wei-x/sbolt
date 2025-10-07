@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use crate::codegen::types::Block;
 use crate::types::{error, result};
 use proc_macro2::TokenStream;
