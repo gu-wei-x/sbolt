@@ -84,6 +84,7 @@ impl<'a> Block<'a> {
             ));
         }
 
+        let ts = self.to_token_stream()?;
         let has_layout = match self {
             Block::KROOT(root_span) => root_span
                 .blocks()
@@ -91,36 +92,48 @@ impl<'a> Block<'a> {
                 .any(|b| matches!(b, Block::KLAYOUT(_))),
             _ => false,
         };
-        let mut ts = self.to_token_stream()?;
-        let view_root_mod_name = format_ident!("{}", mod_name);
-        let layout_logic_ts = if has_layout {
-            quote! {
-                match Self::layout() {
-                    Some(layout) => {
-                        for key in disguise::types::resolve_layout_to_view_keys(&layout, &Self::name()) {
-                            if let Some(creator) = crate::#view_root_mod_name::resolve_view_creator(&key) {
-                                let view = creator(disguise::context!());
-                                return view.render();
+        match has_layout {
+            true => {
+                let view_root_mod_name = format_ident!("{}", mod_name);
+                let code = quote! {
+                    fn render(&self) -> disguise::types::result::RenderResult<String> {
+                        let mut writer = disguise::types::HtmlWriter::new();
+                        //let mut runtime_sections = std::collections::HashMap::<String, Vec<String>>::new();
+                        // todo: here we also need a collect to make sure render called once for each section
+                        // TODO: add other logic here
+                        #(#ts)*
+                        match Self::layout() {
+                            Some(layout) => {
+                                // rust doesn't have insert or update(feature is in nightly), here remove and insert to make sure only one default.
+                                //runtime_sections.remove_entry("default");
+                                //runtime_sections.insert("default".to_string(), vec![writer.into_string()]);
+                                // todo: 1. consolidate section with context, unrendered.
+                                // 2. clone context data for layout.
+                                for key in disguise::types::resolve_layout_to_view_keys(&layout, &Self::name()) {
+                                    if let Some(creator) = crate::#view_root_mod_name::resolve_view_creator(&key) {
+                                        let view = creator(disguise::context!());
+                                        return view.render();
+                                    }
+                                }
+                                Err(disguise::types::error::RuntimeError::layout_not_found(&layout, &Self::name()))
                             }
+                            None => Ok(writer.into_string()),
                         }
-                        Err(disguise::types::error::RuntimeError::layout_not_found(&layout, &Self::name()))
                     }
-                    None => Ok(writer.into_string()),
-                }
+                };
+                Ok(code)
             }
-        } else {
-            quote! {
-                Ok(writer.into_string())
+            false => {
+                let code = quote! {
+                    fn render(&self) -> disguise::types::result::RenderResult<String> {
+                        let mut writer = disguise::types::HtmlWriter::new();
+                        // TODO: add other logic here
+                        #(#ts)*
+                        Ok(writer.into_string())
+                    }
+                };
+                Ok(code)
             }
-        };
-        ts.push(layout_logic_ts);
-        let code = quote! {
-            fn render(&self) -> disguise::types::result::RenderResult<String> {
-                let mut writer = disguise::types::HtmlWriter::new();
-                // TODO: add other logic here
-                #(#ts)*
-            }
-        };
-        Ok(code)
+        }
     }
 }
