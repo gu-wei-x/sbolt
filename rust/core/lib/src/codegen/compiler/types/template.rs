@@ -92,9 +92,6 @@ impl<'a> Template<'a> {
             &full_view_name,
             &compiler_options.mod_name,
         )?;
-        println!("**********{}**********************", &target.display());
-        println!("{:#?}", code.to_string());
-        println!("********************************");
         fsutil::write_code_to_file(&target, &code)?;
         Ok(result)
     }

@@ -1,11 +1,16 @@
 #![cfg(test)]
-// cargo test --test view_tests -- --nocapture
+use disguise::types::result;
 disguise::include_views!();
 
 #[test]
-fn comp_test_view() {
-    let result = basic_views::render("views/test", disguise::context!());
-    assert!(result.is_ok());
+#[should_panic]
+fn no_existing_view() {
+    basic_views::render("views/no_existing", disguise::context!()).unwrap();
+}
+
+#[test]
+fn comp_test_view() -> result::RenderResult<()> {
+    let result = basic_views::render("views/test", disguise::context!())?;
     let expected = r#"
 <html>
     <head>
@@ -16,20 +21,19 @@ fn comp_test_view() {
     </body>
 </html>"#
         .trim();
-    let output = result.unwrap();
-    println!("{output}");
-    assert_eq!(output.trim(), expected);
+    assert_eq!(result.trim(), expected);
+
+    Ok(())
 }
 
 #[test]
-fn comp_index_view() {
+fn comp_index_view() -> result::RenderResult<()> {
     let context = disguise::context! {
         name: "Disguise".to_string(),
         age: 1,
         msg: "Hello world!".to_string()
     };
-    let result = basic_views::render("views/comp/index", context);
-    assert!(result.is_ok());
+    let result = basic_views::render("views/comp/index", context)?;
     let expected = r#"
 <html>
     <head>
@@ -40,12 +44,17 @@ fn comp_index_view() {
     </body>
 </html>"#
         .trim();
-    let output = result.unwrap();
-    assert_eq!(output.trim(), expected);
+    assert_eq!(result.trim(), expected);
+
+    Ok(())
 }
 
 #[test]
-fn comp_home_view() {
-    let result = basic_views::render("views/comp/home", disguise::context!());
-    assert!(result.is_ok());
+fn comp_home_view() -> result::RenderResult<()> {
+    let result = basic_views::render("views/comp/home", disguise::context!())?;
+    println!("********************************");
+    println!("{result:#?}");
+    println!("********************************");
+
+    Ok(())
 }

@@ -12,7 +12,4 @@ pub trait Template {
         // default impl.
         Err(error::RuntimeError::view_not_found(&Self::name()))
     }
-    fn render_section(&self, name: &str, _is_required: bool) -> result::RenderResult<String> {
-        Ok(name.to_string())
-    }
 }

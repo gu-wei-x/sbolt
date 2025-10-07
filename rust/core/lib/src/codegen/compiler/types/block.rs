@@ -85,18 +85,21 @@ impl<'a> Block<'a> {
             ));
         }
 
-        let mod_name_id = format_ident!("{}", mod_name);
-        let ts = self.to_token_stream()?;
-        let code = quote! {
-            fn render(&self) -> disguise::types::result::RenderResult<String> {
-                let mut writer = disguise::types::HtmlWriter::new();
-                // TODO: add other logic here
-                #(#ts)*
-
+        let has_layout = match self {
+            Block::KROOT(root_span) => root_span
+                .blocks()
+                .iter()
+                .any(|b| matches!(b, Block::KLAYOUT(_))),
+            _ => false,
+        };
+        let mut ts = self.to_token_stream()?;
+        let view_root_mod_name = format_ident!("{}", mod_name);
+        let layout_logic_ts = if has_layout {
+            quote! {
                 match Self::layout() {
                     Some(layout) => {
                         for key in disguise::types::resolve_layout_to_view_keys(&layout, &Self::name()) {
-                            if let Some(creator) = crate::#mod_name_id::resolve_view_creator(&key) {
+                            if let Some(creator) = crate::#view_root_mod_name::resolve_view_creator(&key) {
                                 let view = creator(disguise::context!());
                                 return view.render();
                             }
@@ -105,6 +108,18 @@ impl<'a> Block<'a> {
                     }
                     None => Ok(writer.into_string()),
                 }
+            }
+        } else {
+            quote! {
+                Ok(writer.into_string())
+            }
+        };
+        ts.push(layout_logic_ts);
+        let code = quote! {
+            fn render(&self) -> disguise::types::result::RenderResult<String> {
+                let mut writer = disguise::types::HtmlWriter::new();
+                // TODO: add other logic here
+                #(#ts)*
             }
         };
         Ok(code)
