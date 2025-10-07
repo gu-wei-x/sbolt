@@ -7,6 +7,10 @@ use winnow::stream::TokenSlice;
 pub(crate) type StrStream<'a> = LocatingSlice<&'a str>;
 pub(crate) type TokenStream<'i> = TokenSlice<'i, Token>;
 
+pub(crate) fn skip_newline(stream: &mut TokenStream) -> bool {
+    skip_next_token_if(stream, |k| k == Kind::NEWLINE)
+}
+
 pub(crate) fn skip_whitespace(stream: &mut TokenStream) -> bool {
     skip_next_token_if(stream, |k| k == Kind::WHITESPACE)
 }

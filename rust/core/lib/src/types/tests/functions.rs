@@ -3,7 +3,7 @@
 use crate::types::functions;
 
 #[test]
-fn test_normalize_path_to_key() {
+fn normalize_path_to_key() {
     assert_eq!(
         functions::normalize_path_to_view_key("test1/test2"),
         "test1::test2::Test2View"
@@ -26,7 +26,7 @@ fn test_normalize_path_to_key() {
 }
 
 #[test]
-fn test_resolve_layout_to_view_keys() {
+fn resolve_layout_to_view_keys() {
     // absolute
     assert_eq!(
         functions::resolve_layout_to_view_keys("/layout", "test1::test2::Test2View"),

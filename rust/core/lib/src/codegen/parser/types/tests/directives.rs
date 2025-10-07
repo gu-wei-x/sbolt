@@ -1,15 +1,15 @@
 #![cfg(test)]
 use crate::codegen::consts;
-use crate::codegen::parser::template::{Block, Kind, ParseContext};
 use crate::codegen::parser::tokenizer::Tokenizer;
-use crate::types::error;
+use crate::codegen::types::Block;
+use crate::types::result;
 use winnow::stream::TokenSlice;
 
 macro_rules! directive_test_case {
-    ($name:ident, $directive:expr, $kind:expr) => {
+    ($name:ident, $directive:expr) => {
         #[test]
         fn $name() {
-            let contents = [
+            let statements = [
                 $directive,
                 &format!("{} ", $directive),
                 &format!("{};", $directive),
@@ -18,25 +18,19 @@ macro_rules! directive_test_case {
                 &format!("{} \n", $directive),
                 &format!("{} ;\n", $directive),
             ];
-
-            for content in contents {
-                let statement = &format!("@{}", content);
+            for statement in statements {
                 let tokenizer = Tokenizer::new(statement);
                 let tokens = tokenizer.into_vec();
                 let mut token_stream = TokenSlice::new(&tokens);
-                let result = Block::parse_at_block(
-                    statement,
-                    &mut token_stream,
-                    &mut ParseContext::new($kind),
-                );
+                let result = Block::parse_directive(statement, $directive, &mut token_stream);
                 assert!(result.is_err());
             }
         }
     };
-    ($name:ident, $statement:expr, $directive:expr, $kind:expr) => {
+    ($name:ident, $statement:expr, $directive:expr, $type_func: expr) => {
         #[test]
-        fn $name() -> core::result::Result<(), error::CompileError> {
-            let contents = [
+        fn $name() -> result::Result<()> {
+            let statements = [
                 &format!("{} {}", $directive, $statement),
                 &format!("{} {};", $directive, $statement),
                 &format!("{} {};\n", $directive, $statement),
@@ -44,19 +38,12 @@ macro_rules! directive_test_case {
                 &format!("{} {} ;", $directive, $statement),
                 &format!("{} {} ;\n", $directive, $statement),
             ];
-
-            for content in contents {
-                let statement = &format!("@{}", content);
+            for statement in statements {
                 let tokenizer = Tokenizer::new(statement);
                 let tokens = tokenizer.into_vec();
                 let mut token_stream = TokenSlice::new(&tokens);
-                let block = Block::parse_at_block(
-                    statement,
-                    &mut token_stream,
-                    &mut ParseContext::new($kind),
-                )?;
-                assert_eq!(block.name(), Some(&$directive.to_string()));
-                assert_eq!(block.kind(), $kind);
+                let block = Block::parse_directive(statement, $directive, &mut token_stream)?;
+                assert!($type_func(&block));
                 assert_eq!(block.content().trim(), $statement);
             }
 
@@ -66,28 +53,23 @@ macro_rules! directive_test_case {
 }
 
 // layout.
+directive_test_case!(
+    parse_illegal_directive_layout,
+    consts::DIRECTIVE_KEYWORD_LAYOUT
+);
 
 directive_test_case!(
-    test_parse_directive_layout_illegal,
-    consts::DIRECTIVE_KEYWORD_LAYOUT,
-    Kind::DIRECTIVE
-);
-directive_test_case!(
-    test_parse_directive_layout,
+    parse_directive_layout,
     "abc:test",
     consts::DIRECTIVE_KEYWORD_LAYOUT,
-    Kind::DIRECTIVE
+    |b| matches!(b, &Block::KLAYOUT(_))
 );
 
 // use.
+directive_test_case!(parse_illegal_directive_use, consts::DIRECTIVE_KEYWORD_USE);
 directive_test_case!(
-    test_parse_directive_use_illegal,
-    consts::DIRECTIVE_KEYWORD_USE,
-    Kind::DIRECTIVE
-);
-directive_test_case!(
-    test_parse_directive_use,
+    parse_directive_use,
     "abc:test",
     consts::DIRECTIVE_KEYWORD_USE,
-    Kind::DIRECTIVE
+    |b| matches!(b, &Block::KUSE(_))
 );

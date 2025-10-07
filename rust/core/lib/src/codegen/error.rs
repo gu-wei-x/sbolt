@@ -1,5 +1,4 @@
 use crate::codegen::parser;
-use crate::codegen::parser::template::Block;
 use crate::types::{Location, error};
 use std::env::VarError;
 use std::path::PathBuf;
@@ -20,14 +19,6 @@ impl error::CompileError {
         };
 
         error::CompileError::Parser(token.map(|t| t.location()), summary.to_string(), detail)
-    }
-
-    pub(in crate::codegen) fn from_codegn(block: &Block<'_>, str: &str) -> Self {
-        error::CompileError::CodeGen(
-            block.location(),
-            str.to_string(),
-            block.content().to_string(),
-        )
     }
 
     pub(in crate::codegen) fn with_file(&self, file: &PathBuf) -> Self {

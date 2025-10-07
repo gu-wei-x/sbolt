@@ -27,6 +27,7 @@ pub enum Kind {
     ASTERISK = b'*',
     WHITESPACE = b' ',
     SEMICOLON = b';',
+    COMMA = b',',
 }
 
 impl std::fmt::Display for Token {
@@ -63,6 +64,7 @@ pub(crate) fn tokenize(stream: &mut StrStream<'_>, location: &mut Location) -> T
         b'/' => tokenize_symbol(stream, Kind::SLASH, location),
         b'*' => tokenize_symbol(stream, Kind::ASTERISK, location),
         b';' => tokenize_symbol(stream, Kind::SEMICOLON, location),
+        b',' => tokenize_symbol(stream, Kind::COMMA, location),
         b' ' => tokenize_whitespace(stream, location),
         b'\r' => tokenize_newline(stream, location),
         b'\n' => tokenize_newline(stream, location),
@@ -113,7 +115,7 @@ fn tokenize_newline(stream: &mut StrStream<'_>, location: &mut Location) -> Toke
 
 fn tokenize_expression(stream: &mut StrStream<'_>, location: &Location) -> Token {
     let start = stream.current_token_start();
-    const TOKEN_START: &[u8] = b"@=!-<>(){}/*; \r\n";
+    const TOKEN_START: &[u8] = b"@=!-<>(){}/*,; \r\n";
     let offset = stream
         .as_bstr()
         .offset_for(|b| TOKEN_START.contains_token(b))

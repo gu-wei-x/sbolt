@@ -1,64 +1,100 @@
-use crate::codegen::consts;
-use crate::codegen::parser::Token;
-use crate::codegen::parser::template::block::{self, Block};
-use crate::codegen::parser::tokenizer::TokenStream;
-use crate::codegen::parser::tokenizer::{self, get_nth_token};
-use crate::types::{error, result};
+#![allow(dead_code)]
 use winnow::stream::Stream as _;
 
+use crate::codegen::consts;
+use crate::codegen::parser::tokenizer::{TokenStream, get_nth_token};
+use crate::codegen::parser::{Token, tokenizer};
+use crate::codegen::types::Block;
+use crate::codegen::types::Span;
+use crate::types::{error, result};
+
+#[derive(Clone, Copy, PartialEq)]
+pub(in crate::codegen) enum Kind {
+    KCODE,
+    KCOMMENT,
+    KCONTENT,
+    KFUNCTIONS,
+    KINLINEDCODE,
+    KINLINEDCONTENT,
+    KLAYOUT,
+    KRENDER,
+    KROOT,
+    KSECTION,
+    KUSE,
+}
+
 #[derive(Clone)]
-pub(crate) struct ParseContext {
-    kind: block::Kind,
+pub(in crate::codegen) struct ParseContext {
+    kind: Kind,
     tokens: Vec<Token>,
 }
 
 impl ParseContext {
-    pub(crate) fn new(kind: block::Kind) -> Self {
+    pub(in crate::codegen) fn new(kind: Kind) -> Self {
         Self {
             kind: kind,
             tokens: Vec::new(),
         }
     }
 
-    pub(crate) fn kind(&self) -> block::Kind {
+    pub(in crate::codegen) fn kind(&self) -> Kind {
         self.kind
     }
 
-    pub(crate) fn push(&mut self, token: Token) {
+    pub(in crate::codegen) fn push(&mut self, token: Token) {
         self.tokens.push(token);
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn is_content(&self) -> bool {
-        self.kind == block::Kind::CONTENT
-            || self.kind == block::Kind::ROOT
-            || self.kind == block::Kind::INLINEDCONTENT
+    pub(in crate::codegen) fn is_block(&self) -> bool {
+        matches!(self.kind, Kind::KCONTENT | Kind::KROOT | Kind::KCODE)
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn is_code(&self) -> bool {
-        self.kind == block::Kind::CODE
-            || self.kind == block::Kind::FUNCTIONS
-            || self.kind == block::Kind::DIRECTIVE
-            || self.kind == block::Kind::INLINEDCODE
+    pub(in crate::codegen) fn is_content(&self) -> bool {
+        matches!(
+            self.kind,
+            Kind::KCONTENT | Kind::KROOT | Kind::KINLINEDCONTENT
+        )
     }
 
-    pub(crate) fn consume<'a>(&mut self, source: &'a str) -> Option<Block<'a>> {
+    pub(in crate::codegen) fn is_code(&self) -> bool {
+        matches!(
+            self.kind,
+            Kind::KCODE | Kind::KFUNCTIONS | Kind::KINLINEDCODE | Kind::KLAYOUT | Kind::KUSE
+        )
+    }
+
+    pub(in crate::codegen) fn is_inline(&self) -> bool {
+        matches!(self.kind, Kind::KINLINEDCODE | Kind::KINLINEDCONTENT)
+    }
+
+    pub(in crate::codegen) fn consume<'a>(
+        &mut self,
+        source: &'a str,
+    ) -> result::Result<Option<Block<'a>>> {
         // consume current tokens to create a block and destruct current data.
         if self.tokens.is_empty() || self.tokens[0].kind() == tokenizer::Kind::EOF {
-            return None;
+            return Ok(None);
         }
 
-        let mut result = Block::new(None, self.kind(), source);
+        let mut span = Span::new(source);
         for token in &self.tokens {
-            result.push_token(*token);
+            span.push_token(*token);
         }
 
         self.tokens.clear();
-        Some(result)
-    }
+        // workaround fix later.
+        let context = if matches!(self.kind, Kind::KROOT) {
+            &ParseContext::new(Kind::KCONTENT)
+        } else {
+            self
+        };
 
-    pub(crate) fn switch_if_possible(
+        Ok(Some(Self::create_block(context, None, span)?))
+    }
+}
+
+impl ParseContext {
+    pub(in crate::codegen) fn switch_if_possible(
         &self,
         source: &str,
         token_stream: &mut TokenStream,
@@ -101,9 +137,9 @@ impl ParseContext {
                 match exp {
                     consts::DIRECTIVE_KEYWORD_USE => {
                         // block but not code kind.
-                        if self.kind().is_block_kind() && !self.kind().is_code_kind() {
+                        if self.is_block() && !self.is_code() {
                             // switch to code context from root|content.
-                            Ok((true, ParseContext::new(block::Kind::DIRECTIVE)))
+                            Ok((true, ParseContext::new(Kind::KUSE)))
                         } else {
                             Err(error::CompileError::from_parser(
                                 source,
@@ -113,9 +149,9 @@ impl ParseContext {
                         }
                     }
                     consts::DIRECTIVE_KEYWORD_LAYOUT => {
-                        if self.kind() == block::Kind::ROOT {
+                        if self.kind() == Kind::KROOT {
                             // only allowed in root context.
-                            Ok((true, ParseContext::new(block::Kind::DIRECTIVE)))
+                            Ok((true, ParseContext::new(Kind::KLAYOUT)))
                         } else {
                             Err(error::CompileError::from_parser(
                                 source,
@@ -125,10 +161,10 @@ impl ParseContext {
                         }
                     }
                     consts::KEYWORD_SECTION => {
-                        if self.kind().is_block_kind() && self.kind() != block::Kind::SECTION {
+                        if self.is_block() && self.kind() != Kind::KSECTION {
                             // todo: how to detect nested section in side section?
                             // do it before parsing end?
-                            Ok((true, ParseContext::new(block::Kind::SECTION)))
+                            Ok((true, ParseContext::new(Kind::KSECTION)))
                         } else {
                             Err(error::CompileError::from_parser(
                                 source,
@@ -139,32 +175,32 @@ impl ParseContext {
                     }
                     _ => {
                         // inlined
-                        if self.kind().is_code_kind() {
-                            Ok((true, ParseContext::new(block::Kind::INLINEDCONTENT)))
+                        if self.is_code() {
+                            Ok((true, ParseContext::new(Kind::KINLINEDCONTENT)))
                         } else {
-                            Ok((true, ParseContext::new(block::Kind::INLINEDCODE)))
+                            Ok((true, ParseContext::new(Kind::KINLINEDCODE)))
                         }
                     }
                 }
             }
             tokenizer::Kind::OPARENTHESIS => {
                 // inlined
-                if self.kind().is_code_kind() {
-                    Ok((true, ParseContext::new(block::Kind::INLINEDCONTENT)))
+                if self.is_code() {
+                    Ok((true, ParseContext::new(Kind::KINLINEDCONTENT)))
                 } else {
-                    Ok((true, ParseContext::new(block::Kind::INLINEDCODE)))
+                    Ok((true, ParseContext::new(Kind::KINLINEDCODE)))
                 }
             }
             tokenizer::Kind::OCURLYBRACKET => {
-                if self.kind().is_code_kind() {
-                    Ok((true, ParseContext::new(block::Kind::CONTENT)))
+                if self.is_code() {
+                    Ok((true, ParseContext::new(Kind::KCONTENT)))
                 } else {
-                    Ok((true, ParseContext::new(block::Kind::CODE)))
+                    Ok((true, ParseContext::new(Kind::KCODE)))
                 }
             }
             tokenizer::Kind::ASTERISK => {
-                if self.kind().is_content_kind() {
-                    Ok((true, ParseContext::new(block::Kind::COMMENT)))
+                if self.is_content() {
+                    Ok((true, ParseContext::new(Kind::KCOMMENT)))
                 } else {
                     Err(error::CompileError::from_parser(
                         source,
@@ -176,6 +212,34 @@ impl ParseContext {
             _ => {
                 // Don't switch context
                 Ok((false, ParseContext::new(self.kind())))
+            }
+        }
+    }
+}
+
+impl ParseContext {
+    pub(in crate::codegen) fn create_block<'a>(
+        context: &ParseContext,
+        name: Option<String>,
+        span: Span<'a>,
+    ) -> result::Result<Block<'a>> {
+        match name {
+            Some(name) => Ok(Block::new_section(&name, span)),
+            None => {
+                // convert to block.
+                match context.kind() {
+                    Kind::KCODE => Ok(Block::new_code(span)),
+                    Kind::KCOMMENT => Ok(Block::new_comment(span)),
+                    Kind::KCONTENT => Ok(Block::new_content(span)),
+                    Kind::KFUNCTIONS => Ok(Block::new_functions(span)),
+                    Kind::KINLINEDCODE => Ok(Block::new_inline_code(span)),
+                    Kind::KINLINEDCONTENT => Ok(Block::new_inline_content(span)),
+                    Kind::KLAYOUT => Ok(Block::new_layout(span)),
+                    Kind::KRENDER => Ok(Block::new_render(span)),
+                    Kind::KROOT => Ok(Block::new_root(span)),
+                    Kind::KSECTION => Ok(Block::new_section("", span)),
+                    Kind::KUSE => Ok(Block::new_use(span)),
+                }
             }
         }
     }

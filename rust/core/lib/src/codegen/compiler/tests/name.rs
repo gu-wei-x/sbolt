@@ -2,7 +2,7 @@
 use crate::codegen::compiler::name;
 
 #[test]
-fn test_create_name_space() {
+fn create_name_space() {
     let ns_prefix = None;
     let name = String::from("test");
     let full_name = name::create_name_space(&ns_prefix, &name);
@@ -20,12 +20,12 @@ fn test_create_name_space() {
 }
 
 #[test]
-fn test_create_view_type_name() {
+fn create_view_type_name() {
     assert_eq!(name::create_view_type_name("index"), "IndexView");
 }
 
 #[test]
-fn test_create_type_full_name() {
+fn create_type_full_name() {
     assert_eq!(
         name::create_type_full_name("index", "test"),
         "crate::test::index"

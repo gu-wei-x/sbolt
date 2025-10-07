@@ -1,5 +1,3 @@
-mod block;
-mod cgresult;
 mod compiler;
 mod error;
 mod fsutil;
@@ -8,7 +6,7 @@ mod name;
 mod options;
 mod registry;
 mod result;
-mod template;
+mod types;
 
 #[cfg(test)]
 mod tests;

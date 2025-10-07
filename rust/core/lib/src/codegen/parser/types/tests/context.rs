@@ -1,20 +1,14 @@
 #![cfg(test)]
-use crate::{
-    codegen::{
-        consts,
-        parser::{
-            template::{Kind, ParseContext, block},
-            tokenizer::Tokenizer,
-        },
-    },
-    types::error,
-};
+use crate::codegen::parser::types::context::Kind;
+use crate::codegen::parser::types::context::ParseContext;
+use crate::codegen::{consts, parser::tokenizer::Tokenizer, types::Block};
+use crate::types::result;
 use winnow::stream::TokenSlice;
 
 macro_rules! parse_context_test_case {
     ($case_name:ident, $source:expr, $from_kind: expr) => {
         #[test]
-        fn $case_name() -> core::result::Result<(), error::CompileError> {
+        fn $case_name() -> result::Result<()> {
             let source = $source;
             let tokenizer = Tokenizer::new(source);
             let tokens = tokenizer.into_vec();
@@ -27,7 +21,7 @@ macro_rules! parse_context_test_case {
     };
     ($case_name:ident, $source:expr, $is_from_content:expr, $from_kind: expr, $expected: expr) => {
         #[test]
-        fn $case_name() -> core::result::Result<(), error::CompileError> {
+        fn $case_name() -> result::Result<()> {
             let source = $source;
             let tokenizer = Tokenizer::new(source);
             let tokens = tokenizer.into_vec();
@@ -42,172 +36,172 @@ macro_rules! parse_context_test_case {
 
 // from content.
 parse_context_test_case!(
-    test_parse_context_from_content_should_switch,
+    parse_context_from_content_should_switch,
     "@123",
     true,
-    Kind::CONTENT,
+    Kind::KCONTENT,
     true
 );
 parse_context_test_case!(
-    test_parse_context_from_content_single_at,
+    parse_context_from_content_single_at,
     "@",
     true,
-    Kind::CONTENT,
+    Kind::KCONTENT,
     false
 );
 parse_context_test_case!(
-    test_parse_context_from_content_should_not_switch,
+    parse_context_from_content_should_not_switch,
     "@@123",
     true,
-    Kind::CONTENT,
+    Kind::KCONTENT,
     false
 );
 
 parse_context_test_case!(
-    test_parse_context_from_content_layout,
+    parse_context_from_content_layout,
     &format!("@{}", consts::DIRECTIVE_KEYWORD_LAYOUT),
     true,
-    Kind::ROOT,
+    Kind::KROOT,
     true
 );
 
 parse_context_test_case!(
-    test_parse_context_from_content_section,
+    parse_context_from_content_section,
     &format!("@{}", consts::KEYWORD_SECTION),
     true,
-    Kind::CONTENT,
+    Kind::KCONTENT,
     true
 );
 
 parse_context_test_case!(
-    test_parse_context_from_content_use,
+    parse_context_from_content_use,
     &format!("@{}", consts::DIRECTIVE_KEYWORD_USE),
     true,
-    Kind::CONTENT,
+    Kind::KCONTENT,
     true
 );
 
 parse_context_test_case!(
-    test_parse_context_from_content_oparenthesis,
+    parse_context_from_content_oparenthesis,
     "@(",
     true,
-    Kind::CONTENT,
+    Kind::KCONTENT,
     true
 );
 
 parse_context_test_case!(
-    test_parse_context_from_content_ocurlybracket,
+    parse_context_from_content_ocurlybracket,
     "@{",
     true,
-    Kind::CONTENT,
+    Kind::KCONTENT,
     true
 );
 
 // from code.
 parse_context_test_case!(
-    test_parse_context_from_code_should_switch,
+    parse_context_from_code_should_switch,
     "@123",
     false,
-    Kind::CODE,
+    Kind::KCODE,
     true
 );
 parse_context_test_case!(
-    test_parse_context_from_code_single_at,
+    parse_context_from_code_single_at,
     "@",
     false,
-    Kind::CODE,
+    Kind::KCODE,
     false
 );
 parse_context_test_case!(
-    test_parse_context_from_code_should_not_switch,
+    parse_context_from_code_should_not_switch,
     "@@123",
     false,
-    Kind::CODE,
+    Kind::KCODE,
     false
 );
 
 // not allowed.
 parse_context_test_case!(
-    test_parse_context_from_code_layout,
+    parse_context_from_code_layout,
     &format!("@{}", consts::DIRECTIVE_KEYWORD_LAYOUT),
-    Kind::CODE
+    Kind::KCODE
 );
 
 parse_context_test_case!(
-    test_parse_context_from_code_section,
+    parse_context_from_code_section,
     &format!("@{}", consts::KEYWORD_SECTION),
     false,
-    Kind::CODE,
+    Kind::KCODE,
     true
 );
 
 // not allowed.
 parse_context_test_case!(
-    test_parse_context_from_code_use,
+    parse_context_from_code_use,
     &format!("@{}", consts::DIRECTIVE_KEYWORD_USE),
-    Kind::CODE
+    Kind::KCODE
 );
 
 parse_context_test_case!(
-    test_parse_context_from_code_oparenthesis,
+    parse_context_from_code_oparenthesis,
     "@(",
     false,
-    Kind::CODE,
+    Kind::KCODE,
     true
 );
 
 parse_context_test_case!(
-    test_parse_context_from_code_ocurlybracket,
+    parse_context_from_code_ocurlybracket,
     "@{",
     false,
-    Kind::CODE,
+    Kind::KCODE,
     true
 );
 
 #[test]
-fn test_parse_context_to_block_empty() -> core::result::Result<(), error::CompileError> {
+fn parse_context_to_block_empty() -> result::Result<()> {
     let source = "";
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
-    let mut context = ParseContext::new(Kind::ROOT);
+    let mut context = ParseContext::new(Kind::KROOT);
     for token in tokens {
         context.push(token);
     }
-    let block = context.consume(source);
+    let block = context.consume(source)?;
     assert!(block.is_none());
     Ok(())
 }
 
 #[test]
-fn test_parse_context_to_block_from_content() -> core::result::Result<(), error::CompileError> {
+fn parse_context_to_block_from_content() -> result::Result<()> {
     let source = "test1 test2";
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
-    let mut context = ParseContext::new(Kind::ROOT);
+    let mut context = ParseContext::new(Kind::KROOT);
     for token in tokens {
         context.push(token);
     }
-    let result = context.consume(source);
+    let result = context.consume(source)?;
     assert!(result.is_some());
     let block = result.unwrap();
     assert_eq!(block.content(), source);
-    assert!(matches!(block.kind(), block::Kind::ROOT));
+    assert!(matches!(block, Block::KCONTENT(_)));
     Ok(())
 }
 
 #[test]
-fn test_parse_context_to_block_from_code() -> core::result::Result<(), error::CompileError> {
+fn parse_context_to_block_from_code() -> result::Result<()> {
     let source = "test1 test2";
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
-    let mut context = ParseContext::new(Kind::CODE);
+    let mut context = ParseContext::new(Kind::KCODE);
     for token in tokens {
         context.push(token);
     }
-    let result = context.consume(source);
+    let result = context.consume(source)?;
     assert!(result.is_some());
     let block = result.unwrap();
     assert_eq!(block.content(), source);
-    assert!(matches!(block.kind(), block::Kind::CODE));
+    assert!(matches!(block, Block::KCODE(_)));
     Ok(())
 }

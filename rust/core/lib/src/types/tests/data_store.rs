@@ -3,7 +3,7 @@ use crate::types::data_store::DataStore;
 
 // cargo test test_primitive_type -- --nocapture
 #[test]
-fn test_primitive_type() {
+fn primitive_type() {
     let store = DataStore::<String>::new();
     store.set("k1", "v1".to_string());
     store.set("k2", 1);
@@ -17,7 +17,7 @@ fn test_primitive_type() {
 }
 
 #[test]
-fn test_custom_type() {
+fn custom_type() {
     #[derive(PartialEq, Debug)]
     struct CustomType {
         value: String,
