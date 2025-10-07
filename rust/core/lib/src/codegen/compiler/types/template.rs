@@ -13,7 +13,7 @@ use quote::format_ident;
 use quote::quote;
 
 impl<'a> Template<'a> {
-    pub(in crate::codegen::compiler::types) fn generate_code(
+    pub(in crate::codegen::compiler::types) fn to_token_stream(
         &self,
         view_name: &str,
         view_type: &str,
@@ -23,11 +23,11 @@ impl<'a> Template<'a> {
         let view_name = format_ident!("{}", view_name);
         let view_type = format_ident!("K{}", view_type);
         let template_type = format_ident!("{}", consts::TEMPLATE_TYPE_NAME);
-        let imports_content = self.block().generate_imports()?;
-        let layout_content = self.block().generate_layout()?;
+        let imports_content = self.block().generate_imports_token_stream()?;
+        let layout_content = self.block().generate_layout_token_stream()?;
 
         // a view must have render method.
-        let render_content = self.block().generate_render(mod_name)?;
+        let render_content = self.block().generate_render_token_stream(mod_name)?;
         let code = quote! {
             use crate::viewtypes::*;
             use disguise::types::Context;
@@ -86,16 +86,13 @@ impl<'a> Template<'a> {
         let view_type = name::create_view_type_name(&full_view_name);
         result.add_view_mapping(full_view_name.to_string(), view_name.clone());
 
-        let code = self.generate_code(
+        let _code = self.to_token_stream(
             &view_name,
             &view_type,
             &full_view_name,
             &compiler_options.mod_name,
         )?;
         //fsutil::write_code_to_file(&target, &code)?;
-        println!("**********************************");
-        println!("{}", code.to_string());
-        println!("**********************************");
         Ok(result)
     }
 }

@@ -4,18 +4,16 @@ use crate::types::result;
 use quote::quote;
 
 #[test]
-fn template_generate_code() -> result::Result<()> {
+fn to_token_stream() -> result::Result<()> {
     let raw_content = r#"
 @use test::test1;
 @layout test::test2;
 @section test1 {
    this is test1
 }
-<html>
-   <div>Test</div>
-</html>"#;
+<html><div>Test</div></html>"#;
     let template = Template::from(&raw_content, None)?;
-    let code = template.generate_code(
+    let ts = template.to_token_stream(
         "TestView",
         "TestnsTestViewView",
         "testns::TestView",
@@ -59,6 +57,8 @@ fn template_generate_code() -> result::Result<()> {
 
             fn render(& self) -> disguise::types::result::RenderResult<String> {
                 let mut writer = disguise::types::HtmlWriter::new();
+                writer.write("todo: implement section");
+                writer.write("<html><div>Test</div></html>");
                 match Self::layout() {
                     Some(layout) => {
                         for key in disguise::types::resolve_layout_to_view_keys(&layout, &Self::name()) {
@@ -74,7 +74,7 @@ fn template_generate_code() -> result::Result<()> {
             }
         }
     };
-    assert_eq!(code.to_string(), expected.to_string());
+    assert_eq!(ts.to_string(), expected.to_string());
 
     Ok(())
 }

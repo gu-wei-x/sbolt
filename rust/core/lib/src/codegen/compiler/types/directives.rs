@@ -5,7 +5,9 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 impl<'a> Block<'a> {
-    pub(in crate::codegen::compiler::types) fn generate_use(&self) -> result::Result<TokenStream> {
+    pub(in crate::codegen::compiler::types) fn to_use_token_stream(
+        &self,
+    ) -> result::Result<TokenStream> {
         match self {
             Block::KUSE(span) => {
                 let statement = format!("{} {};", consts::DIRECTIVE_KEYWORD_USE, span.content());
@@ -22,7 +24,7 @@ impl<'a> Block<'a> {
         }
     }
 
-    pub(in crate::codegen::compiler::types) fn generate_imports(
+    pub(in crate::codegen::compiler::types) fn generate_imports_token_stream(
         &self,
     ) -> result::Result<Vec<TokenStream>> {
         let root_span = match self {
@@ -54,7 +56,7 @@ impl<'a> Block<'a> {
     }
 
     // template has default implementation: option.
-    pub(in crate::codegen::compiler::types) fn generate_layout(
+    pub(in crate::codegen::compiler::types) fn generate_layout_token_stream(
         &self,
     ) -> result::Result<Option<TokenStream>> {
         let root_span = match self {

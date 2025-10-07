@@ -145,9 +145,9 @@ fn template_from_code_block_in_content() -> result::Result<()> {
 fn template_from_inlined_content_in_code_separated_by_lf() -> result::Result<()> {
     let pre_code = "let name = '';";
     let content = "test";
-    let post_code = "\nprintln!(\"Hello, {}!\", name);";
+    let post_code = "println!(\"Hello, {}!\", name);";
 
-    let raw_content = &format!("@{{{}@{}{}}}", pre_code, content, post_code);
+    let raw_content = &format!("@{{{}@{}\n{}}}", pre_code, content, post_code);
     let template = Template::from(&raw_content, None)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
@@ -318,63 +318,53 @@ fn template_from_doc() -> result::Result<()> {
         Block::KROOT(span) => span,
         _ => panic!("Expected KROOT block"),
     };
-    assert_eq!(root_span.blocks().len(), 12);
+    assert_eq!(root_span.blocks().len(), 10);
 
     // 0: use
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KUSE(_)));
     assert_eq!(block.content(), "test::test");
 
-    // 1: newline
+    // 1: layout
     let block = &root_span.blocks()[1];
-    assert!(matches!(block, Block::KCONTENT(_)));
-    assert_eq!(block.content(), "\n");
-
-    // 2: layout
-    let block = &root_span.blocks()[2];
     assert!(matches!(block, Block::KLAYOUT(_)));
     assert_eq!(block.content(), "test::test");
 
-    // 3: newline
+    // 2: code block
+    let block = &root_span.blocks()[2];
+    assert!(matches!(block, Block::KCODE(_)));
+
+    // 3: content
     let block = &root_span.blocks()[3];
     assert!(matches!(block, Block::KCONTENT(_)));
-    assert_eq!(block.content(), "\n");
 
-    // 4: code block
+    // 4: inline code
     let block = &root_span.blocks()[4];
-    assert!(matches!(block, Block::KCODE(_)));
+    assert!(matches!(block, Block::KINLINEDCODE(_)));
+    assert_eq!(block.content(), "msg");
 
     // 5: content
     let block = &root_span.blocks()[5];
     assert!(matches!(block, Block::KCONTENT(_)));
-
-    // 6: inline code
-    let block = &root_span.blocks()[6];
-    assert!(matches!(block, Block::KINLINEDCODE(_)));
-    assert_eq!(block.content(), "msg");
-
-    // 7: content
-    let block = &root_span.blocks()[7];
-    assert!(matches!(block, Block::KCONTENT(_)));
     assert_eq!(block.content(), " - from ");
 
-    // 8: inline code with parentheses
-    let block = &root_span.blocks()[8];
+    // 6: inline code with parentheses
+    let block = &root_span.blocks()[6];
     assert!(matches!(block, Block::KINLINEDCODE(_)));
     assert_eq!(block.content(), "name");
 
-    // 9: content with parentheses
-    let block = &root_span.blocks()[9];
+    // 7: content with parentheses
+    let block = &root_span.blocks()[7];
     assert!(matches!(block, Block::KCONTENT(_)));
     assert_eq!(block.content(), "(");
 
-    // 10: inline code with parentheses
-    let block = &root_span.blocks()[10];
+    // 108: inline code with parentheses
+    let block = &root_span.blocks()[8];
     assert!(matches!(block, Block::KINLINEDCODE(_)));
     assert_eq!(block.content(), "age");
 
-    // 11: content with parentheses
-    let block = &root_span.blocks()[11];
+    // 9: content with parentheses
+    let block = &root_span.blocks()[9];
     assert!(matches!(block, Block::KCONTENT(_)));
 
     Ok(())
@@ -442,37 +432,33 @@ fn template_from_doc_with_multiple_imports() -> result::Result<()> {
         Block::KROOT(span) => span,
         _ => panic!("Expected KROOT block"),
     };
-    assert_eq!(root_span.blocks().len(), 7);
+    assert_eq!(root_span.blocks().len(), 6);
 
     // 0: use
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KUSE(_)));
     assert_eq!(block.content(), "test::test1");
 
-    // 1: content.
+    // 1: use
     let block = &root_span.blocks()[1];
-    assert!(matches!(block, Block::KCONTENT(_)));
-
-    // 2: use
-    let block = &root_span.blocks()[2];
     assert!(matches!(block, Block::KUSE(_)));
     assert_eq!(block.content(), "test::test2");
 
-    // 3: content.
-    let block = &root_span.blocks()[3];
+    // 2: content.
+    let block = &root_span.blocks()[2];
     assert!(matches!(block, Block::KCONTENT(_)));
 
-    // 4: use
-    let block = &root_span.blocks()[4];
+    // 3: use
+    let block = &root_span.blocks()[3];
     assert!(matches!(block, Block::KUSE(_)));
     assert_eq!(block.content(), "test::test3");
 
-    // 5: content.
-    let block = &root_span.blocks()[5];
+    // 4: content.
+    let block = &root_span.blocks()[4];
     assert!(matches!(block, Block::KCONTENT(_)));
 
-    // 4: use
-    let block = &root_span.blocks()[6];
+    // 5: use
+    let block = &root_span.blocks()[5];
     assert!(matches!(block, Block::KUSE(_)));
     assert_eq!(block.content(), "test::test4");
 
@@ -534,30 +520,30 @@ fn template_from_doc_with_multiple_sections() -> result::Result<()> {
         Block::KROOT(span) => span,
         _ => panic!("Expected KROOT block"),
     };
-    assert_eq!(root_span.blocks().len(), 7);
+    assert_eq!(root_span.blocks().len(), 6);
 
     // 0: section, newline
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KSECTION(_, _)));
 
-    // 3: section, newline
+    // 1: section, newline
+    let block = &root_span.blocks()[1];
+    assert!(matches!(block, Block::KSECTION(_, _)));
+
+    // 2: content
     let block = &root_span.blocks()[2];
+    assert!(matches!(block, Block::KCONTENT(_)));
+
+    // 3: section, newline
+    let block = &root_span.blocks()[3];
     assert!(matches!(block, Block::KSECTION(_, _)));
 
     // 4: content
-    let block = &root_span.blocks()[3];
-    assert!(matches!(block, Block::KCONTENT(_)));
-
-    // 5: section, newline
     let block = &root_span.blocks()[4];
-    assert!(matches!(block, Block::KSECTION(_, _)));
-
-    // 5: content
-    let block = &root_span.blocks()[5];
     assert!(matches!(block, Block::KCONTENT(_)));
 
-    // 6: section
-    let block = &root_span.blocks()[6];
+    // 5: section
+    let block = &root_span.blocks()[5];
     assert!(matches!(block, Block::KSECTION(_, _)));
 
     Ok(())

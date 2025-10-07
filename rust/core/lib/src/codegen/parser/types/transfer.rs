@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use crate::codegen::consts;
+use crate::codegen::parser::tokenizer::skip_newline;
 use crate::codegen::parser::types::context::ParseContext;
 use crate::codegen::parser::{Token, tokenizer};
 use crate::codegen::types::Span;
@@ -109,6 +110,8 @@ impl<'a> Block<'a> {
                         ));
                     }
                 };
+                // skip the newline after the block.
+                skip_newline(token_stream);
                 Ok(block)
             }
         }

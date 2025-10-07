@@ -28,6 +28,10 @@ impl<'a> Span<'a> {
         &self.blocks
     }
 
+    pub(in crate::codegen) fn is_simple(&self) -> bool {
+        self.blocks.len() == 0
+    }
+
     pub(in crate::codegen) fn range(&self) -> Range<usize> {
         self.range.clone()
     }
