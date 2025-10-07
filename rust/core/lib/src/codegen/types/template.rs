@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use crate::codegen::types::block::Block;
 
 pub(in crate::codegen) struct Template<'a> {

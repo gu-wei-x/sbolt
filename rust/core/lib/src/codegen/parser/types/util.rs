@@ -4,6 +4,7 @@ use crate::codegen::parser::tokenizer::get_nth_token;
 use winnow::stream::Stream as _;
 use winnow::stream::TokenSlice;
 
+#[allow(dead_code)]
 pub(in crate::codegen::parser::types) fn get_tokens_before<'a, F: Fn(Kind) -> bool>(
     stream: &'a mut TokenSlice<Token>,
     kind_fn: F,

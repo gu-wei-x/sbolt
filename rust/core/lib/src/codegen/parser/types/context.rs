@@ -1,13 +1,12 @@
-#![allow(dead_code)]
-use winnow::stream::Stream as _;
-
 use crate::codegen::consts;
 use crate::codegen::parser::tokenizer::{TokenStream, get_nth_token};
 use crate::codegen::parser::{Token, tokenizer};
 use crate::codegen::types::Block;
 use crate::codegen::types::Span;
 use crate::types::{error, result};
+use winnow::stream::Stream as _;
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq)]
 pub(in crate::codegen) enum Kind {
     KCODE,

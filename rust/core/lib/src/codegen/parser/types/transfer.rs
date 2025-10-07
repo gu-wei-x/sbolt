@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use crate::codegen::consts;
 use crate::codegen::parser::tokenizer::skip_newline;
 use crate::codegen::parser::types::context::ParseContext;

@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-use std::path::PathBuf;
-
 use crate::codegen::CompileResult;
 use crate::codegen::CompilerOptions;
 use crate::codegen::compiler::fsutil;
@@ -11,6 +8,7 @@ use crate::types::result;
 use proc_macro2::TokenStream;
 use quote::format_ident;
 use quote::quote;
+use std::path::PathBuf;
 
 impl<'a> Template<'a> {
     pub(in crate::codegen::compiler::types) fn to_token_stream(
