@@ -31,10 +31,10 @@ macro_rules! tokenizer_test_case {
     };
 }
 
-tokenizer_test_case!(test_tokenizer_eof, vec![""], [token::Kind::EOF]);
+tokenizer_test_case!(tokenizer_eof, vec![""], [token::Kind::EOF]);
 
 tokenizer_test_case!(
-    test_tokenizer_symbols,
+    tokenizer_symbols,
     vec![
         "@", "=", "!", "-", "<", ">", "{", "}", "(", ")", "/", "*", ";", ",", "\r\n", "\n"
     ],
@@ -60,13 +60,13 @@ tokenizer_test_case!(
 );
 
 tokenizer_test_case!(
-    test_tokenizer_exp,
+    tokenizer_exp,
     vec!["abc"],
     [token::Kind::EXPRESSION, token::Kind::EOF]
 );
 
 tokenizer_test_case!(
-    test_tokenizer_exp_with_symbol,
+    tokenizer_exp_with_symbol,
     vec!["abc", ";", ","],
     [
         token::Kind::EXPRESSION,
@@ -77,7 +77,7 @@ tokenizer_test_case!(
 );
 
 tokenizer_test_case!(
-    test_tokenizer_unicode_stream,
+    tokenizer_unicode_stream,
     vec!["你好", ";", "hello", ")", "世界"],
     [
         token::Kind::EXPRESSION,
@@ -90,7 +90,7 @@ tokenizer_test_case!(
 );
 
 tokenizer_test_case!(
-    test_tokenizer_unicode_stream_and_lines,
+    tokenizer_unicode_stream_and_lines,
     vec!["你好", "\n", "hello", "*", "world", "\r", "世界", "\r\n"],
     [
         token::Kind::EXPRESSION,
@@ -106,7 +106,7 @@ tokenizer_test_case!(
 );
 
 #[test]
-fn test_tokenizer_stream_with_lines() {
+fn tokenizer_stream_with_lines() {
     let token_parts = vec!["你好", "\n", "hello", "*", "world", "\r", "世界", "\r\n"];
     let tokenizer_input: String = token_parts.join("");
     let tokenizer = Tokenizer::new(&tokenizer_input);

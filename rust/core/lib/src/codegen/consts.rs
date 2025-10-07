@@ -9,6 +9,5 @@ pub(crate) const TEMPLATES_MOD_FILE_NAME: &'static str = "mod.rs";
 
 pub(crate) const DIRECTIVE_KEYWORD_LAYOUT: &'static str = "layout";
 pub(crate) const KEYWORD_RENDER: &'static str = "render";
-pub(crate) const KEYWORD_RENDER_SECTION: &'static str = "render_section";
 pub(crate) const KEYWORD_SECTION: &'static str = "section";
 pub(crate) const DIRECTIVE_KEYWORD_USE: &'static str = "use";

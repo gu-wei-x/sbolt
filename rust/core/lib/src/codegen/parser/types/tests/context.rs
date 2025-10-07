@@ -36,21 +36,21 @@ macro_rules! parse_context_test_case {
 
 // from content.
 parse_context_test_case!(
-    test_parse_context_from_content_should_switch,
+    parse_context_from_content_should_switch,
     "@123",
     true,
     Kind::KCONTENT,
     true
 );
 parse_context_test_case!(
-    test_parse_context_from_content_single_at,
+    parse_context_from_content_single_at,
     "@",
     true,
     Kind::KCONTENT,
     false
 );
 parse_context_test_case!(
-    test_parse_context_from_content_should_not_switch,
+    parse_context_from_content_should_not_switch,
     "@@123",
     true,
     Kind::KCONTENT,
@@ -58,7 +58,7 @@ parse_context_test_case!(
 );
 
 parse_context_test_case!(
-    test_parse_context_from_content_layout,
+    parse_context_from_content_layout,
     &format!("@{}", consts::DIRECTIVE_KEYWORD_LAYOUT),
     true,
     Kind::KROOT,
@@ -66,7 +66,7 @@ parse_context_test_case!(
 );
 
 parse_context_test_case!(
-    test_parse_context_from_content_section,
+    parse_context_from_content_section,
     &format!("@{}", consts::KEYWORD_SECTION),
     true,
     Kind::KCONTENT,
@@ -74,7 +74,7 @@ parse_context_test_case!(
 );
 
 parse_context_test_case!(
-    test_parse_context_from_content_use,
+    parse_context_from_content_use,
     &format!("@{}", consts::DIRECTIVE_KEYWORD_USE),
     true,
     Kind::KCONTENT,
@@ -82,7 +82,7 @@ parse_context_test_case!(
 );
 
 parse_context_test_case!(
-    test_parse_context_from_content_oparenthesis,
+    parse_context_from_content_oparenthesis,
     "@(",
     true,
     Kind::KCONTENT,
@@ -90,7 +90,7 @@ parse_context_test_case!(
 );
 
 parse_context_test_case!(
-    test_parse_context_from_content_ocurlybracket,
+    parse_context_from_content_ocurlybracket,
     "@{",
     true,
     Kind::KCONTENT,
@@ -99,21 +99,21 @@ parse_context_test_case!(
 
 // from code.
 parse_context_test_case!(
-    test_parse_context_from_code_should_switch,
+    parse_context_from_code_should_switch,
     "@123",
     false,
     Kind::KCODE,
     true
 );
 parse_context_test_case!(
-    test_parse_context_from_code_single_at,
+    parse_context_from_code_single_at,
     "@",
     false,
     Kind::KCODE,
     false
 );
 parse_context_test_case!(
-    test_parse_context_from_code_should_not_switch,
+    parse_context_from_code_should_not_switch,
     "@@123",
     false,
     Kind::KCODE,
@@ -122,13 +122,13 @@ parse_context_test_case!(
 
 // not allowed.
 parse_context_test_case!(
-    test_parse_context_from_code_layout,
+    parse_context_from_code_layout,
     &format!("@{}", consts::DIRECTIVE_KEYWORD_LAYOUT),
     Kind::KCODE
 );
 
 parse_context_test_case!(
-    test_parse_context_from_code_section,
+    parse_context_from_code_section,
     &format!("@{}", consts::KEYWORD_SECTION),
     false,
     Kind::KCODE,
@@ -137,13 +137,13 @@ parse_context_test_case!(
 
 // not allowed.
 parse_context_test_case!(
-    test_parse_context_from_code_use,
+    parse_context_from_code_use,
     &format!("@{}", consts::DIRECTIVE_KEYWORD_USE),
     Kind::KCODE
 );
 
 parse_context_test_case!(
-    test_parse_context_from_code_oparenthesis,
+    parse_context_from_code_oparenthesis,
     "@(",
     false,
     Kind::KCODE,
@@ -151,7 +151,7 @@ parse_context_test_case!(
 );
 
 parse_context_test_case!(
-    test_parse_context_from_code_ocurlybracket,
+    parse_context_from_code_ocurlybracket,
     "@{",
     false,
     Kind::KCODE,

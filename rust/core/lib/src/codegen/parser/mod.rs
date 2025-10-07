@@ -1,5 +1,4 @@
 mod span;
-pub(in crate::codegen) mod template;
 pub(in crate::codegen) mod tokenizer;
 mod types;
 

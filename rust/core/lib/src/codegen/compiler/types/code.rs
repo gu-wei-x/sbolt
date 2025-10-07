@@ -55,7 +55,7 @@ impl<'a> Block<'a> {
             let raw_content = code_span.content();
             match raw_content.parse::<TokenStream>() {
                 Ok(ts) => Ok(quote! {
-                    writer.write(#ts);
+                    writer.write(&#ts.to_string());
                 }),
                 Err(err) => Err(error::CompileError::from_lex(&self, err)),
             }

@@ -86,13 +86,16 @@ impl<'a> Template<'a> {
         let view_type = name::create_view_type_name(&full_view_name);
         result.add_view_mapping(full_view_name.to_string(), view_name.clone());
 
-        let _code = self.to_token_stream(
+        let code = self.to_token_stream(
             &view_name,
             &view_type,
             &full_view_name,
             &compiler_options.mod_name,
         )?;
-        //fsutil::write_code_to_file(&target, &code)?;
+        println!("**********{}**********************", &target.display());
+        println!("{:#?}", code.to_string());
+        println!("********************************");
+        fsutil::write_code_to_file(&target, &code)?;
         Ok(result)
     }
 }

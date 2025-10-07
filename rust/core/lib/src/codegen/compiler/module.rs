@@ -58,7 +58,7 @@ impl Module {
                         && fsutil::match_file_with_ext(&entry.path(), &compiler_options.extensions)
                     {
                         let content = fs::read_to_string(entry.path()).unwrap_or_default();
-                        let template = match crate::codegen::parser::template::Template::from(
+                        let template = match crate::codegen::types::Template::from(
                             &content,
                             Some(name_space.clone()),
                         ) {

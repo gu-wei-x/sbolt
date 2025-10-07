@@ -7,7 +7,7 @@ use crate::codegen::parser::tokenizer::Tokenizer;
 use crate::codegen::parser::tokenizer::stream;
 
 #[test]
-fn test_skip_whitespace_false() {
+fn skip_whitespace_false() {
     let source = "123";
     let tokenizer = Tokenizer::new(source);
     let tokens: Vec<tokenizer::Token> = tokenizer.into_vec();
@@ -17,7 +17,7 @@ fn test_skip_whitespace_false() {
 }
 
 #[test]
-fn test_skip_whitespace_true() {
+fn skip_whitespace_true() {
     let source = " 123";
     let tokenizer = Tokenizer::new(source);
     let tokens: Vec<tokenizer::Token> = tokenizer.into_vec();
@@ -27,7 +27,7 @@ fn test_skip_whitespace_true() {
 }
 
 #[test]
-fn test_skip_whitespace_and_newline_false() {
+fn skip_whitespace_and_newline_false() {
     let source = "\n123";
     let tokenizer = Tokenizer::new(source);
     let tokens: Vec<tokenizer::Token> = tokenizer.into_vec();
@@ -37,7 +37,7 @@ fn test_skip_whitespace_and_newline_false() {
 }
 
 #[test]
-fn test_get_next_token_if() {
+fn get_next_token_if() {
     let source = "\n123";
     let tokenizer = Tokenizer::new(source);
     let tokens: Vec<tokenizer::Token> = tokenizer.into_vec();
@@ -49,7 +49,7 @@ fn test_get_next_token_if() {
 }
 
 #[test]
-fn test_get_next_token_util() {
+fn get_next_token_util() {
     let source = "\n123";
     let tokenizer = Tokenizer::new(source);
     let tokens: Vec<tokenizer::Token> = tokenizer.into_vec();
@@ -61,7 +61,7 @@ fn test_get_next_token_util() {
 }
 
 #[test]
-fn test_skip_next_token_if() {
+fn skip_next_token_if() {
     let source = "\n123";
     let tokenizer = Tokenizer::new(source);
     let tokens: Vec<tokenizer::Token> = tokenizer.into_vec();
@@ -71,7 +71,7 @@ fn test_skip_next_token_if() {
 }
 
 #[test]
-fn test_get_nth_token() {
+fn get_nth_token() {
     let source = "\n123@*\n";
     let tokenizer = Tokenizer::new(source);
     let tokens: Vec<tokenizer::Token> = tokenizer.into_vec();

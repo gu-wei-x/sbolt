@@ -3,7 +3,7 @@
 disguise::include_views!();
 
 #[test]
-fn test_comp_test_view() {
+fn comp_test_view() {
     let result = basic_views::render("views/test", disguise::context!());
     assert!(result.is_ok());
     let expected = r#"
@@ -22,7 +22,7 @@ fn test_comp_test_view() {
 }
 
 #[test]
-fn test_comp_index_view() {
+fn comp_index_view() {
     let context = disguise::context! {
         name: "Disguise".to_string(),
         age: 1,
@@ -45,7 +45,7 @@ fn test_comp_index_view() {
 }
 
 #[test]
-fn test_comp_home_view() {
+fn comp_home_view() {
     let result = basic_views::render("views/comp/home", disguise::context!());
     assert!(result.is_ok());
 }

@@ -1,16 +1,16 @@
 <html>
     <head>
-        @render_section("title", true)
+        @render(title, true)
     </head>
     <body>
         <div class="menu">
-           @render_section("menu", true)
+           @render(menu, true)
         </div>
         <div class="main">
-           @render_section("", true)
+           @render()
         </div>
         <div class="footer">
-           @render_section("footer", false)
+           @render(footer, false)
         </div>
     </body>
 </html>

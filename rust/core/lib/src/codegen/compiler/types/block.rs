@@ -16,7 +16,10 @@ impl<'a> Block<'a> {
                 let ts = self.to_code_token_stream()?;
                 result.push(ts);
             }
-            Block::KCOMMENT(_) => todo!(),
+            Block::KCOMMENT(_) => {
+                // todo: output with option
+                // ignore the comment block
+            }
             Block::KCONTENT(_) => {
                 let ts = self.to_content_token_stream()?;
                 result.push(ts);
