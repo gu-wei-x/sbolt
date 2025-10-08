@@ -28,23 +28,17 @@ impl<'a> Template<'a> {
         let render_content = self.block().generate_render_token_stream(mod_name)?;
         let code = quote! {
             use crate::viewtypes::*;
-            use disguise::types::Context;
             use disguise::types::Writer;
             #(#imports_content)*
 
-            pub struct #view_name {
-                context: disguise::types::DefaultViewContext,
-            }
-
+            pub struct #view_name;
             impl #view_name {
-                pub(crate) fn new(context: disguise::types::DefaultViewContext) -> Self {
-                    Self {
-                        context: context,
-                    }
+                pub(crate) fn new() -> Self {
+                    Self {}
                 }
 
-                pub(crate) fn create(context: disguise::types::DefaultViewContext) -> #template_type {
-                   #template_type::#view_type(#view_name::new(context))
+                pub(crate) fn create() -> #template_type {
+                   #template_type::#view_type(#view_name::new())
                 }
             }
 
@@ -52,10 +46,6 @@ impl<'a> Template<'a> {
             {
                 fn name() -> String {
                     #full_view_name.to_string()
-                }
-
-                fn get_data<D: Send + Sync + 'static>(&self, key: &str) -> Option<&D> {
-                    self.context.get_data(key)
                 }
 
                 #layout_content

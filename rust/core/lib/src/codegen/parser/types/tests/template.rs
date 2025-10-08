@@ -469,7 +469,7 @@ fn template_from_doc_with_multiple_imports() -> result::Result<()> {
 // TODO: add codeblock, nested code block mixed with content tests
 /*********************************************************************************************/
 #[test]
-fn template_from_doc_with_section() -> result::Result<()> {
+fn template_from_doc_with_simple_section() -> result::Result<()> {
     let raw_content = r#"
 @section test1 {
    this is test1
@@ -493,6 +493,39 @@ fn template_from_doc_with_section() -> result::Result<()> {
     // 1: content
     let block = &root_span.blocks()[1];
     assert!(matches!(block, Block::KCONTENT(_)));
+    Ok(())
+}
+
+#[test]
+fn template_from_doc_content_composit_section() -> result::Result<()> {
+    let raw_content = r#"
+@section test1 {
+   pre
+   @{
+      let a =3;
+   }
+   after
+}"#;
+    let template = Template::from(&raw_content, None)?;
+    let block = template.block();
+    assert!(matches!(block, Block::KROOT(_)));
+    let root_span = match block {
+        Block::KROOT(span) => span,
+        _ => panic!("Expected KROOT block"),
+    };
+    assert_eq!(root_span.blocks().len(), 1);
+
+    // 0: section
+    let block = &root_span.blocks()[0];
+    assert!(matches!(block, Block::KSECTION(_, _)));
+    let section_span = match block {
+        Block::KSECTION(_name, span) => span,
+        _ => panic!("Expected KSECTION block"),
+    };
+    assert_eq!(section_span.blocks().len(), 3);
+    assert!(matches!(&section_span.blocks()[0], Block::KCONTENT(_)));
+    assert!(matches!(&section_span.blocks()[1], Block::KCODE(_)));
+    assert!(matches!(&section_span.blocks()[2], Block::KCONTENT(_)));
     Ok(())
 }
 

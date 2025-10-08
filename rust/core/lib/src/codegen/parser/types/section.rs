@@ -2,7 +2,7 @@ use crate::codegen::consts;
 use crate::codegen::parser::Token;
 use crate::codegen::parser::tokenizer::{self, TokenStream};
 use crate::codegen::parser::types::context::{Kind, ParseContext};
-use crate::codegen::types::Block;
+use crate::codegen::types::{Block, Span};
 use crate::types::{error, result};
 use winnow::stream::Stream as _;
 
@@ -46,15 +46,46 @@ impl<'a> Block<'a> {
                         Some(brace_token)
                             if brace_token.kind() == tokenizer::Kind::OCURLYBRACKET =>
                         {
-                            let mut context = ParseContext::new(Kind::KSECTION);
-                            let mut block = Self::parse_block_within_kinds(
+                            // Note: section is content.
+                            let block = Self::parse_block_within_kinds(
                                 source,
                                 tokenizer::Kind::OCURLYBRACKET,
                                 tokenizer::Kind::CCURLYBRACKET,
                                 token_stream,
-                                &mut context,
+                                &mut ParseContext::new(Kind::KSECTION),
                             )?;
-                            block.with_name(name);
+                            let root_span = match block {
+                                Block::KSECTION(_name, span) => span,
+                                _ => {
+                                    return Err(error::CompileError::from_parser(
+                                        source,
+                                        Some(*token),
+                                        &format!("Expected `{}` here", consts::KEYWORD_SECTION),
+                                    ));
+                                }
+                            };
+                            let section_span = match root_span.is_simple() {
+                                true => root_span,
+                                false => {
+                                    // unpack.
+                                    let mut span = Span::new(source);
+                                    for block in root_span.blocks() {
+                                        // revert back
+                                        if matches!(block, Block::KSECTION(_, _)) {
+                                            span.push_block(block.to_content());
+                                        } else {
+                                            span.push_block(block.clone());
+                                        }
+                                    }
+                                    span
+                                }
+                            };
+
+                            let block = ParseContext::create_block(
+                                &ParseContext::new(Kind::KSECTION),
+                                Some(name.to_string()),
+                                section_span,
+                            )?;
                             Ok(block)
                         }
                         _ => Err(error::CompileError::from_parser(
