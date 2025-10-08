@@ -52,9 +52,9 @@ fn comp_index_view() -> result::RenderResult<()> {
 #[test]
 fn comp_home_view() -> result::RenderResult<()> {
     let result = basic_views::render("views/comp/home", &mut disguise::context!())?;
-    println!("********************************");
-    println!("{result}");
-    println!("********************************");
+    assert!(result.contains("<title>Home</title>"));
+    assert!(result.contains("<li>menu 1</li>"));
+    assert!(result.contains("this is footer"));
 
     Ok(())
 }
