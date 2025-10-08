@@ -8,9 +8,10 @@ fn to_token_stream() -> result::Result<()> {
     let raw_content = r#"
 @use test::test1;
 @layout test::test2;
-@section test1 {
-   this is test1
+@section test1 {@{
+   let name = "test1";
 }
+this is @name}
 <html><div>Test</div></html>"#;
     let template = Template::from(&raw_content, None)?;
     let ts = template.to_token_stream(
@@ -57,7 +58,15 @@ fn to_token_stream() -> result::Result<()> {
 
             fn render(& self) -> disguise::types::result::RenderResult<String> {
                 let mut writer = disguise::types::HtmlWriter::new();
-                writer.write("todo: implement section");
+                let _name = "test1";
+                let _inner_writer = {
+                    let mut writer = disguise::types::HtmlWriter::new();
+                    let name = "test1";
+                    writer.write("this is ");
+                    writer.write(&name.to_string());
+                    writer
+                } ;
+                // todo: add logic to register the section.
                 writer.write("<html><div>Test</div></html>");
                 match Self::layout() {
                     Some(layout) => {

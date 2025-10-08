@@ -1,7 +1,10 @@
 @**layout ~/layout;**@
 @layout layout;
 @section title{
-  <title>Home</title>
+  @{
+    let title = "Home";
+  }
+  <title>@title</title>
 }
 @section menu{
     <ul>
