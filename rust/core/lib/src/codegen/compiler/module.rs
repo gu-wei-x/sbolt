@@ -131,7 +131,7 @@ impl Module {
 
         quote! {
             #import_content_ts
-            pub mod #mod_name {
+            pub(crate) mod #mod_name {
                 #re_export_content_ts
 
                 // TemplateResolver.
@@ -165,6 +165,7 @@ impl Module {
                     }
                 }
 
+                #[allow(dead_code)]
                 pub(crate) fn resolve_view_creator(name: &str) -> Option<fn() -> #viewtypes_ident_ts> {
                     TEMPLATE_RESOLVER.resolve(name)
                 }

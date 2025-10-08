@@ -53,7 +53,7 @@ fn comp_index_view() -> result::RenderResult<()> {
 fn comp_home_view() -> result::RenderResult<()> {
     let result = basic_views::render("views/comp/home", &mut disguise::context!())?;
     println!("********************************");
-    println!("{result:#?}");
+    println!("{result}");
     println!("********************************");
 
     Ok(())

@@ -1,7 +1,8 @@
 [workspace]
 resolver = "2"
 members = [ 
-  "core/lib/",
+  "benchmark",
+  "core/lib",
   #cargo run -p basic 
   "examples/basic",
 ]

@@ -1,0 +1,16 @@
+<html>
+    <head>
+        @render(title, true)
+    </head>
+    <body>
+        <div class="menu">
+           @render(menu, true)
+        </div>
+        <div class="main">
+           @render
+        </div>
+        <div class="footer">
+           @render(footer, false)
+        </div>
+    </body>
+</html>
