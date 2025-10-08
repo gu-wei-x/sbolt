@@ -96,23 +96,16 @@ impl<'a> Block<'a> {
             true => {
                 let view_root_mod_name = format_ident!("{}", mod_name);
                 let code = quote! {
-                    fn render(&self) -> disguise::types::result::RenderResult<String> {
+                    fn render(&self, context:&mut impl disguise::types::Context) -> disguise::types::result::RenderResult<String> {
                         let mut writer = disguise::types::HtmlWriter::new();
-                        //let mut runtime_sections = std::collections::HashMap::<String, Vec<String>>::new();
-                        // todo: here we also need a collect to make sure render called once for each section
-                        // TODO: add other logic here
                         #(#ts)*
                         match Self::layout() {
                             Some(layout) => {
-                                // rust doesn't have insert or update(feature is in nightly), here remove and insert to make sure only one default.
-                                //runtime_sections.remove_entry("default");
-                                //runtime_sections.insert("default".to_string(), vec![writer.into_string()]);
-                                // todo: 1. consolidate section with context, unrendered.
-                                // 2. clone context data for layout.
                                 for key in disguise::types::resolve_layout_to_view_keys(&layout, &Self::name()) {
                                     if let Some(creator) = crate::#view_root_mod_name::resolve_view_creator(&key) {
-                                        let view = creator(disguise::context!());
-                                        return view.render();
+                                        context.set_default_section(writer.into_string());
+                                        let view = creator();
+                                        return view.render(context);
                                     }
                                 }
                                 Err(disguise::types::error::RuntimeError::layout_not_found(&layout, &Self::name()))
@@ -125,7 +118,7 @@ impl<'a> Block<'a> {
             }
             false => {
                 let code = quote! {
-                    fn render(&self) -> disguise::types::result::RenderResult<String> {
+                    fn render(&self, #[allow(unused_variables)]context:&mut impl disguise::types::Context) -> disguise::types::result::RenderResult<String> {
                         let mut writer = disguise::types::HtmlWriter::new();
                         // TODO: add other logic here
                         #(#ts)*

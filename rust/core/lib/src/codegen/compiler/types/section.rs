@@ -22,13 +22,13 @@ impl<'a> Block<'a> {
                 // simple is content section.
                 let raw_content = span.content();
                 quote! {
-                    let _name = #name;
-                    let _inner_writer = {
+                    let name = #name;
+                    let inner_writer = {
                         let mut writer = disguise::types::HtmlWriter::new();
                         writer.write(#raw_content);
                         writer
                     };
-                    // todo: add to sections.
+                    context.add_section(name, inner_writer.into_string());
                 }
             }
             false => {
@@ -39,13 +39,13 @@ impl<'a> Block<'a> {
                     }
                 }
                 quote! {
-                    let _name = #name;
-                    let _inner_writer = {
+                    let section_name = #name;
+                    let section_writer = {
                         let mut writer = disguise::types::HtmlWriter::new();
                         #(#tsv)*
                         writer
                     };
-                    // todo: add to sections.
+                    context.add_section(section_name, section_writer.into_string());
                 }
             }
         };

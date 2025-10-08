@@ -1,4 +1,4 @@
-use crate::types::error;
+use crate::types::Context;
 use crate::types::result;
 
 pub trait Template {
@@ -7,9 +7,5 @@ pub trait Template {
         // default impl.
         None
     }
-    fn get_data<D: Send + Sync + 'static>(&self, key: &str) -> Option<&D>;
-    fn render(&self) -> result::RenderResult<String> {
-        // default impl.
-        Err(error::RuntimeError::view_not_found(&Self::name()))
-    }
+    fn render(&self, context: &mut impl Context) -> result::RenderResult<String>;
 }

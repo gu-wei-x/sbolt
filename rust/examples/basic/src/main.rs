@@ -3,12 +3,12 @@ disguise::include_views!();
 
 fn main() {
     // create a context and set some data.
-    let context = disguise::context! {
+    let mut context = disguise::context! {
         name: "Disguise".to_string(),
         age: 1,
         msg: "Hello world!".to_string()
     };
-    let output = basic_views::render("views/comp/index", context).unwrap_or_else(|e| {
+    let output = basic_views::render("views/comp/index", &mut context).unwrap_or_else(|e| {
         eprintln!("Error: {e:?}");
         std::process::exit(1);
     });

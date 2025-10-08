@@ -1,10 +1,10 @@
 @{
-    let name = match self.get_data::<String>("name") {
+    let name = match context.get_data::<String>("name") {
         Some(str) => str,
         None => "",
     };
-    let age = disguise::types::DisplayOptionRef(self.get_data::<i32>("age"));
-    let msg = disguise::types::DisplayOptionRef(self.get_data::<String>("msg"));
+    let age = disguise::types::DisplayOptionRef(context.get_data::<i32>("age"));
+    let msg = disguise::types::DisplayOptionRef(context.get_data::<String>("msg"));
 }
 <html>
     <head>

@@ -22,58 +22,48 @@ this is @name}
     )?;
     let expected = quote! {
         use crate::viewtypes::*;
-        use disguise::types::Context;
         use disguise::types::Writer;
         use test::test1;
 
-        pub struct TestView {
-            context: disguise::types::DefaultViewContext,
-        }
+        pub struct TestView;
 
         impl TestView {
-            pub(crate) fn new(context: disguise::types::DefaultViewContext) -> Self {
-                Self {
-                    context:context,
-                }
+            pub(crate) fn new() -> Self {
+                Self {}
             }
-
-            pub(crate) fn create(context: disguise::types::DefaultViewContext) -> Template {
-                Template::KTestnsTestViewView(TestView::new(context))
+            pub(crate) fn create() -> Template {
+                Template::KTestnsTestViewView(TestView::new())
             }
         }
 
-        impl disguise::types::Template for TestView
-        {
+        impl disguise::types::Template for TestView {
             fn name() -> String {
                 "testns::TestView".to_string()
-            }
-
-            fn get_data<D: Send + Sync + 'static>(&self, key: &str) -> Option<&D> {
-                self.context.get_data(key)
             }
 
             fn layout() -> Option<String> {
                 Some("test::test2".to_string())
             }
 
-            fn render(& self) -> disguise::types::result::RenderResult<String> {
+            fn render(& self, context:&mut impl disguise::types::Context) -> disguise::types::result::RenderResult<String> {
                 let mut writer = disguise::types::HtmlWriter::new();
-                let _name = "test1";
-                let _inner_writer = {
+                let section_name = "test1";
+                let section_writer = {
                     let mut writer = disguise::types::HtmlWriter::new();
                     let name = "test1";
                     writer.write("this is ");
                     writer.write(&name.to_string());
                     writer
-                } ;
-                // todo: add logic to register the section.
+                };
+                context.add_section(section_name, section_writer.into_string());
                 writer.write("<html><div>Test</div></html>");
                 match Self::layout() {
                     Some(layout) => {
-                        for key in disguise::types::resolve_layout_to_view_keys(&layout, &Self::name()) {
-                            if let Some(creator) = crate::test_view_mod::resolve_view_creator(& key) {
-                                let view = creator(disguise::context!());
-                                return view.render();
+                        for key in disguise::types::resolve_layout_to_view_keys(&layout, &Self::name ()) {
+                            if let Some(creator) = crate::test_view_mod::resolve_view_creator(&key) {
+                                context.set_default_section(writer.into_string());
+                                let view = creator();
+                                return view.render(context);
                             }
                         }
                         Err(disguise::types::error::RuntimeError::layout_not_found(&layout, &Self::name()))
@@ -84,6 +74,5 @@ this is @name}
         }
     };
     assert_eq!(ts.to_string(), expected.to_string());
-
     Ok(())
 }

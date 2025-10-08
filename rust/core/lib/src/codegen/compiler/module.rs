@@ -136,7 +136,7 @@ impl Module {
 
                 // TemplateResolver.
                 struct TemplateResolver {
-                    view_creators: std::collections::HashMap<String, fn(context: disguise::types::DefaultViewContext) -> #viewtypes_ident_ts>,
+                    view_creators: std::collections::HashMap<String, fn() -> #viewtypes_ident_ts>,
                 }
 
                 impl TemplateResolver {
@@ -146,7 +146,7 @@ impl Module {
                         }
                     }
 
-                    fn resolve(&self, name: &str) -> Option<fn(context: disguise::types::DefaultViewContext) -> #viewtypes_ident_ts> {
+                    fn resolve(&self, name: &str) -> Option<fn() -> #viewtypes_ident_ts> {
                         let key = disguise::types::normalize_path_to_view_key(name);
                         self.view_creators.get(&key).map(|f| *f)
                     }
@@ -156,16 +156,16 @@ impl Module {
                     TemplateResolver::new()
                 });
 
-                pub(crate) fn render(name: &str, context: disguise::types::DefaultViewContext) -> disguise::types::result::RenderResult<String> {
+                pub(crate) fn render(name: &str, context:&mut impl disguise::types::Context) -> disguise::types::result::RenderResult<String> {
                     if let Some(creator) = TEMPLATE_RESOLVER.resolve(name) {
-                        let view = creator(context);
-                        view.render()
+                        let view = creator();
+                        view.render(context)
                     } else {
                         Err(disguise::types::error::RuntimeError::view_not_found(name))
                     }
                 }
 
-                pub(crate) fn resolve_view_creator(name: &str) -> Option<fn(context: disguise::types::DefaultViewContext) -> #viewtypes_ident_ts> {
+                pub(crate) fn resolve_view_creator(name: &str) -> Option<fn() -> #viewtypes_ident_ts> {
                     TEMPLATE_RESOLVER.resolve(name)
                 }
             }
