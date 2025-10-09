@@ -2,12 +2,13 @@
 use crate::codegen::types::Block;
 use crate::codegen::types::Template;
 use crate::types::result;
+use crate::types::template::Kind;
 use quote::quote;
 
 #[test]
 fn to_content_token_stream_from_simple_content() -> result::Result<()> {
     let raw_content = r#"test::test1"#;
-    let template = Template::from(&raw_content, None)?;
+    let template = Template::from(&raw_content, None, Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = match block {

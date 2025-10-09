@@ -24,7 +24,7 @@ impl<'a> Block<'a> {
                 quote! {
                     let name = #name;
                     let inner_writer = {
-                        let mut writer = disguise::types::HtmlWriter::new();
+                        let mut writer = self.create_writer(None);
                         writer.write(#raw_content);
                         writer
                     };
@@ -41,7 +41,7 @@ impl<'a> Block<'a> {
                 quote! {
                     let section_name = #name;
                     let section_writer = {
-                        let mut writer = disguise::types::HtmlWriter::new();
+                        let mut writer = self.create_writer(None);
                         #(#tsv)*
                         writer
                     };

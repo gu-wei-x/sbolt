@@ -2,6 +2,7 @@
 use crate::codegen::types::Block;
 use crate::codegen::types::Template;
 use crate::types::result;
+use crate::types::template::Kind;
 use quote::quote;
 
 // layout is special: can only be generated from root block.
@@ -9,7 +10,7 @@ use quote::quote;
 #[should_panic]
 fn to_layout_token_stream_from_layout_block() {
     let raw_content = r#"@layout test::test1;"#;
-    let template = Template::from(&raw_content, None).unwrap();
+    let template = Template::from(&raw_content, None, Kind::KHTML).unwrap();
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = match block {
@@ -26,7 +27,7 @@ fn to_layout_token_stream_from_layout_block() {
 #[should_panic]
 fn to_layout_token_stream_from_layout_block2() {
     let raw_content = r#"@layout test::test1;"#;
-    let template = Template::from(&raw_content, None).unwrap();
+    let template = Template::from(&raw_content, None, Kind::KHTML).unwrap();
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = match block {
@@ -42,7 +43,7 @@ fn to_layout_token_stream_from_layout_block2() {
 #[test]
 fn generate_layout_token_stream_from_root_block() -> result::Result<()> {
     let raw_content = r#"@layout test::test1;"#;
-    let template = Template::from(&raw_content, None)?;
+    let template = Template::from(&raw_content, None, Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = match block {
@@ -66,7 +67,7 @@ fn generate_layout_token_stream_from_root_block() -> result::Result<()> {
 #[test]
 fn to_token_stream() -> result::Result<()> {
     let raw_content = r#"@use test::test1;"#;
-    let template = Template::from(&raw_content, None)?;
+    let template = Template::from(&raw_content, None, Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = match block {

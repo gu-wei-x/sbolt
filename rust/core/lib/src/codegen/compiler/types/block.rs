@@ -98,7 +98,7 @@ impl<'a> Block<'a> {
                 let view_root_mod_name = format_ident!("{}", mod_name);
                 let code = quote! {
                     fn render(&self, context:&mut impl disguise::types::Context) -> disguise::types::result::RenderResult<String> {
-                        let mut writer = disguise::types::HtmlWriter::new();
+                        let mut writer = self.create_writer(None);
                         #(#ts)*
                         match Self::layout() {
                             Some(layout) => {
@@ -120,7 +120,7 @@ impl<'a> Block<'a> {
             false => {
                 let code = quote! {
                     fn render(&self, #[allow(unused_variables)]context:&mut impl disguise::types::Context) -> disguise::types::result::RenderResult<String> {
-                        let mut writer = disguise::types::HtmlWriter::new();
+                        let mut writer = self.create_writer(None);
                         // TODO: add other logic here
                         #(#ts)*
                         Ok(writer.into_string())

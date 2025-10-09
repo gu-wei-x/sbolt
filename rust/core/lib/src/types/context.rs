@@ -19,14 +19,14 @@ pub trait Context {
 }
 
 pub struct DefaultViewContext {
-    pub(crate) state: DataStore<String>,
+    pub(crate) state: DataStore<Box<dyn Send + Sync>>,
     sections: HashMap<String, Vec<String>>,
 }
 
 impl DefaultViewContext {
     pub fn new() -> Self {
         Self {
-            state: DataStore::<String>::new(),
+            state: DataStore::<Box<dyn Send + Sync>>::new(),
             sections: HashMap::<String, Vec<String>>::new(),
         }
     }

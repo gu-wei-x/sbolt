@@ -2,7 +2,7 @@ mod context;
 mod data_store;
 mod functions;
 mod macros;
-mod template;
+pub mod template;
 mod writer;
 
 #[cfg(test)]

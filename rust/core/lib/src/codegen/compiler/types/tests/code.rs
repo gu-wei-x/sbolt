@@ -3,6 +3,7 @@
 use crate::codegen::types::Block;
 use crate::codegen::types::Template;
 use crate::types::result;
+use crate::types::template::Kind;
 use quote::quote;
 
 #[test]
@@ -11,7 +12,7 @@ fn to_code_token_stream_simple() -> result::Result<()> {
         let test=1;
         let test2=2;
     }"#;
-    let template = Template::from(&raw_content, None)?;
+    let template = Template::from(&raw_content, None, Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = match block {
@@ -37,7 +38,7 @@ fn to_code_token_stream_with_block() -> result::Result<()> {
             @{<tr>}
         }
     }"#;
-    let template = Template::from(&raw_content, None)?;
+    let template = Template::from(&raw_content, None, Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = match block {
@@ -69,7 +70,7 @@ fn to_code_token_stream_with_complex_nested_block() -> result::Result<()> {
             @{</tr>}
         }
     }"#;
-    let template = Template::from(&raw_content, None)?;
+    let template = Template::from(&raw_content, None, Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = match block {

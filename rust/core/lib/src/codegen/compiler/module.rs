@@ -54,13 +54,21 @@ impl Module {
                             .process(compiler_options)?
                             .merge_into(&mut result);
                         result.add_mod(entry.file_name().to_str().unwrap_or_default());
-                    } else if meta.is_file()
-                        && fsutil::match_file_with_ext(&entry.path(), &compiler_options.extensions)
-                    {
+                    } else if meta.is_file() {
+                        let template_kind = fsutil::get_template_kind_from_ext(
+                            &entry.path(),
+                            compiler_options.extensions(),
+                        );
+                        if template_kind.is_none() {
+                            // skip non-template files.
+                            continue;
+                        }
+
                         let content = fs::read_to_string(entry.path()).unwrap_or_default();
                         let template = match crate::codegen::types::Template::from(
                             &content,
                             Some(name_space.clone()),
+                            template_kind.unwrap(),
                         ) {
                             Ok(t) => t,
                             Err(e) => {

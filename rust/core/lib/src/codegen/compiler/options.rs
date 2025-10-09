@@ -1,32 +1,49 @@
-use crate::codegen::consts;
+use crate::{codegen::consts, types::template};
+use std::collections::HashMap;
 
 pub struct CompilerOptions {
-    pub(crate) optimize: bool,
     pub(crate) debug: bool,
-    pub(crate) source_dirs: Vec<String>,
-    pub(crate) extensions: Vec<String>,
-    pub(crate) out_dir: Option<String>,
+    pub(crate) extensions: HashMap<String, template::Kind>,
     pub(crate) mod_name: String,
+    pub(crate) optimize: bool,
+    pub(crate) out_dir: Option<String>,
+    pub(crate) source_dirs: Vec<String>,
 }
 
 impl Default for CompilerOptions {
     fn default() -> Self {
-        let mut options = CompilerOptions {
-            optimize: false,
+        let options = CompilerOptions {
             debug: false,
-            source_dirs: Vec::new(),
-            extensions: Vec::new(),
+            extensions: HashMap::<String, template::Kind>::new(),
+            mod_name: String::from(consts::TEMP_GENERATED_DIR),
+            optimize: false,
             out_dir: None,
-            mod_name: String::from("generated_views"),
+            source_dirs: Vec::new(),
         };
-        options
-            .extensions
-            .push(consts::DEFAULT_TEMPLATE_FILE_EXTENSION.into());
+
+        // add default extensions and their kinds
+        let options = options
+            .with_extension(
+                consts::DEFAULT_HTML_TEMPLATE_FILE_EXTENSION,
+                template::Kind::KHTML,
+            )
+            .with_extension(
+                consts::DEFAULT_JSON_TEMPLATE_FILE_EXTENSION,
+                template::Kind::KJSON,
+            )
+            .with_extension(
+                consts::DEFAULT_TEXT_TEMPLATE_FILE_EXTENSION,
+                template::Kind::KTEXT,
+            );
         options
     }
 }
 
 impl CompilerOptions {
+    pub fn extensions(&self) -> &HashMap<String, template::Kind> {
+        &self.extensions
+    }
+
     pub fn with_optimize(mut self, optimize: bool) -> Self {
         self.optimize = optimize;
         self
@@ -42,8 +59,8 @@ impl CompilerOptions {
         self
     }
 
-    pub fn with_extension(mut self, extension: &str) -> Self {
-        self.extensions.push(extension.into());
+    pub fn with_extension(mut self, extension: &str, kind: template::Kind) -> Self {
+        self.extensions.insert(extension.into(), kind);
         self
     }
 
