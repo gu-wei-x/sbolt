@@ -27,7 +27,7 @@ impl<'a> Block<'a> {
         } else {
             let mut result = vec![];
             for block in content_span.blocks() {
-                for ts in block.to_token_stream()? {
+                for ts in block.to_token_stream(Some(self))? {
                     result.push(ts);
                 }
             }

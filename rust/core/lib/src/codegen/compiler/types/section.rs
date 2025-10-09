@@ -34,7 +34,7 @@ impl<'a> Block<'a> {
             false => {
                 let mut tsv = vec![];
                 for block in span.blocks() {
-                    for rs in block.to_token_stream()? {
+                    for rs in block.to_token_stream(Some(self))? {
                         tsv.push(rs);
                     }
                 }

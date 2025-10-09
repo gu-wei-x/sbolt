@@ -8,11 +8,12 @@ use quote::quote;
 impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_token_stream(
         &self,
+        from: Option<&Block<'a>>,
     ) -> result::Result<Vec<TokenStream>> {
         let mut result = vec![];
         match self {
             Block::KCODE(_) => {
-                let ts = self.to_code_token_stream()?;
+                let ts = self.to_code_token_stream(from)?;
                 result.push(ts);
             }
             Block::KCOMMENT(_) => {
@@ -43,7 +44,7 @@ impl<'a> Block<'a> {
                 } else {
                     for block in span.blocks() {
                         if !matches!(block, Block::KLAYOUT(_) | Block::KUSE(_)) {
-                            for rs in block.to_token_stream()? {
+                            for rs in block.to_token_stream(from)? {
                                 result.push(rs);
                             }
                         }
@@ -84,7 +85,7 @@ impl<'a> Block<'a> {
             ));
         }
 
-        let ts = self.to_token_stream()?;
+        let ts = self.to_token_stream(Some(self))?;
         let has_layout = match self {
             Block::KROOT(root_span) => root_span
                 .blocks()
