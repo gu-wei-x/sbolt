@@ -5,19 +5,19 @@ disguise::include_views!();
 #[test]
 #[should_panic]
 fn no_existing_view() {
-    basic_views::render("views/no_existing", &mut disguise::context!()).unwrap();
+    lib_it_views::render("views/no_existing", &mut disguise::context!()).unwrap();
 }
 
 #[test]
 fn comp_test_view() -> result::RenderResult<()> {
-    let result = basic_views::render("views/test", &mut disguise::context!())?;
+    let result = lib_it_views::render("views/default", &mut disguise::context!())?;
     let expected = r#"
 <html>
     <head>
-        <title>Test</title>
+        <title>Default</title>
     </head>
     <body>
-        <div>Hello Test!</div>
+        <div>Hello Default!</div>
     </body>
 </html>"#
         .trim();
@@ -31,16 +31,16 @@ fn comp_index_view() -> result::RenderResult<()> {
     let mut context = disguise::context! {
         name: "Disguise".to_string(),
         age: 1,
-        msg: "Hello world!".to_string()
+        msg: "Welcome!".to_string()
     };
-    let result = basic_views::render("views/comp/index", &mut context)?;
+    let result = lib_it_views::render("views/sub/index", &mut context)?;
     let expected = r#"
 <html>
     <head>
-        <title>Index</title>
+        <title>Welcome</title>
     </head>
     <body>
-        <div>Hello world! - from Disguise(1)</div>
+        <div>Welcome! - from Disguise(1)</div>
     </body>
 </html>"#
         .trim();
@@ -51,7 +51,7 @@ fn comp_index_view() -> result::RenderResult<()> {
 
 #[test]
 fn comp_home_view() -> result::RenderResult<()> {
-    let result = basic_views::render("views/comp/home", &mut disguise::context!())?;
+    let result = lib_it_views::render("views/sub/home", &mut disguise::context!())?;
     assert!(result.contains("<title>Home</title>"));
     assert!(result.contains("<li>menu 1</li>"));
     assert!(result.contains("this is footer"));

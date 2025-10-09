@@ -8,7 +8,7 @@
 }
 <html>
     <head>
-        <title>Index</title>
+        <title>Welcome</title>
     </head>
     <body>
         <div>@msg - from @name(@age)</div>
