@@ -1,5 +1,7 @@
 use crate::types::error::CompileError;
+use crate::types::template;
 use proc_macro2::TokenStream;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
@@ -25,9 +27,13 @@ pub(in crate::codegen::compiler) fn get_file_name<P: AsRef<Path>>(path: &P) -> O
         .and_then(|s| s.to_str().map(|s| s.to_string()))
 }
 
-pub(in crate::codegen::compiler) fn match_file_with_ext(path: &PathBuf, exts: &[String]) -> bool {
+pub(in crate::codegen::compiler) fn get_template_kind_from_ext(
+    path: &PathBuf,
+    exts: &HashMap<String, template::Kind>,
+) -> Option<template::Kind> {
     path.extension()
-        .map_or(false, |e| exts.contains(&e.to_string_lossy().into_owned()))
+        .and_then(|e| exts.get(&e.to_string_lossy().into_owned()))
+        .cloned()
 }
 
 pub(in crate::codegen::compiler) fn write_code_to_file(
