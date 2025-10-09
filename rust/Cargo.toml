@@ -2,9 +2,10 @@
 resolver = "2"
 members = [ 
   "benchmark",
+  "core/it",
   "core/lib",
-  #cargo run -p basic 
-  "examples/basic",
+  #cargo run -p cli 
+  "examples/cli",
 ]
 
 [workspace.lints.rust]

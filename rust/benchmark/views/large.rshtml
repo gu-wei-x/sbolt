@@ -9,9 +9,10 @@
         <div class="content">
            <table>
               @{
-                  for row in 0..100 {
+                  let size = 100;
+                  for row in 0..size {
                       @{<tr>}
-                      for col in 0..100 {
+                      for col in 0..size {
                         @{<td>@row @col</td>}
                       }
                       @{<tr>}

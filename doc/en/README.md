@@ -1,15 +1,18 @@
 # disguise
 
-view template engine in rust. disguise pre-processes templates from a directory and compiles templates into crate bits.
+disguise is a view template engine in rust. disguise pre-processes templates from directories and compiles them into crate bits.
 
-## Following is the steps to use this view template engine. See: [examples/basic](./rust/examples/basic/)
+## Following are the steps to use disguise. See: [examples/cli](../../rust/examples/cli/)
 
-### 1. add disguise crate and add disguise to `[build-dependencies]`
+### 1. add disguise crate and add disguise crate to `[build-dependencies]`
+
 ```shell
 cargo add disguise
+cargo add disguise --build
 ```
 
 ### 2. create views directory containing view templates(*.rshtml)
+
 ```
 $:.
 │   build.rs
@@ -19,26 +22,25 @@ $:.
     │   main.rs
     │
     └───views
-        │   test.rshtml
+        │   default.rshtml
         │
-        └───comp
+        └───sub
                 index.rshtml
-
-
 ```
-src/views/comp/index.rshtml
+
+src/views/sub/index.rshtml
 ```rust
 @{
-    let name = match self.get_data::<String>("name") {
+    let name = match context.get_data::<String>("name") {
         Some(str) => str,
         None => "",
     };
-    let age = disguise::types::DisplayOptionRef(self.get_data::<i32>("age"));
-    let msg = disguise::types::DisplayOptionRef(self.get_data::<String>("msg"));
+    let age = disguise::types::DisplayOptionRef(context.get_data::<i32>("age"));
+    let msg = disguise::types::DisplayOptionRef(context.get_data::<String>("msg"));
 }
 <html>
     <head>
-        <title>Index</title>
+        <title>Welcome</title>
     </head>
     <body>
         <div>@msg - from @name(@age)</div>
@@ -74,7 +76,7 @@ fn main() {
         age: 1,
         msg: "Hello world!".to_string()
     };
-    let output = basic_views::render("views/comp/index", &mut context).unwrap_or_else(|e| {
+    let output = cli_views::render("views/sub/index", &mut context).unwrap_or_else(|e| {
         eprintln!("Error: {e:?}");
         std::process::exit(1);
     });
@@ -86,14 +88,14 @@ fn main() {
 
 ```sh
 $>cargo run
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
-     Running `target\debug\basic.exe`
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running `target/debug/cli`
 <html>
     <head>
-        <title>Index</title>
+        <title>Welcome</title>
     </head>
     <body>
-        <div>Hello world! - from Disguise(1)</div>
+        <div>Welcome! - from Disguise(1)</div>
     </body>
 </html>
 ```

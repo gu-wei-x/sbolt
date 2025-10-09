@@ -1,0 +1,11 @@
+[package]
+name = "lib_it"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+disguise = { path = "../lib" }
+
+[build-dependencies]
+disguise = { path = "../lib", features = ["pretty"] }
