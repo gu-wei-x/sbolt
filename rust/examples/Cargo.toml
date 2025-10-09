@@ -3,4 +3,7 @@ resolver = "2"
 members = [ 
   #cargo run -p cli 
   "cli",
+  "web/actix",
+  "web/axum",
+  "web/rocket",
 ]
