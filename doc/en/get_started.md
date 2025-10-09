@@ -1,6 +1,4 @@
-# disguise
-
-disguise is a view template engine in rust. disguise pre-processes templates from directories and compiles them into crate bits.
+# Get started
 
 ## Following are the steps to use disguise. See: [examples/cli](../../rust/examples/cli/)
 
@@ -99,4 +97,14 @@ $>cargo run
     </body>
 </html>
 ```
+
+## Use in web applications
+
+It's very simple to use disguise in your web applications with popular `rust web frameworks`. Please see examples:
+* [Use with Actix-web](../../rust/examples/web/actix)
+* [Use with Axum](../../rust/examples/web/axum)
+* [Use with Rocket](../../rust/examples/web/rocket)
+
+---
+### [Next: syntax](./syntax.md)
 

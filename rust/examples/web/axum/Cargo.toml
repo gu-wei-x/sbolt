@@ -1,0 +1,13 @@
+[package]
+name = "axum-example"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+axum = "0.8.6"
+disguise = { path = "../../../core/lib" }
+tokio = { version = "1", features = ["full"] }
+
+[build-dependencies]
+disguise = { path = "../../../core/lib", features = ["pretty"] }

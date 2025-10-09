@@ -1,0 +1,12 @@
+[package]
+name = "rocket-example"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+disguise = { path = "../../../core/lib" }
+rocket = "0.5.1"
+
+[build-dependencies]
+disguise = { path = "../../../core/lib", features = ["pretty"] }
