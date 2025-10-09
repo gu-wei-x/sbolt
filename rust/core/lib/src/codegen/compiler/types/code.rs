@@ -6,6 +6,7 @@ use quote::quote;
 impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_code_token_stream(
         &self,
+        from: Option<&Block<'a>>,
     ) -> result::Result<TokenStream> {
         let code_span = match self {
             Block::KCODE(span) => span,
@@ -17,24 +18,31 @@ impl<'a> Block<'a> {
             }
         };
 
+        // validate parent block.
+        from.ok_or(error::CompileError::from_codegen(
+            &self,
+            "Parent block is required to generate code",
+        ))?;
+        let mut code_content = String::new();
         if code_span.is_simple() {
             let raw_content = code_span.content();
-            match raw_content.parse::<TokenStream>() {
-                Ok(ts) => Ok(quote! {
-                    #ts
-                }),
-                Err(err) => Err(error::CompileError::from_lex(&self, err)),
-            }
+            code_content.push_str(&raw_content);
         } else {
-            let mut result = vec![];
             for block in code_span.blocks() {
-                for ts in block.to_token_stream()? {
-                    result.push(ts);
+                if matches!(block, Block::KCODE(_)) {
+                    let raw_content = block.content();
+                    code_content.push_str(&raw_content);
+                } else {
+                    for ts in block.to_token_stream(from)? {
+                        code_content.push_str(&ts.to_string());
+                    }
                 }
             }
-            Ok(quote! {
-                #(#result)*
-            })
+        }
+
+        match code_content.parse::<TokenStream>() {
+            Ok(ts) => Ok(ts),
+            Err(err) => Err(error::CompileError::from_lex(&self, err)),
         }
     }
 

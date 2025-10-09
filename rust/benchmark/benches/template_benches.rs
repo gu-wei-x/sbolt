@@ -1,6 +1,11 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 
 fn criterion_benchmark(c: &mut Criterion) {
+    c.bench_function("render_view_with_large_size_of_content", |b| {
+        b.iter(|| {
+            lib_bench::render_template_with_large_size_of_content();
+        });
+    });
     c.bench_function("render_view_with_layout", |b| {
         b.iter(|| {
             lib_bench::render_template_with_layout();
