@@ -1,27 +1,25 @@
 [package]
 name = "disguise"
-version = "0.0.0"
-authors = ["Wei Gu <gu_wei_dev@outlook.com>"]
+version = "0.0.1"
+authors = ["Wei Gu"]
 edition = "2024"
 description = """
-asp.net razor-like view template engine.
+A view template engine in rust
 """
-keywords = ["web"]
+keywords = ["html", "layout", "template", "web"]
 license = "MIT"
 homepage = "https://github.com/gu-wei-x/disguise"
 repository = "https://github.com/gu-wei-x/disguise"
 
 [dependencies]
-proc-macro2 = "1.0.101"
-quote = "1.0.40"
-winnow = "0.7.13"
+proc-macro2 = "1"
+quote = "1"
+syn = "2"
+winnow = "0.7"
 
 #optional
-prettyplease = { version = "0.2.37", optional = true }
-#syn = { version = "2.0.106", optional = true }
-syn = { version = "2.0.106"}
+prettyplease = { version = "0.2", optional = true }
 
 [features]
-#pretty = [ "prettyplease", "syn" ]
 pretty = [ "prettyplease"]
 
