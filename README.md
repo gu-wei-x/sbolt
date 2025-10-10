@@ -5,7 +5,7 @@ disguise is a view template engine in rust. disguise pre-processes templates fro
 ## disguise has benefits compared to other templates:
 1. Catch syntactical and logical errors in templates ahead of time.
 2. High scalability as templates go with crate bits.
-3. Better performance for runtime and startup as templates are compiled into bits.
+3. Better performance for runtime and startup as templates are compiled into bits, see [benchmark](./rust/benchmark).
 
 The template syntax is inspired by [aspnet Razor](https://dotnet.microsoft.com/en-us/apps/aspnet) syntax which uses `@` symbol to transition between `CONTENT` and `rust` code. A sample template looks llike bellow: `views/welcome.rshtml`
 ```
@@ -64,7 +64,7 @@ fn main() {
 
 ## Documentation
   * [Dev](./doc/dev/README.md)
-  * [Userdoc](./doc/en/get_started.md)
+  * [User](./doc/en/get_started.md)
 
 ## License
 
