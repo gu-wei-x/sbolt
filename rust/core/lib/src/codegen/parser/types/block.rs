@@ -101,14 +101,22 @@ impl<'a> Block<'a> {
         token_stream: &mut TokenStream,
         context: &mut ParseContext,
     ) -> result::Result<Block<'a>> {
+        let previous_token =
+            token_stream
+                .previous_tokens()
+                .next()
+                .ok_or(error::CompileError::from_parser(
+                    source,
+                    None,
+                    "Expected after `@`",
+                ))?;
         // validate, first token must be open_kind and consume the token.
-        let previous_token = token_stream.previous_tokens().last().copied();
         match token_stream.peek_token() {
             Some(token) => {
                 if token.kind() != open_kind {
                     return Err(error::CompileError::from_parser(
                         source,
-                        previous_token,
+                        Some(*previous_token),
                         "Expected opening delimiter",
                     ));
                 } else {
@@ -118,7 +126,7 @@ impl<'a> Block<'a> {
             _ => {
                 return Err(error::CompileError::from_parser(
                     source,
-                    previous_token,
+                    Some(*previous_token),
                     "Expected opening delimiter",
                 ));
             }
@@ -192,7 +200,7 @@ impl<'a> Block<'a> {
         if depth != 0 {
             return Err(error::CompileError::from_parser(
                 source,
-                previous_token,
+                Some(*previous_token),
                 "Unbalanced delimiters in block",
             ));
         }
