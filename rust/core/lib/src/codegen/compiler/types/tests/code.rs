@@ -1,5 +1,4 @@
 #![cfg(test)]
-#![cfg(test)]
 use crate::codegen::types::Block;
 use crate::codegen::types::Template;
 use crate::types::result;

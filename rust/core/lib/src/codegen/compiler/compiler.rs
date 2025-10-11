@@ -5,6 +5,7 @@ use crate::codegen::compiler::module::Module;
 use crate::codegen::compiler::registry;
 use crate::codegen::consts;
 use crate::types::result;
+use proc_macro2::TokenStream;
 use std::env;
 use std::path::PathBuf;
 
@@ -22,12 +23,14 @@ impl Compiler {
         match self.process() {
             Ok(result) => result,
             Err(err) => {
-                /**
-                 * cargo:error= is not impled for build scripts to report issues
-                 * change in future with cargo:error format to let ide highlight issue.
+                /*
+                 * cargo:error= is not impled for build scripts to report issues right now.
+                 * change this in future with cargo:error format to let ide highlight issues.
                  */
                 eprintln!("\x1b[0;31merror\x1b[0m:{err:#}");
-                std::process::exit(1);
+
+                // panic to stop compiling.
+                panic!("Compile failed.")
             }
         }
     }
@@ -35,7 +38,12 @@ impl Compiler {
 
 impl Compiler {
     // called by build script to process view templates.
-    fn process(&self) -> result::Result<CompileResult> {
+    pub(in crate::codegen::compiler) fn process(&self) -> result::Result<CompileResult> {
+        // validate mod name from options
+        let Ok(_) = self.options.mod_name.parse::<TokenStream>() else {
+            return Err(format!("'{}' is not a valid ident name", self.options.mod_name).into());
+        };
+
         // TODO: implement compilation logic, incremental build, multiple tasks to improve performance, etc.
         let target_dir = if let Some(dir) = &self.options.out_dir {
             dir
