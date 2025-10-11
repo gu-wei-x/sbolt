@@ -23,8 +23,8 @@ this is @name}
     )?;
     let expected = quote! {
      use crate::viewtypes::*;
-     use disguise::types::Template as _;
-     use disguise::types::Writer;
+     use sbolt::types::Template as _;
+     use sbolt::types::Writer;
      use test::test1;
      pub struct TestView;
 
@@ -37,33 +37,33 @@ this is @name}
              Template::KTestnsTestViewView(TestView::new())
          }
 
-         fn create_writer(&self, kind: Option<disguise::types::template::Kind>) -> disguise::types::KWriter {
+         fn create_writer(&self, kind: Option<sbolt::types::template::Kind>) -> sbolt::types::KWriter {
              let kind = match kind {
                  Some(k) => k,
                  _ => TestView::kind(),
              };
              match kind {
-                 disguise::types::template::Kind::KHTML => {
-                     disguise::types::KWriter::KHtml(disguise::types::HtmlWriter::new())
+                 sbolt::types::template::Kind::KHTML => {
+                     sbolt::types::KWriter::KHtml(sbolt::types::HtmlWriter::new())
                  },
-                 _ => disguise::types::KWriter::KText(String::new()),
+                 _ => sbolt::types::KWriter::KText(String::new()),
              }
          }
      }
-     impl disguise::types::Template for TestView {
+     impl sbolt::types::Template for TestView {
          fn name() -> String {
              "testns::TestView".to_string()
          }
 
-         fn kind() -> disguise::types::template::Kind {
-             disguise::types::template::Kind::KHTML
+         fn kind() -> sbolt::types::template::Kind {
+             sbolt::types::template::Kind::KHTML
          }
 
          fn layout() -> Option<String> {
              Some("test::test2".to_string())
          }
 
-         fn render(&self, context: &mut impl disguise::types::Context) -> disguise::types::result::RenderResult<String> {
+         fn render(&self, context: &mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
              let mut writer = self.create_writer(None);
              let section_name = "test1";
              let section_writer = {
@@ -77,14 +77,14 @@ this is @name}
              writer.write("<html><div>Test</div></html>");
              match Self::layout() {
                  Some(layout) => {
-                     for key in disguise::types::resolve_layout_to_view_keys(&layout, &Self::name()) {
+                     for key in sbolt::types::resolve_layout_to_view_keys(&layout, &Self::name()) {
                          if let Some(creator) = crate::test_view_mod::resolve_view_creator(&key) {
                              context.set_default_section(writer.into_string());
                              let view = creator();
                              return view.render(context);
                          }
                      }
-                     Err(disguise::types::error::RuntimeError::layout_not_found(&layout, &Self::name()))
+                     Err(sbolt::types::error::RuntimeError::layout_not_found(&layout, &Self::name()))
                  }
                  None => Ok(writer.into_string()),
              }

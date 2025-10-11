@@ -5,7 +5,7 @@ use actix_web::HttpRequest;
 use actix_web::HttpResponse;
 use actix_web::Responder;
 use actix_web::http::header::ContentType;
-use disguise::types::result::RenderResult;
+use sbolt::types::result::RenderResult;
 
 pub(crate) struct TemplateResult {
     inner_result: RenderResult<String>,

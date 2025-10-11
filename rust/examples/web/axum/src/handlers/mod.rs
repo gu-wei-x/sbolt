@@ -5,7 +5,7 @@ use axum::{
     http::StatusCode,
     response::{Html, IntoResponse, Response},
 };
-use disguise::types::result::RenderResult;
+use sbolt::types::result::RenderResult;
 
 pub(crate) struct TemplateResult {
     inner_result: RenderResult<String>,

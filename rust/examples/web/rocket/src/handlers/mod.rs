@@ -6,7 +6,7 @@ pub(crate) fn routes() -> Vec<Route> {
     routes![welcome::welcome]
 }
 
-use disguise::types::result::RenderResult;
+use sbolt::types::result::RenderResult;
 use rocket::http::ContentType;
 use rocket::http::Status;
 use rocket::request::Request;

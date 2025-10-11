@@ -47,13 +47,13 @@ pub(crate) fn generate_registry(
     let reg_ts = generate_registry_method(mode_name, view_name_mapping)?;
     let type_ident = format_ident!("{}", consts::TEMPLATE_TYPE_NAME);
     let content = quote! {
-        use disguise::types::Template as _;
+        use sbolt::types::Template as _;
         pub(crate) enum #type_ident {
             #view_types_ts
         }
 
         impl #type_ident {
-            pub(crate) fn render(&self, context:&mut impl disguise::types::Context) -> disguise::types::result::RenderResult<String> {
+            pub(crate) fn render(&self, context:&mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
                 match self {
                    #view_unpack_content_ts
                 }

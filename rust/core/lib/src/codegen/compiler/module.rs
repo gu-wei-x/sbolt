@@ -155,7 +155,7 @@ impl Module {
                     }
 
                     fn resolve(&self, name: &str) -> Option<fn() -> #viewtypes_ident_ts> {
-                        let key = disguise::types::normalize_path_to_view_key(name);
+                        let key = sbolt::types::normalize_path_to_view_key(name);
                         self.view_creators.get(&key).map(|f| *f)
                     }
                 }
@@ -164,12 +164,12 @@ impl Module {
                     TemplateResolver::new()
                 });
 
-                pub(crate) fn render(name: &str, context:&mut impl disguise::types::Context) -> disguise::types::result::RenderResult<String> {
+                pub(crate) fn render(name: &str, context:&mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
                     if let Some(creator) = TEMPLATE_RESOLVER.resolve(name) {
                         let view = creator();
                         view.render(context)
                     } else {
-                        Err(disguise::types::error::RuntimeError::view_not_found(name))
+                        Err(sbolt::types::error::RuntimeError::view_not_found(name))
                     }
                 }
 

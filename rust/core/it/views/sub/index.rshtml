@@ -3,8 +3,8 @@
         Some(str) => str,
         None => "",
     };
-    let age = disguise::types::DisplayOptionRef(context.get_data::<i32>("age"));
-    let msg = disguise::types::DisplayOptionRef(context.get_data::<String>("msg"));
+    let age = sbolt::types::DisplayOptionRef(context.get_data::<i32>("age"));
+    let msg = sbolt::types::DisplayOptionRef(context.get_data::<String>("msg"));
 }
 <html>
     <head>

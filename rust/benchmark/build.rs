@@ -1,8 +1,8 @@
 fn main() {
-    let option = disguise::codegen::CompilerOptions::default()
+    let option = sbolt::codegen::CompilerOptions::default()
         .with_optimize(true)
         .with_source_dir("views")
         .with_mod_name("bench_views");
-    let compiler = disguise::codegen::Compiler::new(option);
+    let compiler = sbolt::codegen::Compiler::new(option);
     compiler.compile();
 }
