@@ -1,12 +1,12 @@
 # Get started
 
-## Following are the steps to use disguise. See: [examples/cli](../../rust/examples/cli/)
+## Following are the steps to use sbolt. See: [examples/cli](../../rust/examples/cli/)
 
-### 1. add disguise crate and add disguise crate to `[build-dependencies]`
+### 1. add sbolt crate and add sbolt crate to `[build-dependencies]`
 
 ```shell
-cargo add disguise
-cargo add disguise --build
+cargo add sbolt
+cargo add sbolt --build
 ```
 
 ### 2. create views directory containing view templates(*.rshtml)
@@ -33,8 +33,8 @@ src/views/sub/index.rshtml
         Some(str) => str,
         None => "",
     };
-    let age = disguise::types::DisplayOptionRef(context.get_data::<i32>("age"));
-    let msg = disguise::types::DisplayOptionRef(context.get_data::<String>("msg"));
+    let age = sbolt::types::DisplayOptionRef(context.get_data::<i32>("age"));
+    let msg = sbolt::types::DisplayOptionRef(context.get_data::<String>("msg"));
 }
 <html>
     <head>
@@ -52,11 +52,11 @@ src/views/sub/index.rshtml
 // `cargo build -vv` to show output.
 fn main() {
     let mod_name = format!("{}_views", std::env!("CARGO_PKG_NAME"));
-    let option = disguise::codegen::CompilerOptions::default()
+    let option = sbolt::codegen::CompilerOptions::default()
         .with_optimize(true)
         .with_source_dir("src/views")
         .with_mod_name(&mod_name);
-    let compiler = disguise::codegen::Compiler::new(option);
+    let compiler = sbolt::codegen::Compiler::new(option);
     compiler.compile();
 }
 ```
@@ -65,12 +65,12 @@ fn main() {
 
 ```rust
 // Import the generated view modules.
-disguise::include_views!();
+sbolt::include_views!();
 
 fn main() {
     // create a context and set some data.
-    let mut context = disguise::context! {
-        name: "Disguise".to_string(),
+    let mut context = sbolt::context! {
+        name: "sbolt".to_string(),
         age: 1,
         msg: "Hello world!".to_string()
     };
@@ -93,14 +93,14 @@ $>cargo run
         <title>Welcome</title>
     </head>
     <body>
-        <div>Welcome! - from Disguise(1)</div>
+        <div>Welcome! - from sbolt(1)</div>
     </body>
 </html>
 ```
 
 ## Use in web applications
 
-It's very simple to use disguise in your web applications with popular `rust web frameworks`. Please see examples:
+It's very simple to use sbolt in your web applications with popular `rust web frameworks`. Please see examples:
 * [Use with Actix-web](../../rust/examples/web/actix)
 * [Use with Axum](../../rust/examples/web/axum)
 * [Use with Rocket](../../rust/examples/web/rocket)

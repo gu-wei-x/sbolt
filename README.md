@@ -1,8 +1,8 @@
-# crate disguise
+# crate sbolt
 
-disguise is a view template engine in rust. disguise pre-processes templates from directories and compiles them into crate bits. 
+sbolt is a view template engine in rust. sbolt pre-processes templates from directories and compiles them into crate bits. 
 
-## disguise has benefits compared to other templates:
+## sbolt has benefits compared to other templates:
 1. Catch syntactical and logical errors in templates ahead of time.
 2. High scalability as templates go with crate bits.
 3. Better performance for runtime and startup as templates are compiled into bits, see [benchmark](./rust/benchmark).
@@ -26,31 +26,31 @@ The template syntax is inspired by [aspnet Razor](https://dotnet.microsoft.com/e
 ```
 
 ### Getting started
-The goal of disguise is to have your templates and static files accessible to your rust code as a module. And the module will be generated into code living outside of src directory. There are 3 steps to use the crate:
+The goal of sbolt is to have your templates and static files accessible to your rust code as a module. And the module will be generated into code living outside of src directory. There are 3 steps to use the crate:
 
-1. use disguise to preprocess templates at build stage.
+1. use sbolt to preprocess templates at build stage.
 >> * add the crate to deps: `Cargo.toml`
 ```shell
-cargo add disguise
-cargo add disguise --build
+cargo add sbolt
+cargo add sbolt --build
 ```
 >> * create a build script to process templates: `build.rs`
 ```rust
 fn main() {
-    let option = disguise::codegen::CompilerOptions::default()
+    let option = sbolt::codegen::CompilerOptions::default()
         .with_optimize(true)
         .with_source_dir("src/views")
         .with_mod_name("example_views");
-    let compiler = disguise::codegen::Compiler::new(option);
+    let compiler = sbolt::codegen::Compiler::new(option);
     compiler.compile();
 }
 ```
 2. include the generated module from build stage and use the logic from generated module.
 ```rust
-disguise::include_views!();
+sbolt::include_views!();
 fn main() {
-    let mut context = disguise::context! {
-        name: "disguise".to_string()
+    let mut context = sbolt::context! {
+        name: "sbolt".to_string()
     };
     let output = example_views::render("views/welcome", &mut context).unwrap_or_else(|e| {
         eprintln!("Error: {e:?}");

@@ -5,8 +5,8 @@ edition = "2024"
 publish = false
 
 [dependencies]
-disguise = { path = "../../core/lib" }
+sbolt = { path = "../../core/lib" }
 
 [build-dependencies]
-disguise = { path = "../../core/lib", features = ["pretty"] }
-#disguise = { path = "../../core/lib" }
+sbolt = { path = "../../core/lib", features = ["pretty"] }
+#sbolt = { path = "../../core/lib" }

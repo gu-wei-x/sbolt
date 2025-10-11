@@ -1,5 +1,5 @@
 [package]
-name = "disguise"
+name = "sbolt"
 version = "0.0.1"
 authors = ["Wei Gu"]
 edition = "2024"
@@ -8,8 +8,8 @@ A view template engine in rust
 """
 keywords = ["html", "layout", "template", "web"]
 license = "MIT"
-homepage = "https://github.com/gu-wei-x/disguise"
-repository = "https://github.com/gu-wei-x/disguise"
+homepage = "https://github.com/gu-wei-x/sbolt"
+repository = "https://github.com/gu-wei-x/sbolt"
 
 [dependencies]
 proc-macro2 = "1"

@@ -1,16 +1,16 @@
 #![cfg(test)]
-use disguise::types::result;
-disguise::include_views!();
+use sbolt::types::result;
+sbolt::include_views!();
 
 #[test]
 #[should_panic]
 fn no_existing_view() {
-    lib_it_views::render("views/no_existing", &mut disguise::context!()).unwrap();
+    lib_it_views::render("views/no_existing", &mut sbolt::context!()).unwrap();
 }
 
 #[test]
 fn comp_test_view() -> result::RenderResult<()> {
-    let result = lib_it_views::render("views/default", &mut disguise::context!())?;
+    let result = lib_it_views::render("views/default", &mut sbolt::context!())?;
     let expected = r#"
 <html>
     <head>
@@ -28,8 +28,8 @@ fn comp_test_view() -> result::RenderResult<()> {
 
 #[test]
 fn comp_index_view() -> result::RenderResult<()> {
-    let mut context = disguise::context! {
-        name: "Disguise".to_string(),
+    let mut context = sbolt::context! {
+        name: "sbolt".to_string(),
         age: 1,
         msg: "Welcome!".to_string()
     };
@@ -40,7 +40,7 @@ fn comp_index_view() -> result::RenderResult<()> {
         <title>Welcome</title>
     </head>
     <body>
-        <div>Welcome! - from Disguise(1)</div>
+        <div>Welcome! - from sbolt(1)</div>
     </body>
 </html>"#
         .trim();
@@ -51,7 +51,7 @@ fn comp_index_view() -> result::RenderResult<()> {
 
 #[test]
 fn comp_home_view() -> result::RenderResult<()> {
-    let result = lib_it_views::render("views/sub/home", &mut disguise::context!())?;
+    let result = lib_it_views::render("views/sub/home", &mut sbolt::context!())?;
     assert!(result.contains("<title>Home</title>"));
     assert!(result.contains("<li>menu 1</li>"));
     assert!(result.contains("this is footer"));

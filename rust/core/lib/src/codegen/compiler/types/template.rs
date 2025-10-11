@@ -25,21 +25,21 @@ impl<'a> Template<'a> {
         let layout_content = self.block().generate_layout_token_stream()?;
         let kind = match self.kind() {
             crate::types::template::Kind::KHTML => {
-                quote! { disguise::types::template::Kind::KHTML }
+                quote! { sbolt::types::template::Kind::KHTML }
             }
             crate::types::template::Kind::KJSON => {
-                quote! { disguise::types::template::Kind::KJSON }
+                quote! { sbolt::types::template::Kind::KJSON }
             }
             crate::types::template::Kind::KTEXT => {
-                quote! { disguise::types::template::Kind::KTEXT }
+                quote! { sbolt::types::template::Kind::KTEXT }
             }
         };
         // a view must have render method.
         let render_content = self.block().generate_render_token_stream(mod_name)?;
         let code = quote! {
             use crate::viewtypes::*;
-            use disguise::types::Template as _;
-            use disguise::types::Writer;
+            use sbolt::types::Template as _;
+            use sbolt::types::Writer;
             #(#imports_content)*
 
             pub struct #view_name;
@@ -52,27 +52,27 @@ impl<'a> Template<'a> {
                    #template_type::#view_type(#view_name::new())
                 }
 
-                fn create_writer(&self, kind: Option<disguise::types::template::Kind>) -> disguise::types::KWriter {
+                fn create_writer(&self, kind: Option<sbolt::types::template::Kind>) -> sbolt::types::KWriter {
                     let kind = match kind {
                         Some(k) => k,
                         _ => #view_name::kind(),
                     };
                     match kind {
-                        disguise::types::template::Kind::KHTML => {
-                            disguise::types::KWriter::KHtml(disguise::types::HtmlWriter::new())
+                        sbolt::types::template::Kind::KHTML => {
+                            sbolt::types::KWriter::KHtml(sbolt::types::HtmlWriter::new())
                         },
-                        _ => disguise::types::KWriter::KText(String::new()),
+                        _ => sbolt::types::KWriter::KText(String::new()),
                     }
                 }
             }
 
-            impl disguise::types::Template for #view_name
+            impl sbolt::types::Template for #view_name
             {
                 fn name() -> String {
                     #full_view_name.to_string()
                 }
 
-                fn kind() -> disguise::types::template::Kind {
+                fn kind() -> sbolt::types::template::Kind {
                      #kind
                 }
 

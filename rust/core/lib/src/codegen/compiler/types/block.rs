@@ -97,19 +97,19 @@ impl<'a> Block<'a> {
             true => {
                 let view_root_mod_name = format_ident!("{}", mod_name);
                 let code = quote! {
-                    fn render(&self, context:&mut impl disguise::types::Context) -> disguise::types::result::RenderResult<String> {
+                    fn render(&self, context:&mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
                         let mut writer = self.create_writer(None);
                         #(#ts)*
                         match Self::layout() {
                             Some(layout) => {
-                                for key in disguise::types::resolve_layout_to_view_keys(&layout, &Self::name()) {
+                                for key in sbolt::types::resolve_layout_to_view_keys(&layout, &Self::name()) {
                                     if let Some(creator) = crate::#view_root_mod_name::resolve_view_creator(&key) {
                                         context.set_default_section(writer.into_string());
                                         let view = creator();
                                         return view.render(context);
                                     }
                                 }
-                                Err(disguise::types::error::RuntimeError::layout_not_found(&layout, &Self::name()))
+                                Err(sbolt::types::error::RuntimeError::layout_not_found(&layout, &Self::name()))
                             }
                             None => Ok(writer.into_string()),
                         }
@@ -119,7 +119,7 @@ impl<'a> Block<'a> {
             }
             false => {
                 let code = quote! {
-                    fn render(&self, #[allow(unused_variables)]context:&mut impl disguise::types::Context) -> disguise::types::result::RenderResult<String> {
+                    fn render(&self, #[allow(unused_variables)]context:&mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
                         let mut writer = self.create_writer(None);
                         // TODO: add other logic here
                         #(#ts)*

@@ -14,13 +14,13 @@ macro_rules! include_views {
 #[macro_export]
 macro_rules! context {
     () => {
-        disguise::types::DefaultViewContext::new()
+        sbolt::types::DefaultViewContext::new()
     };
     (
         $($key:ident $(: $value:expr)?),*
     ) => {{
-        use disguise::types::Context;
-        let mut ctx = disguise::types::DefaultViewContext::new();
+        use sbolt::types::Context;
+        let mut ctx = sbolt::types::DefaultViewContext::new();
         $(
             ctx.set_data(stringify!($key), {
                 $(

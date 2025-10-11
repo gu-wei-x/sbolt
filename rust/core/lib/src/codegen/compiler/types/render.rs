@@ -24,7 +24,7 @@ impl<'a> Block<'a> {
                    match default_section {
                        Some(content) => writer.write(&content),
                        None => {
-                           return Err(disguise::types::error::RuntimeError::NotFound("Default section not found".to_string(), "".to_string()))
+                           return Err(sbolt::types::error::RuntimeError::NotFound("Default section not found".to_string(), "".to_string()))
                        }
                    }
                 };
@@ -44,7 +44,7 @@ impl<'a> Block<'a> {
                         }
                        },
                        None => {
-                           return Err(disguise::types::error::RuntimeError::NotFound("Default section not found".to_string(), "".to_string()))
+                           return Err(sbolt::types::error::RuntimeError::NotFound("Default section not found".to_string(), "".to_string()))
                        }
                    }
                 };
@@ -66,7 +66,7 @@ impl<'a> Block<'a> {
                         }
                        },
                        None if is_required => {
-                           return Err(disguise::types::error::RuntimeError::NotFound("Default section not found".to_string(), "".to_string()))
+                           return Err(sbolt::types::error::RuntimeError::NotFound("Default section not found".to_string(), "".to_string()))
                        }
                        _ => {
                           /*ignore */

@@ -1,10 +1,10 @@
 // Import the generated view modules.
-disguise::include_views!();
+sbolt::include_views!();
 
 fn main() {
     // create a context and set some data.
-    let mut context = disguise::context! {
-        name: "Disguise".to_string(),
+    let mut context = sbolt::context! {
+        name: "sbolt".to_string(),
         age: 1,
         msg: "Welcome!".to_string()
     };

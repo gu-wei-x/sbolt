@@ -1,4 +1,4 @@
-disguise::include_views!();
+sbolt::include_views!();
 mod handlers;
 use axum::{Router, routing::get};
 

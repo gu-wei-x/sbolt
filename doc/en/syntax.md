@@ -1,6 +1,6 @@
 # Syntax
 
-disguise template files contain markup syntax for embedding `rust` code into content. The syntax consists of markup, `rust` and text. Template files usually use `.rshtml` for html, `.rsjson` for json and `.rstxt` for plain text. The extention could be overrided by compile options. disguise uses `@` symbol to ransition between `rust` code and content. 
+sbolt template files contain markup syntax for embedding `rust` code into content. The syntax consists of markup, `rust` and text. Template files usually use `.rshtml` for html, `.rsjson` for json and `.rstxt` for plain text. The extention could be overrided by compile options. sbolt uses `@` symbol to ransition between `rust` code and content. 
 
 ## Redering HTML
 
@@ -8,7 +8,7 @@ The default template is for rendering HTML content. There is no difference for r
 
 ## Basic Syntax
 
-disguise template supports rust and uses the `@` symbol to transition from HTML content to `rust` code. disguise generate `rust` expressions at build stage to be envaluated later at runtime. When an `@` symbol is followed by disguise [keywords](./keywolds.md), it transitons into specific markup. Otherwise, it transitions into HTML text. To escap an `@` symbol in markup, use a second `@` symbol: 
+sbolt template supports rust and uses the `@` symbol to transition from HTML content to `rust` code. sbolt generate `rust` expressions at build stage to be envaluated later at runtime. When an `@` symbol is followed by sbolt [keywords](./keywolds.md), it transitons into specific markup. Otherwise, it transitions into HTML text. To escap an `@` symbol in markup, use a second `@` symbol: 
 
 - **escape `@`:** use double `@`.
     ```
