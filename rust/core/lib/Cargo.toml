@@ -7,6 +7,7 @@ description = """
 A view template engine in rust
 """
 keywords = ["html", "layout", "template", "web"]
+readme = "../../../README.md"
 license = "MIT"
 homepage = "https://github.com/gu-wei-x/sbolt"
 repository = "https://github.com/gu-wei-x/sbolt"
