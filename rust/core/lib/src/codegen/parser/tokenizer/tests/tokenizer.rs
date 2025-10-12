@@ -3,6 +3,7 @@ use crate::codegen::parser::tokenizer;
 use crate::codegen::parser::tokenizer::Tokenizer;
 use crate::codegen::parser::tokenizer::token;
 use crate::types::Location;
+use std::io::Write;
 
 macro_rules! tokenizer_test_case {
     ($name:ident, $input:expr, $expected:expr) => {
@@ -106,6 +107,16 @@ tokenizer_test_case!(
 );
 
 #[test]
+fn tokenizer_token_display() {
+    let source = "\n123@*\n";
+    let tokenizer = Tokenizer::new(source);
+    let tokens: Vec<tokenizer::Token> = tokenizer.into_vec();
+    let token = &tokens[1];
+    let fmt_str = &token.to_string();
+    assert_eq!(fmt_str, "Token(EXPRESSION, 1, 4)");
+}
+
+#[test]
 fn tokenizer_stream_with_lines() {
     let token_parts = vec!["你好", "\n", "hello", "*", "world", "\r", "世界", "\r\n"];
     let tokenizer_input: String = token_parts.join("");
@@ -175,4 +186,17 @@ fn tokenizer_stream_with_lines() {
     assert_eq!(token.kind(), token::Kind::EOF);
     assert_eq!(tokenizer_input.len()..tokenizer_input.len(), token.range());
     assert_eq!(token.location(), Location::new(3, 0));
+}
+
+#[test]
+fn tokenizer_stream_with_bom() {
+    let mut buffer = Vec::<u8>::new();
+    _ = buffer.write_all(&[0xEF, 0xBB, 0xBF]);
+    _ = buffer.write_all(b"123@*\n");
+    let source = String::from_utf8(buffer).expect("Invalid UTF-8 sequence");
+    let tokenizer = Tokenizer::new(&source);
+    let tokens: Vec<tokenizer::Token> = tokenizer.into_vec();
+    let token = &tokens[1];
+    assert_eq!(token.kind(), token::Kind::AT);
+    assert_eq!(token.location(), Location::new(0, 6));
 }

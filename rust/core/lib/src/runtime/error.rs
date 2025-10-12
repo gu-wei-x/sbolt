@@ -9,8 +9,8 @@ impl RuntimeError {
 
     pub fn layout_not_found(layout: &str, view_name: &str) -> Self {
         RuntimeError::NotFound(
-            layout.to_string(),
-            format!("Layout: '{layout}' not found for View: {view_name}"),
+            view_name.to_string(),
+            format!("Layout '{layout}' not found for View `{view_name}`"),
         )
     }
 }
@@ -19,7 +19,7 @@ impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             RuntimeError::NotFound(name, message) => {
-                write!(f, "View '{}' not found: {}", name, message)
+                write!(f, "View:{}, NotFound: {}", name, message)
             }
         }
     }
