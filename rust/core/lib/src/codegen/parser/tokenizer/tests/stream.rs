@@ -7,6 +7,20 @@ use crate::codegen::parser::tokenizer::Tokenizer;
 use crate::codegen::parser::tokenizer::stream;
 
 #[test]
+fn skip_newline() {
+    let source = "\r\n\r\n123";
+    let tokenizer = Tokenizer::new(source);
+    let tokens: Vec<tokenizer::Token> = tokenizer.into_vec();
+    let mut stream = TokenSlice::new(&tokens);
+    let result = stream::skip_newline(&mut stream);
+    assert!(result);
+    let result = stream.peek_token();
+    assert!(result.is_some());
+    let token = result.unwrap();
+    assert_eq!(token.kind(), tokenizer::Kind::EXPRESSION);
+}
+
+#[test]
 fn skip_whitespace_false() {
     let source = "123";
     let tokenizer = Tokenizer::new(source);
@@ -112,6 +126,10 @@ fn get_nth_token() {
     assert!(sixth.is_some());
     let token = sixth.unwrap();
     assert_eq!(token.kind(), tokenizer::Kind::EOF);
+
+    // 7th token not-exist
+    let seventh = stream::get_nth_token(&stream, 6);
+    assert!(seventh.is_none());
 
     // unconsumed token
     let unconsumed = stream.peek_token();

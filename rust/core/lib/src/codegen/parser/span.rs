@@ -21,17 +21,6 @@ impl Location {
     }
 }
 
-impl<T: Default + Copy> Default for Span<T> {
-    fn default() -> Self {
-        Self {
-            kind: T::default(),
-            start: 0,
-            end: 0,
-            location: Location::default(),
-        }
-    }
-}
-
 impl<T: Copy> Span<T> {
     pub(crate) fn new(kind: T, start: usize, end: usize, location: Location) -> Self {
         Self {
