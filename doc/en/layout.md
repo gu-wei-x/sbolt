@@ -9,7 +9,8 @@ Views usually share visual and programmatic elements.
 ## What is a layout
 
 Web apps usually have a common layout that provides a consistent experience as they navigate from page to page. The layout usually includes common UI elements such as the header, menu elements, and footer like:
-![Layout](./images/layout.png)
+<img src="./images/layout.png">
+<img src="./images/layout_ex.png" width="1458">
 
 HTML usually also contains resources like scripts and stylesheets, those are also used by many pages within an web app. All of these shared elements may be defined in a layout file, which can then be referenced by any template used within an web app. Layouts reduce duplicate logic in templates. 
 
