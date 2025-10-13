@@ -1,5 +1,5 @@
 #![cfg(test)]
-use crate::types::data_store::DataStore;
+use crate::types::DataStore;
 
 // cargo test test_primitive_type -- --nocapture
 #[test]

@@ -32,11 +32,6 @@ impl<'a> Span<'a> {
         self.blocks.len() == 0
     }
 
-    #[allow(dead_code)]
-    pub(in crate::codegen) fn range(&self) -> Range<usize> {
-        self.range.clone()
-    }
-
     pub(in crate::codegen) fn location(&self) -> Location {
         if self.has_blocks() {
             self.blocks

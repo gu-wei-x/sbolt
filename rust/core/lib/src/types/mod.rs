@@ -5,9 +5,6 @@ mod macros;
 pub mod template;
 mod writer;
 
-#[cfg(test)]
-mod tests;
-
 pub use context::*;
 pub use data_store::*;
 pub use functions::*;
