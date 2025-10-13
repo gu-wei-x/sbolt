@@ -13,7 +13,7 @@ fn template_from_empty() {
 #[test]
 fn template_from_content() -> result::Result<()> {
     let content = "Hello, world!";
-    let template = Template::from(&content, None, Kind::KHTML)?;
+    let template = Template::from(&content, Some(String::from("testns")), Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     match block {
@@ -25,6 +25,7 @@ fn template_from_content() -> result::Result<()> {
         }
         _ => panic!("Expected KROOT block"),
     }
+    assert_eq!(template.namespace(), Some(&String::from("testns")));
 
     Ok(())
 }

@@ -1,4 +1,8 @@
-pub fn normalize_path_to_view_key(path: &str) -> String {
+pub fn normalize_path_to_view_key(path: &str) -> Option<String> {
+    if path.is_empty() {
+        return None;
+    }
+
     let normalized_name = path.trim_matches('/').replace("/", "::");
     let mut parts = normalized_name.split("::").peekable();
     let mut result = String::new();
@@ -9,13 +13,10 @@ pub fn normalize_path_to_view_key(path: &str) -> String {
             None => {
                 // append name for last one.
                 let mut chars = part.chars();
-                match chars.next() {
-                    Some(first_char) => {
-                        result.push_str(&first_char.to_uppercase().collect::<String>());
-                        result.push_str(chars.as_str());
-                        result.push_str("View");
-                    }
-                    None => {}
+                if let Some(first_char) = chars.next() {
+                    result.push_str(&first_char.to_uppercase().collect::<String>());
+                    result.push_str(chars.as_str());
+                    result.push_str("View");
                 }
                 break;
             }
@@ -24,7 +25,7 @@ pub fn normalize_path_to_view_key(path: &str) -> String {
             }
         }
     }
-    result
+    Some(result)
 }
 
 pub fn resolve_layout_to_view_keys(layout_path: &str, view_name: &str) -> Vec<String> {

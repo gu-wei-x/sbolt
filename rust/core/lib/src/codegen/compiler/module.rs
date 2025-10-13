@@ -155,8 +155,10 @@ impl Module {
                     }
 
                     fn resolve(&self, name: &str) -> Option<fn() -> #viewtypes_ident_ts> {
-                        let key = sbolt::types::normalize_path_to_view_key(name);
-                        self.view_creators.get(&key).map(|f| *f)
+                        match sbolt::types::normalize_path_to_view_key(name) {
+                            Some(key) => self.view_creators.get(&key).map(|f| *f),
+                            None => None,
+                        }
                     }
                 }
 
