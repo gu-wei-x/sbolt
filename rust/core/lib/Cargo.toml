@@ -1,13 +1,13 @@
 [package]
 name = "sbolt"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Wei Gu"]
 edition = "2024"
 description = """
-A view template engine in rust
+A small and fast view template engine in rust
 """
 keywords = ["html", "layout", "template", "web"]
-readme = "../../../README.md"
+readme = "../../../doc/en/lib_README.md"
 license = "MIT"
 homepage = "https://github.com/gu-wei-x/sbolt"
 repository = "https://github.com/gu-wei-x/sbolt"
