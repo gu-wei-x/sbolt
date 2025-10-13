@@ -31,6 +31,7 @@ fn block_parse_content() -> result::Result<()> {
             let first_block = &span.blocks()[0];
             assert!(matches!(first_block, Block::KCONTENT(_)));
             assert_eq!(first_block.content().trim(), source.trim());
+            assert_eq!(first_block.location().line, 1);
         }
         _ => panic!("Expected KROOT block"),
     }
@@ -53,6 +54,7 @@ fn block_parse_inline_code() -> result::Result<()> {
             let first_block = &span.blocks()[0];
             assert!(matches!(first_block, Block::KINLINEDCODE(_)));
             assert_eq!(first_block.content().trim(), "test");
+            assert_eq!(first_block.location().line, 0);
         }
         _ => panic!("Expected KROOT block"),
     }

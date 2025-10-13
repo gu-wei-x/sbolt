@@ -80,7 +80,7 @@ impl<'a> Block<'a> {
 
         match directive {
             consts::DIRECTIVE_KEYWORD_LAYOUT => Ok(Block::new_layout(span)),
-            consts::DIRECTIVE_KEYWORD_USE => Ok(Block::KUSE(span)),
+            consts::DIRECTIVE_KEYWORD_USE => Ok(Block::new_use(span)),
             _ => Err(error::CompileError::from_parser(
                 source,
                 Some(*start_token),

@@ -15,6 +15,7 @@ fn block_parse_comment() -> result::Result<()> {
     let block = Block::parse_comment(source, token, &mut token_stream)?;
     assert!(matches!(block, Block::KCOMMENT(_)));
     assert_eq!(block.content(), source);
+    assert_eq!(block.location().line, 0);
     Ok(())
 }
 

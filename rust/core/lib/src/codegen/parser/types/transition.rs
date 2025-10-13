@@ -9,7 +9,7 @@ use winnow::stream::Stream as _;
 
 impl<'a> Block<'a> {
     // @exp, @{}, @()
-    pub(in crate::codegen::parser::types) fn parse_transfer_block(
+    pub(in crate::codegen::parser::types) fn parse_transition_block(
         source: &'a str,
         token_stream: &mut TokenStream,
         context: &mut ParseContext,

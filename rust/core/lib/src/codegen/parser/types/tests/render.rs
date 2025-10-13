@@ -14,6 +14,7 @@ fn block_parse_render_no_params() -> result::Result<()> {
     let block = Block::parse_render(source, &mut token_stream)?;
     assert!(matches!(block, Block::KRENDER(_)));
     assert_eq!(block.content(), "");
+    assert_eq!(block.location().line, 0);
 
     let source = r#"@render"#;
     let tokenizer = Tokenizer::new(source);
