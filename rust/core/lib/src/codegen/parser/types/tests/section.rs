@@ -1,4 +1,9 @@
 #![cfg(test)]
+use winnow::stream::TokenSlice;
+
+use crate::codegen::parser::tokenizer::Tokenizer;
+use crate::codegen::parser::types::context;
+use crate::codegen::parser::types::context::ParseContext;
 use crate::codegen::types::Block;
 use crate::codegen::types::Template;
 use crate::types::result;
@@ -51,4 +56,49 @@ fn to_content() -> result::Result<()> {
     assert_eq!(content_block.content().trim(), "this is test1");
 
     Ok(())
+}
+
+#[test]
+#[should_panic]
+fn parse_transition_block_section_invalid_format() {
+    let source = r#"@section{}"#;
+    let tokenizer = Tokenizer::new(source);
+    let tokens = tokenizer.into_vec();
+    let mut token_stream = TokenSlice::new(&tokens);
+    Block::parse_transition_block(
+        source,
+        &mut token_stream,
+        &mut ParseContext::new(context::Kind::KSECTION),
+    )
+    .unwrap();
+}
+
+#[test]
+#[should_panic]
+fn parse_transition_block_section_no_section_name() {
+    let source = r#"@section {}"#;
+    let tokenizer = Tokenizer::new(source);
+    let tokens = tokenizer.into_vec();
+    let mut token_stream = TokenSlice::new(&tokens);
+    Block::parse_transition_block(
+        source,
+        &mut token_stream,
+        &mut ParseContext::new(context::Kind::KSECTION),
+    )
+    .unwrap();
+}
+
+#[test]
+#[should_panic]
+fn parse_transition_block_section_not_within_curlybracket() {
+    let source = r#"@section test()"#;
+    let tokenizer = Tokenizer::new(source);
+    let tokens = tokenizer.into_vec();
+    let mut token_stream = TokenSlice::new(&tokens);
+    Block::parse_transition_block(
+        source,
+        &mut token_stream,
+        &mut ParseContext::new(context::Kind::KSECTION),
+    )
+    .unwrap();
 }

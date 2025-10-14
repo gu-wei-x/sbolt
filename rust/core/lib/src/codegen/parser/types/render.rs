@@ -65,119 +65,88 @@ impl<'a> Block<'a> {
             )
         })?;
 
-        match token.kind() {
-            tokenizer::Kind::CPARENTHESIS => {
-                // no params @render()
-                // empty render
-                let block = ParseContext::create_block(
-                    &ParseContext::new(Kind::KRENDER),
-                    None,
-                    Span::new(source),
-                )?;
-                return Ok(block);
-            }
-            tokenizer::Kind::EXPRESSION => {
-                let mut root_span = Span::new(source);
+        if token.kind() == tokenizer::Kind::CPARENTHESIS {
+            // no params @render()
+            // empty render
+            let block = ParseContext::create_block(
+                &ParseContext::new(Kind::KRENDER),
+                None,
+                Span::new(source),
+            )?;
+            return Ok(block);
+        } else {
+            let mut root_span = Span::new(source);
 
-                // has params
-                let mut left_span = Span::new(source);
-                left_span.push_token(*token);
-                let left_block = ParseContext::create_block(
+            // has params
+            let mut left_span = Span::new(source);
+            left_span.push_token(*token);
+            let left_block =
+                ParseContext::create_block(&ParseContext::new(Kind::KCONTENT), None, left_span)?;
+            root_span.push_block(left_block);
+
+            tokenizer::skip_whitespace(token_stream);
+            tokenizer::skip_next_token_if(token_stream, |k| k == tokenizer::Kind::COMMA);
+            tokenizer::skip_whitespace(token_stream);
+            // second.
+            let token = get_token_if(token_stream, |k| {
+                k == tokenizer::Kind::EXPRESSION || k == tokenizer::Kind::CPARENTHESIS
+            })
+            .ok_or_else(|| {
+                error::CompileError::from_parser(
+                    source,
+                    Some(*start_token),
+                    &format!("Expected '(' after '{}'", consts::KEYWORD_RENDER,),
+                )
+            })?;
+
+            if token.kind() == tokenizer::Kind::CPARENTHESIS {
+                // only one param
+                let block =
+                    ParseContext::create_block(&ParseContext::new(Kind::KRENDER), None, root_span)?;
+                return Ok(block);
+            } else {
+                // validate, must be true or false
+                let text = &source[token.range()];
+                let is_bool = text.parse::<bool>().is_ok();
+                if !is_bool {
+                    return Err(error::CompileError::from_parser(
+                        source,
+                        Some(*token),
+                        &format!(
+                            "Expected boolean literal (true or false) as second parameter for '{}'",
+                            consts::KEYWORD_RENDER,
+                        ),
+                    ));
+                }
+
+                // has two params
+                let mut right_span = Span::new(source);
+                right_span.push_token(*token);
+                let right_block = ParseContext::create_block(
                     &ParseContext::new(Kind::KCONTENT),
                     None,
-                    left_span,
+                    right_span,
                 )?;
-                root_span.push_block(left_block);
-
+                root_span.push_block(right_block);
                 tokenizer::skip_whitespace(token_stream);
-                tokenizer::skip_next_token_if(token_stream, |k| k == tokenizer::Kind::COMMA);
-                tokenizer::skip_whitespace(token_stream);
-                // second.
-                let token = get_token_if(token_stream, |k| {
-                    k == tokenizer::Kind::EXPRESSION || k == tokenizer::Kind::CPARENTHESIS
-                })
-                .ok_or_else(|| {
-                    error::CompileError::from_parser(
-                        source,
-                        Some(*start_token),
-                        &format!("Expected '(' after '{}'", consts::KEYWORD_RENDER,),
-                    )
-                })?;
-
-                match token.kind() {
-                    tokenizer::Kind::CPARENTHESIS => {
-                        // only one param
-                        let block = ParseContext::create_block(
-                            &ParseContext::new(Kind::KRENDER),
-                            None,
-                            root_span,
-                        )?;
-                        return Ok(block);
-                    }
-                    tokenizer::Kind::EXPRESSION => {
-                        // validate, must be true or false
-                        let text = &source[token.range()];
-                        let is_bool = text.parse::<bool>().is_ok();
-                        if !is_bool {
-                            return Err(error::CompileError::from_parser(
-                                source,
-                                Some(*token),
-                                &format!(
-                                    "Expected boolean literal (true or false) as second parameter for '{}'",
-                                    consts::KEYWORD_RENDER,
-                                ),
-                            ));
-                        }
-
-                        // has two params
-                        let mut right_span = Span::new(source);
-                        right_span.push_token(*token);
-                        let right_block = ParseContext::create_block(
-                            &ParseContext::new(Kind::KCONTENT),
-                            None,
-                            right_span,
-                        )?;
-                        root_span.push_block(right_block);
-                        tokenizer::skip_whitespace(token_stream);
-                        // must be )
-                        get_token_if(token_stream, |k| k == tokenizer::Kind::CPARENTHESIS)
-                            .ok_or_else(|| {
-                                error::CompileError::from_parser(
-                                    source,
-                                    Some(*start_token),
-                                    &format!(
-                                        "Expected ')' after second parameter for '{}'",
-                                        consts::KEYWORD_RENDER,
-                                    ),
-                                )
-                            })?;
-                        Ok(ParseContext::create_block(
-                            &ParseContext::new(Kind::KRENDER),
-                            None,
-                            root_span,
-                        )?)
-                    }
-                    _ => {
-                        return Err(error::CompileError::from_parser(
+                // must be )
+                get_token_if(token_stream, |k| k == tokenizer::Kind::CPARENTHESIS).ok_or_else(
+                    || {
+                        error::CompileError::from_parser(
                             source,
-                            Some(*token),
+                            Some(*start_token),
                             &format!(
-                                "Expected parameters or ')' after '(' for '{}'",
+                                "Expected ')' after second parameter for '{}'",
                                 consts::KEYWORD_RENDER,
                             ),
-                        ));
-                    }
-                }
-            }
-            _ => {
-                return Err(error::CompileError::from_parser(
-                    source,
-                    Some(*token),
-                    &format!(
-                        "Expected parameters or ')' after '(' for '{}'",
-                        consts::KEYWORD_RENDER,
-                    ),
-                ));
+                        )
+                    },
+                )?;
+                Ok(ParseContext::create_block(
+                    &ParseContext::new(Kind::KRENDER),
+                    None,
+                    root_span,
+                )?)
             }
         }
     }

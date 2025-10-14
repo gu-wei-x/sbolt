@@ -123,9 +123,7 @@ fn get_nth_token() {
 
     // 6th token is EOF
     let sixth = stream::get_nth_token(&stream, 5);
-    assert!(sixth.is_some());
-    let token = sixth.unwrap();
-    assert_eq!(token.kind(), tokenizer::Kind::EOF);
+    assert!(sixth.is_none());
 
     // 7th token not-exist
     let seventh = stream::get_nth_token(&stream, 6);

@@ -6,12 +6,8 @@ use winnow::stream::TokenSlice;
 
 #[test]
 fn block_parse_empty_stream() {
-    let source = "";
-    let tokenizer = Tokenizer::new(source);
-    let tokens = tokenizer.into_vec();
-    let mut token_stream = TokenSlice::new(&tokens);
-
-    let result = Block::parse(source, &mut token_stream);
+    let mut token_stream = TokenSlice::new(&[]);
+    let result = Block::parse("", &mut token_stream);
     assert!(result.is_err());
 }
 

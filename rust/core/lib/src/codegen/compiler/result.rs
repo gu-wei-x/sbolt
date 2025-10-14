@@ -27,10 +27,6 @@ impl CompileResult {
         self.warnings.push(error);
     }
 
-    pub fn is_success(&self) -> bool {
-        self.warnings.is_empty()
-    }
-
     pub fn warnings(&self) -> &[error::CompileError] {
         &self.warnings
     }

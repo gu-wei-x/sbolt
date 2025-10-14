@@ -52,7 +52,34 @@ macro_rules! directive_test_case {
     };
 }
 
+#[test]
+#[should_panic]
+fn parse_unknown_directive() {
+    let source = r#"test test"#;
+    let tokenizer = Tokenizer::new(source);
+    let tokens = tokenizer.into_vec();
+    let mut token_stream = TokenSlice::new(&tokens);
+    Block::parse_directive(source, "test", &mut token_stream).unwrap();
+}
+
 // layout.
+#[test]
+#[should_panic]
+fn parse_directive_layout_with_empty_stream() {
+    let mut token_stream = TokenSlice::new(&[]);
+    Block::parse_directive("", consts::DIRECTIVE_KEYWORD_LAYOUT, &mut token_stream).unwrap();
+}
+
+#[test]
+#[should_panic]
+fn parse_illegal_directive_layout_starts_without_layout_keyword() {
+    let source = r#"@test test"#;
+    let tokenizer = Tokenizer::new(source);
+    let tokens = tokenizer.into_vec();
+    let mut token_stream = TokenSlice::new(&tokens);
+    Block::parse_directive(source, consts::DIRECTIVE_KEYWORD_LAYOUT, &mut token_stream).unwrap();
+}
+
 directive_test_case!(
     parse_illegal_directive_layout,
     consts::DIRECTIVE_KEYWORD_LAYOUT
@@ -66,6 +93,22 @@ directive_test_case!(
 );
 
 // use.
+#[test]
+#[should_panic]
+fn parse_directive_use_with_empty_stream() {
+    let mut token_stream = TokenSlice::new(&[]);
+    Block::parse_directive("", consts::DIRECTIVE_KEYWORD_USE, &mut token_stream).unwrap();
+}
+
+#[test]
+#[should_panic]
+fn parse_illegal_directive_layout_starts_without_use_keyword() {
+    let source = r#"@test test"#;
+    let tokenizer = Tokenizer::new(source);
+    let tokens = tokenizer.into_vec();
+    let mut token_stream = TokenSlice::new(&tokens);
+    Block::parse_directive(source, consts::DIRECTIVE_KEYWORD_USE, &mut token_stream).unwrap();
+}
 directive_test_case!(parse_illegal_directive_use, consts::DIRECTIVE_KEYWORD_USE);
 directive_test_case!(
     parse_directive_use,

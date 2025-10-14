@@ -29,3 +29,26 @@ fn block_parse_comment_without_closing() {
     let token = token_stream.next_token().unwrap();
     Block::parse_comment(source, token, &mut token_stream).unwrap();
 }
+
+#[test]
+#[should_panic]
+fn block_parse_comment_invalid() {
+    let source = r#"@test****"#;
+    let tokenizer = Tokenizer::new(source);
+    let tokens = tokenizer.into_vec();
+    let mut token_stream = TokenSlice::new(&tokens);
+    let token = token_stream.next_token().unwrap();
+    Block::parse_comment(source, token, &mut token_stream).unwrap();
+}
+
+#[test]
+#[should_panic]
+fn block_parse_comment_invalid2() {
+    let source = r#"@*test*"#;
+    let tokenizer = Tokenizer::new(source);
+    let tokens = tokenizer.into_vec();
+    // ignore the eof.
+    let mut token_stream = TokenSlice::new(&tokens[0..=3]);
+    let token = token_stream.next_token().unwrap();
+    Block::parse_comment(source, token, &mut token_stream).unwrap();
+}
