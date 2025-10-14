@@ -44,7 +44,7 @@ impl<'a> Block<'a> {
                                     }
 
                                     // 2. switch context.
-                                    let block = Block::parse_transfer_block(
+                                    let block = Block::parse_transition_block(
                                         source,
                                         token_stream,
                                         &mut new_context,
@@ -169,7 +169,7 @@ impl<'a> Block<'a> {
                             }
 
                             // 2. switch context.
-                            let block = Block::parse_transfer_block(
+                            let block = Block::parse_transition_block(
                                 source,
                                 token_stream,
                                 &mut new_context,

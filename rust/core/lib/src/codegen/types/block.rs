@@ -77,19 +77,6 @@ impl<'a> Block<'a> {
         Block::KUSE(span)
     }
 
-    #[allow(dead_code)]
-    pub(in crate::codegen) fn with_name(&mut self, name: &str) -> &mut Self {
-        match self {
-            Block::KSECTION(_, span) => {
-                *self = Block::KSECTION(name.to_string(), span.clone());
-                self
-            }
-            _ => {
-                panic!("Only section block can have name");
-            }
-        }
-    }
-
     pub(in crate::codegen) fn to_content(&self) -> Self {
         match self {
             Block::KSECTION(_, span) => Block::KCONTENT(span.clone()),

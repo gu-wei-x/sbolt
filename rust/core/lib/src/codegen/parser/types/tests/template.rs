@@ -16,6 +16,7 @@ fn template_from_content() -> result::Result<()> {
     let template = Template::from(&content, Some(String::from("testns")), Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
+    assert_eq!(block.location().line, 0);
     match block {
         Block::KROOT(span) => {
             assert_eq!(span.blocks().len(), 1);
@@ -168,10 +169,12 @@ fn template_from_inlined_content_in_code_separated_by_lf() -> result::Result<()>
                     let block = &code_span.blocks()[1];
                     assert!(matches!(block, Block::KINLINEDCONTENT(_)));
                     assert_eq!(block.content(), content);
+                    assert_eq!(block.location().line, 0);
 
                     let block = &code_span.blocks()[2];
                     assert!(matches!(block, Block::KCODE(_)));
                     assert_eq!(block.content(), post_code);
+                    assert_eq!(block.location().line, 1);
                 }
                 _ => panic!("Expected KCODE block"),
             }
@@ -326,11 +329,13 @@ fn template_from_doc() -> result::Result<()> {
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KUSE(_)));
     assert_eq!(block.content(), "test::test");
+    assert_eq!(block.location().line, 1);
 
     // 1: layout
     let block = &root_span.blocks()[1];
     assert!(matches!(block, Block::KLAYOUT(_)));
     assert_eq!(block.content(), "test::test");
+    assert_eq!(block.location().line, 2);
 
     // 2: code block
     let block = &root_span.blocks()[2];
@@ -491,10 +496,12 @@ fn template_from_doc_with_simple_section() -> result::Result<()> {
     // 0: section
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KSECTION(_, _)));
+    assert_eq!(block.location().line, 1);
 
     // 1: content
     let block = &root_span.blocks()[1];
     assert!(matches!(block, Block::KCONTENT(_)));
+    assert_eq!(block.location().line, 4);
     Ok(())
 }
 

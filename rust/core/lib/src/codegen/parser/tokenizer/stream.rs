@@ -63,6 +63,7 @@ pub(crate) fn get_nth_token<'a>(
     offset: usize,
 ) -> Option<&'a Token> {
     match stream.iter_offsets().nth(offset) {
+        Some((_, token)) if token.kind() == Kind::EOF => None,
         Some((_, token)) => Some(token),
         None => None,
     }

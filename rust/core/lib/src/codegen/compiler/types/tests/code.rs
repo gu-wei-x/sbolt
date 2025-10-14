@@ -6,6 +6,26 @@ use crate::types::template::Kind;
 use quote::quote;
 
 #[test]
+#[should_panic]
+fn to_code_token_on_non_code_block() {
+    let raw_content = r#"
+        let test=1;
+        let test2=2;
+    "#;
+    let template = Template::from(&raw_content, None, Kind::KHTML).unwrap();
+    let block = template.block();
+    assert!(matches!(block, Block::KROOT(_)));
+    let root_span = match block {
+        Block::KROOT(span) => span,
+        _ => panic!("Expected KROOT block"),
+    };
+    assert_eq!(root_span.blocks().len(), 1);
+    let block = &root_span.blocks()[0];
+    assert!(matches!(block, Block::KCONTENT(_)));
+    block.to_code_token_stream(Some(block)).unwrap();
+}
+
+#[test]
 fn to_code_token_stream_simple() -> result::Result<()> {
     let raw_content = r#"@{
         let test=1;

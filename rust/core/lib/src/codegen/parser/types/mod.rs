@@ -5,7 +5,7 @@ mod directives;
 mod render;
 mod section;
 mod template;
-mod transfer;
+mod transition;
 mod util;
 
 #[cfg(test)]
