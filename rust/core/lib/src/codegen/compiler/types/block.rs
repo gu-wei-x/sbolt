@@ -86,13 +86,11 @@ impl<'a> Block<'a> {
         }
 
         let ts = self.to_token_stream(Some(self))?;
-        let has_layout = match self {
-            Block::KROOT(root_span) => root_span
-                .blocks()
-                .iter()
-                .any(|b| matches!(b, Block::KLAYOUT(_))),
-            _ => false,
-        };
+        let root_span = self.span();
+        let has_layout = root_span
+            .blocks()
+            .iter()
+            .any(|b| matches!(b, Block::KLAYOUT(_)));
         match has_layout {
             true => {
                 let view_root_mod_name = format_ident!("{}", mod_name);

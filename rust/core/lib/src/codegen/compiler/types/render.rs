@@ -7,15 +7,14 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_render_token_stream(
         &self,
     ) -> result::Result<TokenStream> {
-        let content_span = match self {
-            Block::KRENDER(span) => span,
-            _ => {
-                return Err(error::CompileError::from_codegen(
-                    &self,
-                    "Wrong method call: couldn't generate code",
-                ));
-            }
-        };
+        if !matches!(self, Block::KRENDER(_)) {
+            return Err(error::CompileError::from_codegen(
+                &self,
+                "Wrong method call: couldn't generate code",
+            ));
+        }
+
+        let content_span = self.span();
         match content_span.blocks().len() {
             0 => {
                 let ts = quote! {
@@ -44,7 +43,7 @@ impl<'a> Block<'a> {
                         }
                        },
                        None => {
-                           return Err(sbolt::types::error::RuntimeError::NotFound("Default section not found".to_string(), "".to_string()))
+                           return Err(sbolt::types::error::RuntimeError::NotFound(format!("Section `{}` not found", section_name), "".to_string()))
                        }
                    }
                 };
@@ -66,8 +65,8 @@ impl<'a> Block<'a> {
                         }
                        },
                        None if is_required => {
-                           return Err(sbolt::types::error::RuntimeError::NotFound("Default section not found".to_string(), "".to_string()))
-                       }
+                           return Err(sbolt::types::error::RuntimeError::NotFound(format!("Section `{}` not found", section_name), "".to_string()))
+                       },
                        _ => {
                           /*ignore */
                        }

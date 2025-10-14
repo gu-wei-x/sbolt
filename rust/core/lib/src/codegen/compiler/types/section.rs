@@ -22,13 +22,13 @@ impl<'a> Block<'a> {
                 // simple is content section.
                 let raw_content = span.content();
                 quote! {
-                    let name = #name;
+                    let section_name = #name;
                     let inner_writer = {
                         let mut writer = self.create_writer(None);
                         writer.write(#raw_content);
                         writer
                     };
-                    context.add_section(name, inner_writer.into_string());
+                    context.add_section(section_name, inner_writer.into_string());
                 }
             }
             false => {

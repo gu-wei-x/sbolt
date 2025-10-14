@@ -8,21 +8,19 @@ impl<'a> Block<'a> {
         &self,
         from: Option<&Block<'a>>,
     ) -> result::Result<TokenStream> {
-        let code_span = match self {
-            Block::KCODE(span) => span,
-            _ => {
-                return Err(error::CompileError::from_codegen(
-                    &self,
-                    "Wrong method call: couldn't generate code",
-                ));
-            }
-        };
-
         // validate parent block.
         from.ok_or(error::CompileError::from_codegen(
             &self,
             "Parent block is required to generate code",
         ))?;
+
+        if !matches!(self, Block::KCODE(_)) {
+            return Err(error::CompileError::from_codegen(
+                &self,
+                "Wrong method call: couldn't generate code",
+            ));
+        }
+        let code_span = self.span();
         let mut code_content = String::new();
         if code_span.is_simple() {
             let raw_content = code_span.content();
@@ -49,15 +47,13 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_inline_code_token_stream(
         &self,
     ) -> result::Result<TokenStream> {
-        let code_span = match self {
-            Block::KINLINEDCODE(span) => span,
-            _ => {
-                return Err(error::CompileError::from_codegen(
-                    &self,
-                    "Wrong method call: couldn't generate code",
-                ));
-            }
-        };
+        if !matches!(self, Block::KINLINEDCODE(_)) {
+            return Err(error::CompileError::from_codegen(
+                &self,
+                "Wrong method call: couldn't generate code",
+            ));
+        }
+        let code_span = self.span();
         if code_span.is_simple() {
             let raw_content = code_span.content();
             match raw_content.parse::<TokenStream>() {

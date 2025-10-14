@@ -86,6 +86,22 @@ impl<'a> Block<'a> {
         }
     }
 
+    pub(in crate::codegen) fn span(&self) -> &Span<'a> {
+        match self {
+            Block::KCODE(span) => span,
+            Block::KCOMMENT(span) => span,
+            Block::KCONTENT(span) => span,
+            Block::KFUNCTIONS(span) => span,
+            Block::KINLINEDCODE(span) => span,
+            Block::KINLINEDCONTENT(span) => span,
+            Block::KLAYOUT(span) => span,
+            Block::KRENDER(span) => span,
+            Block::KROOT(span) => span,
+            Block::KSECTION(_, span) => span,
+            Block::KUSE(span) => span,
+        }
+    }
+
     pub(in crate::codegen) fn content(&self) -> String {
         match self {
             Block::KCODE(span) => span.content(),

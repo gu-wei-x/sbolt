@@ -53,10 +53,17 @@ cargo run -p rocket-example
 cargo clean
 ```
 
-## 3. Useful commands
+## 3. Workflow
+
+* run [rust/benchmark](../../rust/benchmark) and [code coverage](./coverage.md)
+* add features and tests
+* run [rust/benchmark](../../rust/benchmark) and [code coverage](./coverage.md)
+* don't downgrade the perf and code coverage
+
+## 4. Useful commands
 
 * verbose: `cargo build -vv`
 * show test output: `cargo test [test_name|*] -- --nocapture`
 
-## 4. links
+## 5. links
 * [Rust Documentation](https://doc.rust-lang.org/stable)

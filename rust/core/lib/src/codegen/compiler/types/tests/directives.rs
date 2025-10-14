@@ -13,10 +13,7 @@ fn to_layout_token_stream_from_layout_block() {
     let template = Template::from(&raw_content, None, Kind::KHTML).unwrap();
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
-    let root_span = match block {
-        Block::KROOT(span) => span,
-        _ => panic!("Expected KROOT block"),
-    };
+    let root_span = block.span();
     assert_eq!(root_span.blocks().len(), 1);
     let layout_block = &root_span.blocks()[0];
     assert!(matches!(layout_block, Block::KLAYOUT(_)));
@@ -30,10 +27,7 @@ fn to_layout_token_stream_from_layout_block2() {
     let template = Template::from(&raw_content, None, Kind::KHTML).unwrap();
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
-    let root_span = match block {
-        Block::KROOT(span) => span,
-        _ => panic!("Expected KROOT block"),
-    };
+    let root_span = block.span();
     assert_eq!(root_span.blocks().len(), 1);
     let layout_block = &root_span.blocks()[0];
     assert!(matches!(layout_block, Block::KLAYOUT(_)));
@@ -41,15 +35,22 @@ fn to_layout_token_stream_from_layout_block2() {
 }
 
 #[test]
-fn generate_layout_token_stream_from_root_block() -> result::Result<()> {
+fn generate_layout_token_stream_no_layout_block() -> result::Result<()> {
+    let raw_content = r#"test"#;
+    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let block = template.block();
+    let result = block.generate_layout_token_stream()?;
+    assert!(result.is_none());
+    Ok(())
+}
+
+#[test]
+fn generate_layout_token_stream_with_one_layout_block() -> result::Result<()> {
     let raw_content = r#"@layout test::test1;"#;
     let template = Template::from(&raw_content, None, Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
-    let root_span = match block {
-        Block::KROOT(span) => span,
-        _ => panic!("Expected KROOT block"),
-    };
+    let root_span = block.span();
     assert_eq!(root_span.blocks().len(), 1);
     assert!(matches!(root_span.blocks()[0], Block::KLAYOUT(_)));
     let result = block.generate_layout_token_stream()?;
@@ -65,15 +66,60 @@ fn generate_layout_token_stream_from_root_block() -> result::Result<()> {
 }
 
 #[test]
+#[should_panic]
+fn generate_layout_token_stream_with_multiple_layout_blocks() {
+    let raw_content = r#"@layout test::test1; @layout test::test2;"#;
+    let template = Template::from(&raw_content, None, Kind::KHTML);
+    assert!(template.is_ok());
+    let template = template.unwrap();
+    let block = template.block();
+    block
+        .generate_layout_token_stream()
+        .expect("Only 0/1 layout is allowed.");
+}
+
+#[test]
+#[should_panic]
+fn to_use_token_stream_from_wrong_block() {
+    let raw_content = r#"@layout test::test1;"#;
+    let template = Template::from(&raw_content, None, Kind::KHTML);
+    assert!(template.is_ok());
+    let template = template.unwrap();
+    let block = template.block();
+    assert!(matches!(block, Block::KROOT(_)));
+    let root_span = block.span();
+    assert_eq!(root_span.blocks().len(), 1);
+    assert!(matches!(root_span.blocks()[0], Block::KLAYOUT(_)));
+    block
+        .to_use_token_stream()
+        .expect("expected KUSE block here");
+}
+
+#[test]
+#[should_panic]
+fn to_use_token_stream_with_invalid_content() {
+    let raw_content = r#"@use (abc;"#;
+    let template = Template::from(&raw_content, None, Kind::KHTML);
+    assert!(template.is_ok());
+    let template = template.unwrap();
+    let block = template.block();
+    assert!(matches!(block, Block::KROOT(_)));
+    let root_span = block.span();
+    assert_eq!(root_span.blocks().len(), 1);
+    let use_block = &root_span.blocks()[0];
+    assert!(matches!(use_block, Block::KUSE(_)));
+    use_block
+        .to_use_token_stream()
+        .expect("expected valid use block here");
+}
+
+#[test]
 fn to_token_stream() -> result::Result<()> {
     let raw_content = r#"@use test::test1;"#;
     let template = Template::from(&raw_content, None, Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
-    let root_span = match block {
-        Block::KROOT(span) => span,
-        _ => panic!("Expected KROOT block"),
-    };
+    let root_span = block.span();
     assert_eq!(root_span.blocks().len(), 1);
     let use_block = &root_span.blocks()[0];
     assert!(matches!(use_block, Block::KUSE(_)));
@@ -83,4 +129,39 @@ fn to_token_stream() -> result::Result<()> {
     };
     assert_eq!(ts.to_string(), expected.to_string());
     Ok(())
+}
+
+#[test]
+#[should_panic]
+fn generate_imports_token_stream_from_wrong_block() {
+    let raw_content = r#"@use test::test1;"#;
+    let template = Template::from(&raw_content, None, Kind::KHTML);
+    assert!(template.is_ok());
+    let template = template.unwrap();
+    let block = template.block();
+    assert!(matches!(block, Block::KROOT(_)));
+    let root_span = block.span();
+    assert_eq!(root_span.blocks().len(), 1);
+    let use_block = &root_span.blocks()[0];
+    assert!(matches!(use_block, Block::KUSE(_)));
+    use_block
+        .generate_imports_token_stream()
+        .expect("expected KROOT block here");
+}
+
+#[test]
+#[should_panic]
+fn generate_imports_token_stream_with_wrong_content() {
+    let raw_content = r#"
+    @use test::test1;
+    @use (abc;
+    "#;
+    let template = Template::from(&raw_content, None, Kind::KHTML);
+    assert!(template.is_ok());
+    let template = template.unwrap();
+    let block = template.block();
+    assert!(matches!(block, Block::KROOT(_)));
+    block
+        .generate_imports_token_stream()
+        .expect("expected valid use blocks here");
 }

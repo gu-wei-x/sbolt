@@ -138,10 +138,7 @@ fn block_parse_complex_code_block() -> result::Result<()> {
 
     // root.
     assert!(matches!(block, Block::KROOT(_)));
-    let root_span = match block {
-        Block::KROOT(span) => span,
-        _ => panic!("Expected KROOT block"),
-    };
+    let root_span = block.span();
     assert_eq!(root_span.blocks().len(), 1);
 
     // l1,
