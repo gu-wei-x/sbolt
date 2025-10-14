@@ -9,6 +9,7 @@ use proc_macro2::TokenStream;
 use quote::format_ident;
 use quote::quote;
 use std::path::PathBuf;
+use syn::Ident;
 
 impl<'a> Template<'a> {
     pub(in crate::codegen::compiler::types) fn to_token_stream(
@@ -93,7 +94,6 @@ impl<'a> Template<'a> {
             "Failed to get directory name from {}",
             target.display()
         ))?;
-
         let mut result = CompileResult::default();
         let view_name = name::create_view_type_name(&name);
         let namespace = self.namespace().cloned();
@@ -101,22 +101,18 @@ impl<'a> Template<'a> {
         let full_view_name = name::create_normalized_name(&Some(namespace), &view_name);
         let view_type = name::create_view_type_name(&full_view_name);
         result.add_view_mapping(full_view_name.to_string(), view_name.clone());
-
-        // valid names.
-        let Ok(_) = view_name.parse::<TokenStream>() else {
-            return Err(format!(
+        syn::parse_str::<Ident>(&view_name).map_err(|_| {
+            format!(
                 "'{}' is not a valid ident name, please change the file name",
                 view_name
             )
-            .into());
-        };
-        let Ok(_) = view_name.parse::<TokenStream>() else {
-            return Err(format!(
-                "'{}' is not a valid ident name, please change the file name",
-                view_type
+        })?;
+        syn::parse_str::<Ident>(&compiler_options.mod_name).map_err(|_| {
+            format!(
+                "'{}' is not a valid ident name, please change the mod name",
+                compiler_options.mod_name
             )
-            .into());
-        };
+        })?;
         let code = self.to_token_stream(
             &view_name,
             &view_type,

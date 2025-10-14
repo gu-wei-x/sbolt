@@ -17,15 +17,11 @@ fn template_from_content() -> result::Result<()> {
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     assert_eq!(block.location().line, 0);
-    match block {
-        Block::KROOT(span) => {
-            assert_eq!(span.blocks().len(), 1);
-            let first_block = &span.blocks()[0];
-            assert!(matches!(first_block, Block::KCONTENT(_)));
-            assert_eq!(first_block.content(), content);
-        }
-        _ => panic!("Expected KROOT block"),
-    }
+    let root_span = block.span();
+    assert_eq!(root_span.blocks().len(), 1);
+    let first_block = &root_span.blocks()[0];
+    assert!(matches!(first_block, Block::KCONTENT(_)));
+    assert_eq!(first_block.content(), content);
     assert_eq!(template.namespace(), Some(&String::from("testns")));
 
     Ok(())
@@ -319,10 +315,7 @@ fn template_from_doc() -> result::Result<()> {
     let template = Template::from(&raw_content, None, Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
-    let root_span = match block {
-        Block::KROOT(span) => span,
-        _ => panic!("Expected KROOT block"),
-    };
+    let root_span = block.span();
     assert_eq!(root_span.blocks().len(), 10);
 
     // 0: use
@@ -390,10 +383,7 @@ fn template_from_doc_with_multiple_layouts() -> result::Result<()> {
     let template = Template::from(&raw_content, None, Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
-    let root_span = match block {
-        Block::KROOT(span) => span,
-        _ => panic!("Expected KROOT block"),
-    };
+    let root_span = block.span();
     assert_eq!(root_span.blocks().len(), 5);
 
     // 0: layout
@@ -435,10 +425,7 @@ fn template_from_doc_with_multiple_imports() -> result::Result<()> {
     let template = Template::from(&raw_content, None, Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
-    let root_span = match block {
-        Block::KROOT(span) => span,
-        _ => panic!("Expected KROOT block"),
-    };
+    let root_span = block.span();
     assert_eq!(root_span.blocks().len(), 6);
 
     // 0: use
@@ -487,10 +474,7 @@ fn template_from_doc_with_simple_section() -> result::Result<()> {
     let template = Template::from(&raw_content, None, Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
-    let root_span = match block {
-        Block::KROOT(span) => span,
-        _ => panic!("Expected KROOT block"),
-    };
+    let root_span = block.span();
     assert_eq!(root_span.blocks().len(), 2);
 
     // 0: section
@@ -518,10 +502,7 @@ fn template_from_doc_content_composit_section() -> result::Result<()> {
     let template = Template::from(&raw_content, None, Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
-    let root_span = match block {
-        Block::KROOT(span) => span,
-        _ => panic!("Expected KROOT block"),
-    };
+    let root_span = block.span();
     assert_eq!(root_span.blocks().len(), 1);
 
     // 0: section
@@ -558,10 +539,7 @@ fn template_from_doc_with_multiple_sections() -> result::Result<()> {
     let template = Template::from(&raw_content, None, Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
-    let root_span = match block {
-        Block::KROOT(span) => span,
-        _ => panic!("Expected KROOT block"),
-    };
+    let root_span = block.span();
     assert_eq!(root_span.blocks().len(), 6);
 
     // 0: section, newline
@@ -626,10 +604,7 @@ fn template_from_doc_with_comment_in_content() -> result::Result<()> {
     let template = Template::from(&raw_content, None, Kind::KHTML)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
-    let root_span = match block {
-        Block::KROOT(span) => span,
-        _ => panic!("Expected KROOT block"),
-    };
+    let root_span = block.span();
     assert_eq!(root_span.blocks().len(), 3);
 
     // 0: content

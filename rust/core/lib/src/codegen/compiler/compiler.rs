@@ -5,9 +5,9 @@ use crate::codegen::compiler::module::Module;
 use crate::codegen::compiler::registry;
 use crate::codegen::consts;
 use crate::types::result;
-use proc_macro2::TokenStream;
 use std::env;
 use std::path::PathBuf;
+use syn::Ident;
 
 pub struct Compiler {
     pub(crate) options: CompilerOptions,
@@ -40,9 +40,12 @@ impl Compiler {
     // called by build script to process view templates.
     pub(in crate::codegen::compiler) fn process(&self) -> result::Result<CompileResult> {
         // validate mod name from options
-        let Ok(_) = self.options.mod_name.parse::<TokenStream>() else {
-            return Err(format!("'{}' is not a valid ident name", self.options.mod_name).into());
-        };
+        syn::parse_str::<Ident>(&self.options.mod_name).map_err(|_| {
+            format!(
+                "'{}' is not a valid ident name, please change the mod name",
+                self.options.mod_name
+            )
+        })?;
 
         // TODO: implement compilation logic, incremental build, multiple tasks to improve performance, etc.
         let target_dir = if let Some(dir) = &self.options.out_dir {

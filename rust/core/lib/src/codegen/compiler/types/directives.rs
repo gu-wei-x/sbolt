@@ -7,35 +7,32 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_use_token_stream(
         &self,
     ) -> result::Result<TokenStream> {
-        match self {
-            Block::KUSE(span) => {
-                let statement = format!("{} {};", consts::DIRECTIVE_KEYWORD_USE, span.content());
-                let result = statement.parse::<TokenStream>();
-                match result {
-                    Ok(ts) => Ok(ts),
-                    Err(err) => Err(error::CompileError::from_lex(&self, err)),
-                }
-            }
-            _ => Err(error::CompileError::from_codegen(
+        if !matches!(self, Block::KUSE(_)) {
+            return Err(error::CompileError::from_codegen(
                 &self,
                 "Wrong method call: couldn't generate code",
-            )),
+            ));
+        }
+        let span = self.span();
+        let statement = format!("{} {};", consts::DIRECTIVE_KEYWORD_USE, span.content());
+        let result = statement.parse::<TokenStream>();
+        match result {
+            Ok(ts) => Ok(ts),
+            Err(err) => Err(error::CompileError::from_lex(&self, err)),
         }
     }
 
     pub(in crate::codegen::compiler::types) fn generate_imports_token_stream(
         &self,
     ) -> result::Result<Vec<TokenStream>> {
-        let root_span = match self {
-            Block::KROOT(span) => span,
-            _ => {
-                return Err(error::CompileError::from_codegen(
-                    &self,
-                    "Wrong method call: couldn't generate code",
-                ));
-            }
-        };
+        if !matches!(self, Block::KROOT(_)) {
+            return Err(error::CompileError::from_codegen(
+                &self,
+                "Wrong method call: couldn't generate code",
+            ));
+        }
 
+        let root_span = self.span();
         let use_statements = root_span
             .blocks()
             .iter()
@@ -58,16 +55,14 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn generate_layout_token_stream(
         &self,
     ) -> result::Result<Option<TokenStream>> {
-        let root_span = match self {
-            Block::KROOT(span) => span,
-            _ => {
-                return Err(error::CompileError::from_codegen(
-                    &self,
-                    "Wrong method call: couldn't generate code",
-                ));
-            }
-        };
+        if !matches!(self, Block::KROOT(_)) {
+            return Err(error::CompileError::from_codegen(
+                &self,
+                "Wrong method call: couldn't generate code",
+            ));
+        }
 
+        let root_span = self.span();
         let layout_blocks = root_span
             .blocks()
             .iter()

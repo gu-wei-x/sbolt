@@ -7,17 +7,14 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_content_token_stream(
         &self,
     ) -> result::Result<TokenStream> {
-        // check whether block is pure content or compitation block.
-        let content_span = match self {
-            Block::KCONTENT(span) => span,
-            _ => {
-                return Err(error::CompileError::from_codegen(
-                    &self,
-                    "Wrong method call: couldn't generate code",
-                ));
-            }
-        };
+        if !matches!(self, Block::KCONTENT(_)) {
+            return Err(error::CompileError::from_codegen(
+                &self,
+                "Wrong method call: couldn't generate code",
+            ));
+        }
 
+        let content_span = self.span();
         if content_span.is_simple() {
             let raw_content = content_span.content();
             let ts = quote! {
@@ -41,15 +38,14 @@ impl<'a> Block<'a> {
         &self,
     ) -> result::Result<TokenStream> {
         // check whether block is pure content or compitation block.
-        let content_span = match self {
-            Block::KINLINEDCONTENT(span) => span,
-            _ => {
-                return Err(error::CompileError::from_codegen(
-                    &self,
-                    "Wrong method call: couldn't generate code",
-                ));
-            }
-        };
+        if !matches!(self, Block::KINLINEDCONTENT(_)) {
+            return Err(error::CompileError::from_codegen(
+                &self,
+                "Wrong method call: couldn't generate code",
+            ));
+        }
+
+        let content_span = self.span();
         if content_span.is_simple() {
             let raw_content = content_span.content();
             let ts = quote! {

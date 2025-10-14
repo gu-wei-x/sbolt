@@ -54,18 +54,9 @@ impl<'a> Block<'a> {
                                 token_stream,
                                 &mut ParseContext::new(Kind::KSECTION),
                             )?;
-                            let root_span = match block {
-                                Block::KSECTION(_name, span) => span,
-                                _ => {
-                                    return Err(error::CompileError::from_parser(
-                                        source,
-                                        Some(*token),
-                                        &format!("Expected `{}` here", consts::KEYWORD_SECTION),
-                                    ));
-                                }
-                            };
+                            let root_span = block.span();
                             let section_span = match root_span.is_simple() {
-                                true => root_span,
+                                true => root_span.clone(),
                                 false => {
                                     // unpack.
                                     let mut span = Span::new(source);
