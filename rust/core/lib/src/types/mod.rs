@@ -14,7 +14,7 @@ pub use writer::*;
 pub mod error {
     use std::path::PathBuf;
 
-    #[derive(Clone)]
+    #[derive(Clone, PartialEq)]
     pub enum CompileError {
         CodeGen(
             super::Location,
