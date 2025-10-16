@@ -1,0 +1,17 @@
+code gen:
+
+/******************Start each block generate following****************************************/
+let (inner_writer, inner_sections: HasMap<String,String>) = {
+    // inner writer name overrides the out one, so no need to update names.
+    let mut writer = String::new();
+    let mut sections = HasMap<String,String>::new();
+    // render to use the innner writer and populate inner sections   
+};
+
+// flush to outer
+writer.write(inner_writer.to_string());
+// populate to outer, check if
+runtime_sections.add(inner_sections);
+/******************Start each block generatation**********************************************/
+
+

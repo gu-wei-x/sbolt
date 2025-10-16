@@ -1,0 +1,14 @@
+Parser:
+
+1. funtions: define functions in view
+2. more syntax: @*EXP -- derefrence, @&EXP -- borrow
+3. partial/customerview view from code block: @Custom::View("name", context!(/*properties*/)), this requires View resolver
+
+
+
+CodeGen:
+reduce bit size by optimize static content based on types: html, css, js, json, text(no optimization)
+
+
+Pub interface:
+resolve views based on variant config and variant from context.

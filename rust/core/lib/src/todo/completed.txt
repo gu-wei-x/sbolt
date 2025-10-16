@@ -1,0 +1,23 @@
+Parser:
+
+1. directives: layout, use
+2. layout: section, render
+3. line:column info in errors
+
+
+CodeGen:
+
+1. generate code based on type of blocks
+
+
+Quality:
+1. test coverage > 95%
+2. integration tests
+3. benchmarch tests
+
+
+Pub interface:
+
+1. simplify the interface for adopting in different web frameworks
+2. build with multiple view src directories
+
