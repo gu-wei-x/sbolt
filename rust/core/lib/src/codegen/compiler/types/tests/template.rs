@@ -23,7 +23,7 @@ this is @name}
         "test_view_mod",
     )?;
     let expected = quote! {
-     use crate::viewtypes::*;
+     use crate::test_view_mod::ktemplate::KTemplate;
      use sbolt::types::Template as _;
      use sbolt::types::Writer;
      use test::test1;
@@ -34,8 +34,8 @@ this is @name}
              Self {}
          }
 
-         pub(crate) fn create() -> Template {
-             Template::KTestnsTestViewView(TestView::new())
+         pub(crate) fn create() -> KTemplate {
+             KTemplate::KTestnsTestViewView(TestView::new())
          }
 
          fn create_writer(&self, kind: Option<sbolt::types::template::Kind>) -> sbolt::types::KWriter {
@@ -109,7 +109,7 @@ fn to_token_stream_html_without_layout() -> result::Result<()> {
         "test_view_mod",
     )?;
     let expected = quote! {
-     use crate::viewtypes::*;
+     use crate::test_view_mod::ktemplate::KTemplate;
      use sbolt::types::Template as _;
      use sbolt::types::Writer;
      use test::test1;
@@ -120,8 +120,8 @@ fn to_token_stream_html_without_layout() -> result::Result<()> {
              Self {}
          }
 
-         pub(crate) fn create() -> Template {
-             Template::KTestnsTestViewView(TestView::new())
+         pub(crate) fn create() -> KTemplate {
+             KTemplate::KTestnsTestViewView(TestView::new())
          }
 
          fn create_writer(&self, kind: Option<sbolt::types::template::Kind>) -> sbolt::types::KWriter {
