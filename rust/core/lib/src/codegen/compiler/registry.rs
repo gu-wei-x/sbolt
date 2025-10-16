@@ -28,7 +28,7 @@ pub(crate) fn generate_registry(
         .map(|(name, view_name)| {
             format!(
                 "{}::K{}({}) => {}.render(context),",
-                consts::TEMPLATE_TYPE_NAME,
+                consts::TEMPLATES_TYPE_NAME,
                 name::create_view_type_name(&name),
                 view_name.to_lowercase(),
                 view_name.to_lowercase()
@@ -45,7 +45,7 @@ pub(crate) fn generate_registry(
         .unwrap();
 
     let reg_ts = generate_registry_method(mode_name, view_name_mapping)?;
-    let type_ident = format_ident!("{}", consts::TEMPLATE_TYPE_NAME);
+    let type_ident = format_ident!("{}", consts::TEMPLATES_TYPE_NAME);
     let content = quote! {
         use sbolt::types::Template as _;
         pub(crate) enum #type_ident {
@@ -86,7 +86,7 @@ fn generate_registry_method(
         .parse::<proc_macro2::TokenStream>()
         .unwrap();
 
-    let type_ident = format_ident!("{}", consts::TEMPLATE_TYPE_NAME);
+    let type_ident = format_ident!("{}", consts::TEMPLATES_TYPE_NAME);
     let content = quote! {
         pub(crate) fn create_view_registrar() -> std::collections::HashMap::<String, fn() -> #type_ident> {
             let mut view_reg_creator = std::collections::HashMap::<String, fn() -> #type_ident>::new();

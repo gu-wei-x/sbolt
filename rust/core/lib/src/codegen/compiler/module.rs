@@ -115,32 +115,19 @@ impl Module {
         let viewtypes_ident = format!(
             "{}::{}",
             consts::TEMPLATES_MAP_FILE_NAME,
-            consts::TEMPLATE_TYPE_NAME
+            consts::TEMPLATES_TYPE_NAME
         );
-
         let mod_name = format_ident!("{}", mod_name);
         let import_content: String = mods
             .iter()
             .map(|m| format!("mod {};\n", m))
             .collect::<String>();
-        let re_export_content: String = mods
-            .iter()
-            .map(|m| {
-                format!(
-                    "pub(crate) mod {} {{ pub(crate) use super::super::{}::*; }}\n",
-                    m, m
-                )
-            })
-            .collect::<String>();
-
         let import_content_ts: TokenStream = import_content.parse().unwrap();
-        let re_export_content_ts: TokenStream = re_export_content.parse().unwrap();
         let viewtypes_ident_ts: TokenStream = viewtypes_ident.parse().unwrap();
-
         quote! {
             #import_content_ts
             pub(crate) mod #mod_name {
-                #re_export_content_ts
+                pub(crate) use super::*;
 
                 // TemplateResolver.
                 struct TemplateResolver {

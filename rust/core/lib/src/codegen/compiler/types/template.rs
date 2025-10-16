@@ -21,7 +21,16 @@ impl<'a> Template<'a> {
     ) -> result::Result<TokenStream> {
         let view_name = format_ident!("{}", view_name);
         let view_type = format_ident!("K{}", view_type);
-        let template_type = format_ident!("{}", consts::TEMPLATE_TYPE_NAME);
+        let template_type = format_ident!("{}", consts::TEMPLATES_TYPE_NAME);
+        let template_type_full_name = name::create_type_full_name(
+            &format!(
+                "{}::{}",
+                consts::TEMPLATES_MAP_FILE_NAME,
+                consts::TEMPLATES_TYPE_NAME
+            ),
+            mod_name,
+        );
+        let template_type_ts = syn::parse_str::<TokenStream>(&template_type_full_name)?;
         let imports_content = self.block().generate_imports_token_stream()?;
         let layout_content = self.block().generate_layout_token_stream()?;
         let kind = match self.kind() {
@@ -38,7 +47,7 @@ impl<'a> Template<'a> {
         // a view must have render method.
         let render_content = self.block().generate_render_token_stream(mod_name)?;
         let code = quote! {
-            use crate::viewtypes::*;
+            use #template_type_ts;
             use sbolt::types::Template as _;
             use sbolt::types::Writer;
             #(#imports_content)*
