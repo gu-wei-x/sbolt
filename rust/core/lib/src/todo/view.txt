@@ -1,0 +1,58 @@
+code gen: 
+1. use scope {} to hide outer names.
+2. allow section to be rendered multiple times for sharing content.
+3. default section can only have one.
+
+/+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++/
+fn render()->result::RenderResult<String> {
+    let mut writer = String::new();
+
+    // need a flag to decide whether there is sections in template populated from parser.
+    let mut runtime_sections = HasMap<String, Vec<String>>::new();
+
+    // blocks.
+    /******************Start each block generate following****************************************/
+    /******************generated code here********************************************************/
+    /******************Start each block generatation**********************************************/
+
+
+    // layout.
+    match Self::layout() {
+        None=>{
+            Ok(writer.to_string())
+        }
+        Some(layout)=>{
+            let result = resolve(layout, Self::name());
+            match result {
+                None => Err("not found"),
+                Some(view_creator) => {
+                    // copy current context data to layout_context
+                    let mut layout_context = self.context().clone();
+                    // 1. push runtime_sections to the context.
+                    // 2. push current to default
+                    runtime_sections.override("default", writer.to_string())
+                    let layout_view = view_creator(layout_context);
+                    layout_view.render()
+                }
+            }
+        }
+    }
+}
+
+/***************************************************************************************/
+1. render is not a funtion now as it would be tanslated to code block.
+2. @render(name, true|false) --- render a named section, neame is exp now, not quoted string.
+3. @render() --- render default section from context.
+
+// transfer @render(name, true|false)  to following
+{
+    // can a section be rendered multiple times, should remove or not.
+    // logic will be simple without removing to allow render multiple times.
+    let section_content = get_or_remove_from(/*runtime*/runtime_sections, /*fallback*/context_sectoions, "key");
+    writer.write(section_content);
+}
+/***************************************************************************************/
+
+/+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++/
+
+
