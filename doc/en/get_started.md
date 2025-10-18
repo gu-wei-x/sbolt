@@ -53,7 +53,6 @@ src/views/sub/index.rshtml
 fn main() {
     let mod_name = format!("{}_views", std::env!("CARGO_PKG_NAME"));
     let option = sbolt::codegen::CompilerOptions::default()
-        .with_optimize(true)
         .with_source_dir("src/views")
         .with_mod_name(&mod_name);
     let compiler = sbolt::codegen::Compiler::new(option);

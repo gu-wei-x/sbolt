@@ -1,6 +1,6 @@
 #![cfg(test)]
-use crate::codegen;
 use crate::codegen::types::Template;
+use crate::codegen::{self, CompilerOptions};
 use crate::types::result;
 use crate::types::template::Kind;
 use quote::quote;
@@ -20,7 +20,7 @@ this is @name}
         "TestView",
         "TestnsTestViewView",
         "testns::TestView",
-        "test_view_mod",
+        &CompilerOptions::default().with_mod_name("test_view_mod"),
     )?;
     let expected = quote! {
      use crate::test_view_mod::ktemplate::KTemplate;
@@ -106,7 +106,7 @@ fn to_token_stream_html_without_layout() -> result::Result<()> {
         "TestView",
         "TestnsTestViewView",
         "testns::TestView",
-        "test_view_mod",
+        &CompilerOptions::default().with_mod_name("test_view_mod"),
     )?;
     let expected = quote! {
      use crate::test_view_mod::ktemplate::KTemplate;
@@ -171,7 +171,7 @@ this is @name}"#;
         "TestView",
         "TestnsTestViewView",
         "testns::TestView",
-        "test_view_mod",
+        &CompilerOptions::default().with_mod_name("test_view_mod"),
     );
     assert!(ts.is_ok());
     Ok(())
@@ -191,7 +191,7 @@ this is @name}"#;
         "TestView",
         "TestnsTestViewView",
         "testns::TestView",
-        "test_view_mod",
+        &CompilerOptions::default().with_mod_name("test_view_mod"),
     );
     assert!(ts.is_ok());
     Ok(())
