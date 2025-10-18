@@ -1,6 +1,9 @@
 #![cfg(test)]
 use crate::{
-    codegen::types::{Block, Span, Template},
+    codegen::{
+        CompilerOptions,
+        types::{Block, Span, Template},
+    },
     types::{result, template::Kind},
 };
 
@@ -27,7 +30,7 @@ fn generate_render_token_stream_from_non_root() {
     let root_span = block.span();
     assert_eq!(root_span.blocks().len(), 1);
     root_span.blocks()[0]
-        .generate_render_token_stream("test_mod")
+        .generate_render_token_stream(&CompilerOptions::default().with_mod_name("test_mod"))
         .expect("Expect Root block here");
 }
 
