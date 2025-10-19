@@ -6,11 +6,11 @@ pub(crate) fn routes() -> Vec<Route> {
     routes![welcome::welcome]
 }
 
-use sbolt::types::result::RenderResult;
 use rocket::http::ContentType;
 use rocket::http::Status;
 use rocket::request::Request;
 use rocket::response::{self, Responder, Response};
+use sbolt::types::result::RenderResult;
 
 pub(crate) struct TemplateResult {
     inner_result: RenderResult<String>,

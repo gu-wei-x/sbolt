@@ -29,7 +29,11 @@ impl<'a> Span<'a> {
     }
 
     pub(in crate::codegen) fn is_simple(&self) -> bool {
-        self.blocks.len() == 0
+        self.blocks.is_empty()
+    }
+
+    pub(in crate::codegen) fn is_empty(&self) -> bool {
+        self.blocks.is_empty() && self.tokens.is_empty()
     }
 
     pub(in crate::codegen) fn location(&self) -> Location {

@@ -1,12 +1,14 @@
 #![cfg(test)]
 use winnow::stream::TokenSlice;
 
+use crate::codegen::CompilerOptions;
 use crate::codegen::parser::tokenizer::Tokenizer;
 use crate::codegen::parser::types::context;
 use crate::codegen::parser::types::context::ParseContext;
 use crate::codegen::types::Block;
 use crate::codegen::types::Template;
 use crate::types::result;
+use crate::types::template;
 use crate::types::template::Kind;
 
 #[test]
@@ -16,7 +18,8 @@ fn to_content_panic() {
 <html>
    <div>Test</div>
 </html>"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML).unwrap();
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options).unwrap();
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = match block {
@@ -37,7 +40,8 @@ fn to_content() -> result::Result<()> {
 @section test1 {
    this is test1
 }"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = match block {
@@ -65,12 +69,14 @@ fn parse_transition_block_section_invalid_format() {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    Block::parse_transition_block(
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KSECTION,
+        template::Kind::KHTML,
+        &options,
         source,
-        &mut token_stream,
-        &mut ParseContext::new(context::Kind::KSECTION),
-    )
-    .unwrap();
+    );
+    Block::parse_transition_block(&mut token_stream, &mut context).unwrap();
 }
 
 #[test]
@@ -80,12 +86,14 @@ fn parse_transition_block_section_no_section_name() {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    Block::parse_transition_block(
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KSECTION,
+        template::Kind::KHTML,
+        &options,
         source,
-        &mut token_stream,
-        &mut ParseContext::new(context::Kind::KSECTION),
-    )
-    .unwrap();
+    );
+    Block::parse_transition_block(&mut token_stream, &mut context).unwrap();
 }
 
 #[test]
@@ -95,10 +103,12 @@ fn parse_transition_block_section_not_within_curlybracket() {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    Block::parse_transition_block(
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KSECTION,
+        template::Kind::KHTML,
+        &options,
         source,
-        &mut token_stream,
-        &mut ParseContext::new(context::Kind::KSECTION),
-    )
-    .unwrap();
+    );
+    Block::parse_transition_block(&mut token_stream, &mut context).unwrap();
 }

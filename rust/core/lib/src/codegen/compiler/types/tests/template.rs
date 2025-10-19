@@ -1,6 +1,6 @@
 #![cfg(test)]
-use crate::codegen;
 use crate::codegen::types::Template;
+use crate::codegen::{self, CompilerOptions};
 use crate::types::result;
 use crate::types::template::Kind;
 use quote::quote;
@@ -15,12 +15,13 @@ fn to_token_stream_html() -> result::Result<()> {
 }
 this is @name}
 <html><div>Test</div></html>"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let ts = template.to_token_stream(
         "TestView",
         "TestnsTestViewView",
         "testns::TestView",
-        "test_view_mod",
+        &CompilerOptions::default().with_mod_name("test_view_mod"),
     )?;
     let expected = quote! {
      use crate::test_view_mod::ktemplate::KTemplate;
@@ -101,12 +102,13 @@ fn to_token_stream_html_without_layout() -> result::Result<()> {
     let raw_content = r#"
 @use test::test1;
 <html><div>Test</div></html>"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let ts = template.to_token_stream(
         "TestView",
         "TestnsTestViewView",
         "testns::TestView",
-        "test_view_mod",
+        &CompilerOptions::default().with_mod_name("test_view_mod"),
     )?;
     let expected = quote! {
      use crate::test_view_mod::ktemplate::KTemplate;
@@ -166,12 +168,13 @@ fn to_token_stream_json() -> result::Result<()> {
    let name = "test1";
 }
 this is @name}"#;
-    let template = Template::from(&raw_content, None, Kind::KJSON)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KJSON, &options)?;
     let ts = template.to_token_stream(
         "TestView",
         "TestnsTestViewView",
         "testns::TestView",
-        "test_view_mod",
+        &CompilerOptions::default().with_mod_name("test_view_mod"),
     );
     assert!(ts.is_ok());
     Ok(())
@@ -186,12 +189,13 @@ fn to_token_stream_txt() -> result::Result<()> {
    let name = "test1";
 }
 this is @name}"#;
-    let template = Template::from(&raw_content, None, Kind::KTEXT)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KTEXT, &options)?;
     let ts = template.to_token_stream(
         "TestView",
         "TestnsTestViewView",
         "testns::TestView",
-        "test_view_mod",
+        &CompilerOptions::default().with_mod_name("test_view_mod"),
     );
     assert!(ts.is_ok());
     Ok(())
@@ -201,7 +205,8 @@ this is @name}"#;
 #[should_panic]
 fn compile_without_invalid_file_name() {
     let raw_content = r#"test"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML);
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options);
     assert!(template.is_ok());
     let template = template.unwrap();
 
@@ -215,7 +220,8 @@ fn compile_without_invalid_file_name() {
 #[should_panic]
 fn compile_without_invalid_mod_name() {
     let raw_content = r#"test"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML);
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options);
     assert!(template.is_ok());
     let template = template.unwrap();
 

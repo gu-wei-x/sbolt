@@ -1,4 +1,4 @@
-use crate::codegen::parser::types::context::{Kind, ParseContext};
+use crate::codegen::parser::types::context::ParseContext;
 use crate::codegen::parser::types::util;
 use crate::codegen::types::Span;
 use crate::{
@@ -11,11 +11,12 @@ use crate::{
 use winnow::stream::Stream as _;
 
 impl<'a> Block<'a> {
-    pub(in crate::codegen::parser::types) fn parse(
-        source: &'a str,
+    pub(in crate::codegen::parser::types) fn parse<'s>(
         token_stream: &mut TokenStream,
-    ) -> result::Result<Block<'a>> {
+        context: &mut ParseContext<'_, 's>,
+    ) -> result::Result<Block<'s>> {
         tokenizer::skip_whitespace_and_newline(token_stream);
+        let source = context.source();
         match token_stream.peek_token() {
             None => {
                 return Err(error::CompileError::from_parser(
@@ -25,7 +26,6 @@ impl<'a> Block<'a> {
                 ));
             }
             Some(_) => {
-                let mut context = ParseContext::new(Kind::KROOT);
                 let mut span = Span::new(source);
                 while let Some(token) = token_stream.peek_token() {
                     match token.kind() {
@@ -36,7 +36,7 @@ impl<'a> Block<'a> {
                             context.push(*token);
                         }
                         tokenizer::Kind::AT => {
-                            match context.switch_if_possible(source, token_stream) {
+                            match context.switch_if_possible(token_stream) {
                                 Ok((true, mut new_context)) => {
                                     // 1. consume the current pending tokens belong to current context.
                                     if let Some(block) = context.consume(source)? {
@@ -45,7 +45,6 @@ impl<'a> Block<'a> {
 
                                     // 2. switch context.
                                     let block = Block::parse_transition_block(
-                                        source,
                                         token_stream,
                                         &mut new_context,
                                     )?;
@@ -94,13 +93,13 @@ impl<'a> Block<'a> {
 }
 
 impl<'a> Block<'a> {
-    pub(in crate::codegen::parser::types) fn parse_block_within_kinds(
-        source: &'a str,
+    pub(in crate::codegen::parser::types) fn parse_block_within_kinds<'s>(
         open_kind: tokenizer::Kind,
         close_kind: tokenizer::Kind,
         token_stream: &mut TokenStream,
-        context: &mut ParseContext,
-    ) -> result::Result<Block<'a>> {
+        context: &mut ParseContext<'_, 's>,
+    ) -> result::Result<Block<'s>> {
+        let source = context.source();
         let previous_token =
             token_stream
                 .previous_tokens()
@@ -161,7 +160,7 @@ impl<'a> Block<'a> {
                         ));
                     }
 
-                    match context.switch_if_possible(source, token_stream) {
+                    match context.switch_if_possible(token_stream) {
                         Ok((true, mut new_context)) => {
                             // 1. consume the current pending tokens belong to current context.
                             if let Some(block) = context.consume(source)? {
@@ -169,11 +168,8 @@ impl<'a> Block<'a> {
                             }
 
                             // 2. switch context.
-                            let block = Block::parse_transition_block(
-                                source,
-                                token_stream,
-                                &mut new_context,
-                            )?;
+                            let block =
+                                Block::parse_transition_block(token_stream, &mut new_context)?;
                             span.push_block(block);
                         }
                         Ok((false, _)) => {

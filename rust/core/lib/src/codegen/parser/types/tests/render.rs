@@ -1,7 +1,9 @@
 #![cfg(test)]
-use crate::codegen::parser::tokenizer::Tokenizer;
+use crate::codegen::CompilerOptions;
+use crate::codegen::parser::types::context;
+use crate::codegen::parser::{tokenizer::Tokenizer, types::context::ParseContext};
 use crate::codegen::types::Block;
-use crate::types::result;
+use crate::types::{result, template};
 use winnow::stream::{Stream as _, TokenSlice};
 
 #[test]
@@ -12,7 +14,14 @@ fn block_parse_render_empty_stream() {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     token_stream.next_token();
-    Block::parse_render(source, &mut token_stream).unwrap();
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KRENDER,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    Block::parse_render(&mut token_stream, &mut context).unwrap();
 }
 
 #[test]
@@ -22,8 +31,14 @@ fn block_parse_render_starts_without_keyword() {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    token_stream.next_token();
-    Block::parse_render(source, &mut token_stream).unwrap();
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KRENDER,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    Block::parse_render(&mut token_stream, &mut context).unwrap();
 }
 
 #[test]
@@ -34,7 +49,14 @@ fn block_parse_render_without_closing() {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     token_stream.next_token();
-    Block::parse_render(source, &mut token_stream).unwrap();
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KRENDER,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    Block::parse_render(&mut token_stream, &mut context).unwrap();
 }
 
 #[test]
@@ -45,7 +67,14 @@ fn block_parse_render_without_closing_2() {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     token_stream.next_token();
-    Block::parse_render(source, &mut token_stream).unwrap();
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KRENDER,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    Block::parse_render(&mut token_stream, &mut context).unwrap();
 }
 
 #[test]
@@ -56,7 +85,14 @@ fn block_parse_render_second_param_is_not_bool() {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     token_stream.next_token();
-    Block::parse_render(source, &mut token_stream).unwrap();
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KRENDER,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    Block::parse_render(&mut token_stream, &mut context).unwrap();
 }
 
 #[test]
@@ -67,7 +103,14 @@ fn block_parse_render_second_param_is_not_exp() {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     token_stream.next_token();
-    Block::parse_render(source, &mut token_stream).unwrap();
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KRENDER,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    Block::parse_render(&mut token_stream, &mut context).unwrap();
 }
 
 #[test]
@@ -77,7 +120,14 @@ fn block_parse_render_no_params() -> result::Result<()> {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     token_stream.next_token().unwrap();
-    let block = Block::parse_render(source, &mut token_stream)?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KRENDER,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    let block = Block::parse_render(&mut token_stream, &mut context)?;
     assert!(matches!(block, Block::KRENDER(_)));
     assert_eq!(block.content(), "");
     assert_eq!(block.location().line, 0);
@@ -87,7 +137,14 @@ fn block_parse_render_no_params() -> result::Result<()> {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     token_stream.next_token().unwrap();
-    let block = Block::parse_render(source, &mut token_stream)?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KRENDER,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    let block = Block::parse_render(&mut token_stream, &mut context)?;
     assert!(matches!(block, Block::KRENDER(_)));
     assert_eq!(block.content(), "");
 
@@ -101,7 +158,14 @@ fn block_parse_render_single_param() -> result::Result<()> {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     token_stream.next_token().unwrap();
-    let block = Block::parse_render(source, &mut token_stream)?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KRENDER,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    let block = Block::parse_render(&mut token_stream, &mut context)?;
     assert!(matches!(block, Block::KRENDER(_)));
     let root_span = match block {
         Block::KRENDER(span) => span,
@@ -120,7 +184,14 @@ fn block_parse_render_2_params() -> result::Result<()> {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     token_stream.next_token().unwrap();
-    let block = Block::parse_render(source, &mut token_stream)?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KRENDER,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    let block = Block::parse_render(&mut token_stream, &mut context)?;
     assert!(matches!(block, Block::KRENDER(_)));
     let root_span = match block {
         Block::KRENDER(span) => span,
@@ -135,7 +206,14 @@ fn block_parse_render_2_params() -> result::Result<()> {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     token_stream.next_token().unwrap();
-    let block = Block::parse_render(source, &mut token_stream)?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KRENDER,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    let block = Block::parse_render(&mut token_stream, &mut context)?;
     assert!(matches!(block, Block::KRENDER(_)));
     let root_span = match block {
         Block::KRENDER(span) => span,
@@ -156,5 +234,12 @@ fn block_parse_render_more_than_2_params() {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     token_stream.next_token().unwrap();
-    Block::parse_render(source, &mut token_stream).unwrap();
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KRENDER,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    Block::parse_render(&mut token_stream, &mut context).unwrap();
 }

@@ -7,11 +7,12 @@ use crate::types::{error, result};
 use winnow::stream::Stream as _;
 
 impl<'a> Block<'a> {
-    pub(in crate::codegen::parser::types) fn parse_section(
-        source: &'a str,
+    pub(in crate::codegen::parser::types) fn parse_section<'s>(
         token: &Token,
         token_stream: &mut TokenStream,
-    ) -> result::Result<Block<'a>> {
+        context: &mut ParseContext<'_, 's>,
+    ) -> result::Result<Block<'s>> {
+        let source = context.source();
         // consume the section token
         token_stream.next_token();
 
@@ -48,11 +49,10 @@ impl<'a> Block<'a> {
                         {
                             // Note: section is content.
                             let block = Self::parse_block_within_kinds(
-                                source,
                                 tokenizer::Kind::OCURLYBRACKET,
                                 tokenizer::Kind::CCURLYBRACKET,
                                 token_stream,
-                                &mut ParseContext::new(Kind::KSECTION),
+                                &mut context.clone_for(Kind::KSECTION),
                             )?;
                             let root_span = block.span();
                             let section_span = match root_span.is_simple() {
@@ -73,7 +73,7 @@ impl<'a> Block<'a> {
                             };
 
                             let block = ParseContext::create_block(
-                                &ParseContext::new(Kind::KSECTION),
+                                &context.clone_for(Kind::KSECTION),
                                 Some(name.to_string()),
                                 section_span,
                             )?;

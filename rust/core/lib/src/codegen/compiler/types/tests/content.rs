@@ -1,4 +1,5 @@
 #![cfg(test)]
+use crate::codegen::CompilerOptions;
 use crate::codegen::types::Block;
 use crate::codegen::types::Span;
 use crate::codegen::types::Template;
@@ -10,7 +11,8 @@ use quote::quote;
 #[should_panic]
 fn to_content_token_stream_from_wrong_block() {
     let raw_content = r#"@layout test::test1"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML);
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options);
     assert!(template.is_ok());
     let template = template.unwrap();
     let block = template.block();
@@ -25,7 +27,8 @@ fn to_content_token_stream_from_wrong_block() {
 #[test]
 fn to_content_token_stream_from_simple_content() -> result::Result<()> {
     let raw_content = r#"test::test1"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();
@@ -44,7 +47,8 @@ fn to_content_token_stream_from_simple_content() -> result::Result<()> {
 #[should_panic]
 fn to_inline_content_token_stream_from_wrong_block() {
     let raw_content = r#"@layout test::test1"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML);
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options);
     assert!(template.is_ok());
     let template = template.unwrap();
     let block = template.block();
@@ -61,7 +65,8 @@ fn to_inline_content_token_stream_from_wrong_block() {
 #[test]
 fn to_inline_content_token_stream_from_code_block() -> result::Result<()> {
     let raw_content = r#"@{123; @test}"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();

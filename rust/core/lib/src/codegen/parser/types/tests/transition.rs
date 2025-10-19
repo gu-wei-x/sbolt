@@ -1,8 +1,10 @@
 #![cfg(test)]
+use crate::codegen::CompilerOptions;
 use crate::codegen::parser::tokenizer::Tokenizer;
 use crate::codegen::parser::types::context::{Kind, ParseContext};
 use crate::codegen::types::Block;
 use crate::types::result;
+use crate::types::template;
 use winnow::stream::{Stream as _, TokenSlice};
 
 #[test]
@@ -11,11 +13,9 @@ fn parse_transition_block() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse_transition_block(
-        source,
-        &mut token_stream,
-        &mut ParseContext::new(Kind::KCODE),
-    )?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KCODE, template::Kind::KHTML, &options, source);
+    let block = Block::parse_transition_block(&mut token_stream, &mut context)?;
     assert!(matches!(block, Block::KCODE(_)));
     Ok(())
 }
@@ -27,14 +27,11 @@ fn parse_transition_block_starts_without_transition_symbol() {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KCODE, template::Kind::KHTML, &options, source);
     // change the first token to not be '@'
     token_stream.next_token();
-    Block::parse_transition_block(
-        source,
-        &mut token_stream,
-        &mut ParseContext::new(Kind::KCODE),
-    )
-    .unwrap();
+    Block::parse_transition_block(&mut token_stream, &mut context).unwrap();
 }
 
 #[test]
@@ -44,14 +41,11 @@ fn parse_transition_block_empty_stream() {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KCODE, template::Kind::KHTML, &options, source);
     // change the first token to not be '@'
     token_stream.next_token();
-    Block::parse_transition_block(
-        source,
-        &mut token_stream,
-        &mut ParseContext::new(Kind::KCODE),
-    )
-    .unwrap();
+    Block::parse_transition_block(&mut token_stream, &mut context).unwrap();
 }
 
 #[test]
@@ -61,12 +55,9 @@ fn parse_transition_block_single_transition_symbol() {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens[0..1]);
-    Block::parse_transition_block(
-        source,
-        &mut token_stream,
-        &mut ParseContext::new(Kind::KCODE),
-    )
-    .unwrap();
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KCODE, template::Kind::KHTML, &options, source);
+    Block::parse_transition_block(&mut token_stream, &mut context).unwrap();
 }
 
 #[test]
@@ -76,12 +67,9 @@ fn parse_transition_block_invalid_token() {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    Block::parse_transition_block(
-        source,
-        &mut token_stream,
-        &mut ParseContext::new(Kind::KCODE),
-    )
-    .unwrap();
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KCODE, template::Kind::KHTML, &options, source);
+    Block::parse_transition_block(&mut token_stream, &mut context).unwrap();
 }
 
 #[test]
@@ -90,11 +78,9 @@ fn parse_transition_block_render() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse_transition_block(
-        source,
-        &mut token_stream,
-        &mut ParseContext::new(Kind::KCODE),
-    )?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KCODE, template::Kind::KHTML, &options, source);
+    let block = Block::parse_transition_block(&mut token_stream, &mut context)?;
     assert!(matches!(block, Block::KRENDER(_)));
     Ok(())
 }
@@ -106,10 +92,7 @@ fn parse_transition_block_render_invalid_context() {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    Block::parse_transition_block(
-        source,
-        &mut token_stream,
-        &mut ParseContext::new(Kind::KCONTENT),
-    )
-    .unwrap();
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KCONTENT, template::Kind::KHTML, &options, source);
+    Block::parse_transition_block(&mut token_stream, &mut context).unwrap();
 }

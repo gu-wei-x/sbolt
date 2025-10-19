@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use syn::Ident;
 
 pub struct Compiler {
-    pub(crate) options: CompilerOptions,
+    options: CompilerOptions,
 }
 
 impl Compiler {
@@ -40,15 +40,15 @@ impl Compiler {
     // called by build script to process view templates.
     pub(in crate::codegen::compiler) fn process(&self) -> result::Result<CompileResult> {
         // validate mod name from options
-        syn::parse_str::<Ident>(&self.options.mod_name).map_err(|_| {
+        syn::parse_str::<Ident>(self.options.mod_name()).map_err(|_| {
             format!(
                 "'{}' is not a valid ident name, please change the mod name",
-                self.options.mod_name
+                self.options.mod_name()
             )
         })?;
 
         // TODO: implement compilation logic, incremental build, multiple tasks to improve performance, etc.
-        let target_dir = if let Some(dir) = &self.options.out_dir {
+        let target_dir = if let Some(dir) = self.options.out_dir() {
             dir
         } else {
             &PathBuf::from(env::var(consts::OUT_DIR_ENV_NAME)?)
@@ -60,7 +60,7 @@ impl Compiler {
 
         let mut compiler_result = CompileResult::default();
         compiler_result.add_mod(consts::TEMPLATES_MAP_FILE_NAME);
-        for dir in &self.options.source_dirs {
+        for dir in self.options.source_dirs() {
             Module::new(PathBuf::from(dir), PathBuf::from(target_dir), None)
                 .process(&self.options)?
                 .merge_into(&mut compiler_result);
@@ -78,15 +78,14 @@ impl Compiler {
             consts::RS_FILE_EXTENSION
         ));
 
-        registry::generate_registry(&view_map_file_path, &self.options.mod_name, view_mapping)?;
+        registry::generate_registry(&view_map_file_path, view_mapping, &self.options)?;
 
         let root_mod_file_path = PathBuf::from(target_dir).join(consts::TEMPLATES_MOD_FILE_NAME);
-        let root_mod_ts =
-            Module::generate_root_mod_ts(&self.options.mod_name, compiler_result.mods());
+        let root_mod_ts = Module::generate_root_mod_ts(compiler_result.mods(), &self.options);
         fsutil::write_code_to_file(&root_mod_file_path, &root_mod_ts)?;
 
         // Tell cargo to rerun the build script if any of the source directories change.
-        for dir in &self.options.source_dirs {
+        for dir in self.options.source_dirs() {
             println!("cargo:rerun-if-changed={}", dir);
         }
 

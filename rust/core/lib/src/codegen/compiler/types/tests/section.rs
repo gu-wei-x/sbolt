@@ -1,4 +1,5 @@
 #![cfg(test)]
+use crate::codegen::CompilerOptions;
 use crate::codegen::types::Block;
 use crate::codegen::types::Template;
 use crate::types::result;
@@ -9,7 +10,8 @@ use quote::quote;
 #[should_panic]
 fn to_section_token_stream_from_wrong_block() {
     let raw_content = r#"test"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML);
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options);
     assert!(template.is_ok());
     let template = template.unwrap();
     let block = template.block();
@@ -22,7 +24,8 @@ fn to_section_token_stream_from_wrong_block() {
 #[test]
 fn to_section_token_stream_simple() -> result::Result<()> {
     let raw_content = r#"@section test{test}"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();
@@ -49,7 +52,8 @@ fn to_section_token_stream_simple() -> result::Result<()> {
 fn to_section_token_stream_composite() -> result::Result<()> {
     let raw_content = r#"
     @section test{@test helloworld}"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();

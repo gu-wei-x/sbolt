@@ -17,7 +17,7 @@ impl<'a> Template<'a> {
         view_name: &str,
         view_type: &str,
         full_view_name: &str,
-        mod_name: &str,
+        compiler_options: &CompilerOptions,
     ) -> result::Result<TokenStream> {
         let view_name = format_ident!("{}", view_name);
         let view_type = format_ident!("K{}", view_type);
@@ -28,7 +28,7 @@ impl<'a> Template<'a> {
                 consts::TEMPLATES_MAP_FILE_NAME,
                 consts::TEMPLATES_TYPE_NAME
             ),
-            mod_name,
+            compiler_options.mod_name(),
         );
         let template_type_ts = syn::parse_str::<TokenStream>(&template_type_full_name)?;
         let imports_content = self.block().generate_imports_token_stream()?;
@@ -45,7 +45,9 @@ impl<'a> Template<'a> {
             }
         };
         // a view must have render method.
-        let render_content = self.block().generate_render_token_stream(mod_name)?;
+        let render_content = self
+            .block()
+            .generate_render_token_stream(compiler_options)?;
         let code = quote! {
             use #template_type_ts;
             use sbolt::types::Template as _;
@@ -116,18 +118,14 @@ impl<'a> Template<'a> {
                 view_name
             )
         })?;
-        syn::parse_str::<Ident>(&compiler_options.mod_name).map_err(|_| {
+        syn::parse_str::<Ident>(compiler_options.mod_name()).map_err(|_| {
             format!(
                 "'{}' is not a valid ident name, please change the mod name",
-                compiler_options.mod_name
+                compiler_options.mod_name()
             )
         })?;
-        let code = self.to_token_stream(
-            &view_name,
-            &view_type,
-            &full_view_name,
-            &compiler_options.mod_name,
-        )?;
+        let code =
+            self.to_token_stream(&view_name, &view_type, &full_view_name, compiler_options)?;
         fsutil::write_code_to_file(&target, &code)?;
         Ok(result)
     }

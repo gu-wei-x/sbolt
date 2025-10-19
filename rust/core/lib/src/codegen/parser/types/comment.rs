@@ -1,26 +1,25 @@
 use crate::codegen::parser::Token;
 use crate::codegen::parser::tokenizer::{self, TokenStream};
-use crate::codegen::parser::types::context::{Kind, ParseContext};
+use crate::codegen::parser::types::context::ParseContext;
 use crate::codegen::types::Block;
-use crate::codegen::types::Span;
 use crate::types::{error, result};
 use winnow::stream::Stream as _;
 
 impl<'a> Block<'a> {
-    pub(in crate::codegen::parser::types) fn parse_comment(
-        source: &'a str,
+    pub(in crate::codegen::parser::types) fn parse_comment<'s>(
         token: &Token,
         token_stream: &mut TokenStream,
-    ) -> result::Result<Block<'a>> {
-        let mut result = Span::new(source);
-        result.push_token(*token); // push '@' token
+        context: &mut ParseContext<'_, 's>,
+    ) -> result::Result<Block<'s>> {
+        let source = context.source();
+        context.push(*token);
 
         // note: @ was consumed before calling this function.
         // the first is * token
         match token_stream.peek_token() {
             Some(t) if t.kind() == tokenizer::Kind::ASTERISK => {
                 // consume the '*' token
-                result.push_token(*t);
+                context.push(*t);
                 token_stream.next_token();
             }
             _ => {
@@ -38,21 +37,21 @@ impl<'a> Block<'a> {
             match tok.kind() {
                 tokenizer::Kind::ASTERISK => {
                     // consume the '*' token
-                    result.push_token(*tok);
+                    context.push(*tok);
                     token_stream.next_token();
 
                     // check next token
                     if let Some(next_tok) = token_stream.peek_token() {
                         if next_tok.kind() == tokenizer::Kind::AT {
                             // Found the closing '@', consume '@' and exit the loop
-                            result.push_token(*next_tok);
+                            context.push(*next_tok);
                             token_stream.next_token(); // consume '@'
                             is_ended = true;
                             break;
                         } else {
                             if next_tok.kind() != tokenizer::Kind::ASTERISK {
                                 // consume the token after '*' if it's not another '*'
-                                result.push_token(*next_tok);
+                                context.push(*next_tok);
                                 token_stream.next_token();
                                 continue;
                             }
@@ -67,27 +66,28 @@ impl<'a> Block<'a> {
                     }
                 }
                 _ => {
-                    result.push_token(*tok);
+                    context.push(*tok);
                     token_stream.next_token();
                     continue;
                 }
             }
         }
 
-        match is_ended {
-            true => Ok(ParseContext::create_block(
-                &ParseContext::new(Kind::KCOMMENT),
-                None,
-                result,
-            )?),
-            false => {
-                // If we reach here, we didn't find a closing '*@'
-                Err(error::CompileError::from_parser(
-                    source,
-                    Some(*token),
-                    "Unterminated comment block, expected '*@'",
-                ))
-            }
+        if !is_ended {
+            return Err(error::CompileError::from_parser(
+                source,
+                Some(*token),
+                "Unterminated comment block, expected '*@'",
+            ));
+        }
+
+        match context.consume(source)? {
+            Some(block) => Ok(block),
+            _ => Err(error::CompileError::from_parser(
+                source,
+                Some(*token),
+                "Unbale to parse comment block",
+            )),
         }
     }
 }

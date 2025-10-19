@@ -1,8 +1,11 @@
 #![cfg(test)]
+use crate::codegen::CompilerOptions;
+use crate::codegen::parser::types::context;
 use crate::codegen::parser::types::context::Kind;
 use crate::codegen::parser::types::context::ParseContext;
 use crate::codegen::{consts, parser::tokenizer::Tokenizer, types::Block};
 use crate::types::result;
+use crate::types::template;
 use winnow::stream::TokenSlice;
 
 macro_rules! parse_context_test_case {
@@ -13,8 +16,9 @@ macro_rules! parse_context_test_case {
             let tokenizer = Tokenizer::new(source);
             let tokens = tokenizer.into_vec();
             let mut token_stream = TokenSlice::new(&tokens);
-            let context = ParseContext::new($from_kind);
-            let result = context.switch_if_possible(source, &mut token_stream);
+            let options = CompilerOptions::default();
+            let context = ParseContext::new($from_kind, template::Kind::KHTML, &options, source);
+            let result = context.switch_if_possible(&mut token_stream);
             assert!(result.is_err());
             Ok(())
         }
@@ -26,8 +30,9 @@ macro_rules! parse_context_test_case {
             let tokenizer = Tokenizer::new(source);
             let tokens = tokenizer.into_vec();
             let mut token_stream = TokenSlice::new(&tokens);
-            let context = ParseContext::new($from_kind);
-            let (should_switch, _) = context.switch_if_possible(source, &mut token_stream)?;
+            let options = CompilerOptions::default();
+            let context = ParseContext::new($from_kind, template::Kind::KHTML, &options, source);
+            let (should_switch, _) = context.switch_if_possible(&mut token_stream)?;
             assert_eq!(should_switch, $expected);
             Ok(())
         }
@@ -163,7 +168,13 @@ fn parse_context_to_block_empty() -> result::Result<()> {
     let source = "";
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
-    let mut context = ParseContext::new(Kind::KROOT);
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KROOT,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
     for token in tokens {
         context.push(token);
     }
@@ -177,7 +188,13 @@ fn parse_context_to_block_from_content() -> result::Result<()> {
     let source = "test1 test2";
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
-    let mut context = ParseContext::new(Kind::KROOT);
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KROOT,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
     for token in tokens {
         context.push(token);
     }
@@ -194,7 +211,13 @@ fn parse_context_to_block_from_code() -> result::Result<()> {
     let source = "test1 test2";
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
-    let mut context = ParseContext::new(Kind::KCODE);
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KCODE,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
     for token in tokens {
         context.push(token);
     }
