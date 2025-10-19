@@ -39,7 +39,7 @@ impl<'a> Block<'a> {
                             match context.switch_if_possible(token_stream) {
                                 Ok((true, mut new_context)) => {
                                     // 1. consume the current pending tokens belong to current context.
-                                    if let Some(block) = context.consume(source)? {
+                                    if let Some(block) = context.consume()? {
                                         span.push_block(block);
                                     }
 
@@ -72,7 +72,7 @@ impl<'a> Block<'a> {
 
                 // consume the context.
                 // todo: whether to ignore the lf
-                if let Some(block) = context.consume(source)? {
+                if let Some(block) = context.consume()? {
                     span.push_block(block);
                 }
 
@@ -163,7 +163,7 @@ impl<'a> Block<'a> {
                     match context.switch_if_possible(token_stream) {
                         Ok((true, mut new_context)) => {
                             // 1. consume the current pending tokens belong to current context.
-                            if let Some(block) = context.consume(source)? {
+                            if let Some(block) = context.consume()? {
                                 span.push_block(block);
                             }
 
@@ -202,7 +202,7 @@ impl<'a> Block<'a> {
         }
 
         // consume the context.
-        if let Some(block) = context.consume(source)? {
+        if let Some(block) = context.consume()? {
             span.push_block(block);
         }
 

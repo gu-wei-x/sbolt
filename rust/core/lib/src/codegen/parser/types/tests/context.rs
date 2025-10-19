@@ -178,7 +178,7 @@ fn parse_context_to_block_empty() -> result::Result<()> {
     for token in tokens {
         context.push(token);
     }
-    let block = context.consume(source)?;
+    let block = context.consume()?;
     assert!(block.is_none());
     Ok(())
 }
@@ -198,7 +198,7 @@ fn parse_context_to_block_from_content() -> result::Result<()> {
     for token in tokens {
         context.push(token);
     }
-    let result = context.consume(source)?;
+    let result = context.consume()?;
     assert!(result.is_some());
     let block = result.unwrap();
     assert_eq!(block.content(), source);
@@ -221,7 +221,7 @@ fn parse_context_to_block_from_code() -> result::Result<()> {
     for token in tokens {
         context.push(token);
     }
-    let result = context.consume(source)?;
+    let result = context.consume()?;
     assert!(result.is_some());
     let block = result.unwrap();
     assert_eq!(block.content(), source);
