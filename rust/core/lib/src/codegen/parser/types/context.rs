@@ -1,5 +1,5 @@
+use crate::codegen::parser::optimizer;
 use crate::codegen::parser::tokenizer::{TokenStream, get_nth_token};
-use crate::codegen::parser::types::optimizer::{self, Optimizer};
 use crate::codegen::parser::{Token, tokenizer};
 use crate::codegen::types::Block;
 use crate::codegen::types::Span;
@@ -89,12 +89,9 @@ impl<'a, 's> ParseContext<'a, 's> {
         matches!(self.block_kind, Kind::KINLINEDCODE | Kind::KINLINEDCONTENT)
     }
 
-    pub(in crate::codegen) fn consume<'s1>(
-        &mut self,
-        source: &'s1 str,
-    ) -> result::Result<Option<Block<'s1>>> {
-        let optimizer = optimizer::HtmlOptimizer::new(self.compiler_option);
-        let mut span = Span::new(source);
+    pub(in crate::codegen) fn consume(&mut self) -> result::Result<Option<Block<'s>>> {
+        let mut optimizer = optimizer::create_optimizer(self.template_kind, self.compiler_option);
+        let mut span = Span::new(self.source);
         for token in &self.tokens {
             if optimizer.accept(token) {
                 span.push_token(*token);
@@ -246,11 +243,11 @@ impl<'a, 's> ParseContext<'a, 's> {
 }
 
 impl<'a, 's> ParseContext<'a, 's> {
-    pub(in crate::codegen) fn create_block<'s1>(
-        context: &ParseContext,
+    pub(in crate::codegen) fn create_block(
+        context: &ParseContext<'_, 's>,
         name: Option<String>,
-        span: Span<'s1>,
-    ) -> result::Result<Block<'s1>> {
+        span: Span<'s>,
+    ) -> result::Result<Block<'s>> {
         match name {
             Some(name) => Ok(Block::new_section(&name, span)),
             None => {

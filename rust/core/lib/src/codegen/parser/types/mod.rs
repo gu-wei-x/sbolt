@@ -1,8 +1,7 @@
 mod block;
 mod comment;
-mod context;
+pub(in crate::codegen) mod context;
 mod directives;
-mod optimizer;
 mod render;
 mod section;
 mod template;

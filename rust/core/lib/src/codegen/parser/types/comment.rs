@@ -81,7 +81,7 @@ impl<'a> Block<'a> {
             ));
         }
 
-        match context.consume(source)? {
+        match context.consume()? {
             Some(block) => Ok(block),
             _ => Err(error::CompileError::from_parser(
                 source,
