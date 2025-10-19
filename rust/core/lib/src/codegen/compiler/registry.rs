@@ -1,5 +1,5 @@
 use crate::codegen::compiler::{fsutil, name};
-use crate::codegen::consts;
+use crate::codegen::{CompilerOptions, consts};
 use crate::types::error::CompileError;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
@@ -8,16 +8,17 @@ use std::path::PathBuf;
 
 pub(crate) fn generate_registry(
     file_path: &PathBuf,
-    mode_name: &str,
     view_name_mapping: &HashMap<String, String>,
+    compiler_option: &CompilerOptions,
 ) -> Result<(), CompileError> {
+    let mod_name = compiler_option.mod_name();
     let view_types_content = view_name_mapping
         .iter()
         .map(|(name, _view_name)| {
             format!(
                 "K{}({}),",
                 name::create_view_type_name(&name),
-                name::create_type_full_name(name, mode_name)
+                name::create_type_full_name(name, mod_name)
             )
         })
         .collect::<Vec<String>>()
@@ -44,7 +45,7 @@ pub(crate) fn generate_registry(
         .parse::<proc_macro2::TokenStream>()
         .unwrap();
 
-    let reg_ts = generate_registry_method(mode_name, view_name_mapping)?;
+    let reg_ts = generate_registry_method(mod_name, view_name_mapping)?;
     let type_ident = format_ident!("{}", consts::TEMPLATES_TYPE_NAME);
     let content = quote! {
         use sbolt::types::Template as _;

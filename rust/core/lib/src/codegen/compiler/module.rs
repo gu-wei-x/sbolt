@@ -1,6 +1,6 @@
 use crate::{
     codegen::{
-        CompileResult,
+        CompileResult, CompilerOptions,
         compiler::{fsutil, name},
         consts,
     },
@@ -69,6 +69,7 @@ impl Module {
                             &content,
                             Some(name_space.clone()),
                             template_kind.unwrap(),
+                            compiler_options,
                         ) {
                             Ok(t) => t,
                             Err(e) => {
@@ -94,7 +95,7 @@ impl Module {
             }
 
             // generate the mod.rs file.
-            let ts = Self::generate_sub_mod_ts(result.mods());
+            let ts = Self::generate_sub_mod_ts(result.mods())?;
             let mod_file = target_dir.join(consts::TEMPLATES_MOD_FILE_NAME);
             fsutil::write_code_to_file(&mod_file, &ts)?;
         }
@@ -103,21 +104,27 @@ impl Module {
 }
 
 impl Module {
-    fn generate_sub_mod_ts(mods: &[String]) -> TokenStream {
+    fn generate_sub_mod_ts(mods: &[String]) -> result::Result<TokenStream> {
         let imported_content: String = mods
             .iter()
             .map(|m| format!("pub(crate) mod {};\n", m))
             .collect::<String>();
-        imported_content.parse().unwrap()
+        let ts = imported_content
+            .parse::<TokenStream>()
+            .map_err(|err| format!("Failed to generate sub mod:{err}"))?;
+        Ok(ts)
     }
 
-    pub(crate) fn generate_root_mod_ts(mod_name: &str, mods: &[String]) -> TokenStream {
+    pub(crate) fn generate_root_mod_ts(
+        mods: &[String],
+        compiler_option: &CompilerOptions,
+    ) -> TokenStream {
         let viewtypes_ident = format!(
             "{}::{}",
             consts::TEMPLATES_MAP_FILE_NAME,
             consts::TEMPLATES_TYPE_NAME
         );
-        let mod_name = format_ident!("{}", mod_name);
+        let mod_name = format_ident!("{}", compiler_option.mod_name());
         let import_content: String = mods
             .iter()
             .map(|m| format!("mod {};\n", m))

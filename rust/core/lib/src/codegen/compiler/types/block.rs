@@ -1,3 +1,4 @@
+use crate::codegen::CompilerOptions;
 use crate::codegen::types::Block;
 use crate::types::error;
 use crate::types::result;
@@ -76,7 +77,7 @@ impl<'a> Block<'a> {
 
     pub(in crate::codegen::compiler::types) fn generate_render_token_stream(
         &self,
-        mod_name: &str,
+        compiler_options: &CompilerOptions,
     ) -> result::Result<TokenStream> {
         if !matches!(self, Block::KROOT(_)) {
             return Err(error::CompileError::from_codegen(
@@ -93,7 +94,7 @@ impl<'a> Block<'a> {
             .any(|b| matches!(b, Block::KLAYOUT(_)));
         match has_layout {
             true => {
-                let view_root_mod_name = format_ident!("{}", mod_name);
+                let view_root_mod_name = format_ident!("{}", compiler_options.mod_name());
                 let code = quote! {
                     fn render(&self, context:&mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
                         let mut writer = self.create_writer(None);

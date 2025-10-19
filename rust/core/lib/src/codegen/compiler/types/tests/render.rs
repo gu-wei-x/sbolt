@@ -1,4 +1,5 @@
 #![cfg(test)]
+use crate::codegen::CompilerOptions;
 use crate::codegen::types::Block;
 use crate::codegen::types::Span;
 use crate::codegen::types::Template;
@@ -10,7 +11,8 @@ use quote::quote;
 #[should_panic]
 fn to_render_token_stream() {
     let raw_content = r#"test"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML);
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options);
     assert!(template.is_ok());
     let template = template.unwrap();
     let block = template.block();
@@ -26,7 +28,8 @@ fn to_render_token_stream() {
 fn to_render_token_stream_with_no_param() -> result::Result<()> {
     // @render
     let raw_content = r#"@render()"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();
@@ -51,7 +54,8 @@ fn to_render_token_stream_with_no_param() -> result::Result<()> {
 #[test]
 fn to_render_token_stream_with_single_param() -> result::Result<()> {
     let raw_content = r#"@render(test)"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();
@@ -81,7 +85,8 @@ fn to_render_token_stream_with_single_param() -> result::Result<()> {
 #[test]
 fn to_render_token_stream_with_two_params() -> result::Result<()> {
     let raw_content = r#"@render(test, false)"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();

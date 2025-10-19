@@ -9,10 +9,11 @@ use crate::types::{error, result};
 use winnow::stream::Stream as _;
 
 impl<'a> Block<'a> {
-    pub(in crate::codegen::parser::types) fn parse_render(
-        source: &'a str,
+    pub(in crate::codegen::parser::types) fn parse_render<'s>(
         token_stream: &mut TokenStream,
-    ) -> result::Result<Block<'a>> {
+        context: &mut ParseContext<'_, 's>,
+    ) -> result::Result<Block<'s>> {
+        let source = context.source();
         // token_stream starts with the directive.
         let start_token = match token_stream.peek_token() {
             Some(token) => match token.kind() {
@@ -45,11 +46,7 @@ impl<'a> Block<'a> {
         // without ()
         if let None = get_token_if(token_stream, |k| k == tokenizer::Kind::OPARENTHESIS) {
             // empty render
-            let block = ParseContext::create_block(
-                &ParseContext::new(Kind::KRENDER),
-                None,
-                Span::new(source),
-            )?;
+            let block = ParseContext::create_block(&context, None, Span::new(source))?;
             return Ok(block);
         }
         tokenizer::skip_whitespace(token_stream);
@@ -68,11 +65,7 @@ impl<'a> Block<'a> {
         if token.kind() == tokenizer::Kind::CPARENTHESIS {
             // no params @render()
             // empty render
-            let block = ParseContext::create_block(
-                &ParseContext::new(Kind::KRENDER),
-                None,
-                Span::new(source),
-            )?;
+            let block = ParseContext::create_block(&context, None, Span::new(source))?;
             return Ok(block);
         } else {
             let mut root_span = Span::new(source);
@@ -80,8 +73,7 @@ impl<'a> Block<'a> {
             // has params
             let mut left_span = Span::new(source);
             left_span.push_token(*token);
-            let left_block =
-                ParseContext::create_block(&ParseContext::new(Kind::KCONTENT), None, left_span)?;
+            let left_block = ParseContext::create_block(&context, None, left_span)?;
             root_span.push_block(left_block);
 
             tokenizer::skip_whitespace(token_stream);
@@ -101,8 +93,7 @@ impl<'a> Block<'a> {
 
             if token.kind() == tokenizer::Kind::CPARENTHESIS {
                 // only one param
-                let block =
-                    ParseContext::create_block(&ParseContext::new(Kind::KRENDER), None, root_span)?;
+                let block = ParseContext::create_block(&context, None, root_span)?;
                 return Ok(block);
             } else {
                 // validate, must be true or false
@@ -123,7 +114,7 @@ impl<'a> Block<'a> {
                 let mut right_span = Span::new(source);
                 right_span.push_token(*token);
                 let right_block = ParseContext::create_block(
-                    &ParseContext::new(Kind::KCONTENT),
+                    &context.clone_for(Kind::KCONTENT),
                     None,
                     right_span,
                 )?;
@@ -142,11 +133,7 @@ impl<'a> Block<'a> {
                         )
                     },
                 )?;
-                Ok(ParseContext::create_block(
-                    &ParseContext::new(Kind::KRENDER),
-                    None,
-                    root_span,
-                )?)
+                Ok(ParseContext::create_block(&context, None, root_span)?)
             }
         }
     }

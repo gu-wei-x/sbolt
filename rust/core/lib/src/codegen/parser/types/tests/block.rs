@@ -1,13 +1,17 @@
 #![cfg(test)]
+use crate::codegen::CompilerOptions;
 use crate::codegen::parser::tokenizer::Tokenizer;
+use crate::codegen::parser::types::context::{Kind, ParseContext};
 use crate::codegen::types::Block;
-use crate::types::result;
+use crate::types::{result, template};
 use winnow::stream::TokenSlice;
 
 #[test]
 fn block_parse_empty_stream() {
     let mut token_stream = TokenSlice::new(&[]);
-    let result = Block::parse("", &mut token_stream);
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KROOT, template::Kind::KHTML, &options, "");
+    let result = Block::parse(&mut token_stream, &mut context);
     assert!(result.is_err());
 }
 
@@ -19,7 +23,9 @@ fn block_parse_content() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse(source, &mut token_stream)?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KROOT, template::Kind::KHTML, &options, source);
+    let block = Block::parse(&mut token_stream, &mut context)?;
     assert!(matches!(block, Block::KROOT(_)));
     match block {
         Block::KROOT(span) => {
@@ -42,7 +48,9 @@ fn block_parse_inline_code() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse(source, &mut token_stream)?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KROOT, template::Kind::KHTML, &options, source);
+    let block = Block::parse(&mut token_stream, &mut context)?;
     assert!(matches!(block, Block::KROOT(_)));
     match block {
         Block::KROOT(span) => {
@@ -60,7 +68,9 @@ fn block_parse_inline_code() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse(source, &mut token_stream)?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KROOT, template::Kind::KHTML, &options, source);
+    let block = Block::parse(&mut token_stream, &mut context)?;
     assert!(matches!(block, Block::KROOT(_)));
     match block {
         Block::KROOT(span) => {
@@ -87,7 +97,9 @@ fn block_parse_code_block() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse(source, &mut token_stream)?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KROOT, template::Kind::KHTML, &options, source);
+    let block = Block::parse(&mut token_stream, &mut context)?;
     assert!(matches!(block, Block::KROOT(_)));
     match block {
         Block::KROOT(span) => {
@@ -104,7 +116,9 @@ fn block_parse_code_block() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse(source, &mut token_stream)?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KROOT, template::Kind::KHTML, &options, source);
+    let block = Block::parse(&mut token_stream, &mut context)?;
     assert!(matches!(block, Block::KROOT(_)));
     match block {
         Block::KROOT(span) => {
@@ -134,7 +148,9 @@ fn block_parse_complex_code_block() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse(source, &mut token_stream)?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KROOT, template::Kind::KHTML, &options, source);
+    let block = Block::parse(&mut token_stream, &mut context)?;
 
     // root.
     assert!(matches!(block, Block::KROOT(_)));
@@ -196,7 +212,9 @@ fn block_parse_complex_content_block() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse(source, &mut token_stream)?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KROOT, template::Kind::KHTML, &options, source);
+    let block = Block::parse(&mut token_stream, &mut context)?;
 
     // root.
     assert!(matches!(block, Block::KROOT(_)));
@@ -220,7 +238,9 @@ fn block_parse_escape_from_content() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse(source, &mut token_stream)?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KROOT, template::Kind::KHTML, &options, source);
+    let block = Block::parse(&mut token_stream, &mut context)?;
 
     // root.
     assert!(matches!(block, Block::KROOT(_)));
@@ -244,9 +264,10 @@ fn block_parse_escape_from_code() -> result::Result<()> {
     let tokenizer = Tokenizer::new(source);
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
-    let block = Block::parse(source, &mut token_stream)?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KROOT, template::Kind::KHTML, &options, source);
+    let block = Block::parse(&mut token_stream, &mut context)?;
 
-    // root.
     // root.
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = match block {

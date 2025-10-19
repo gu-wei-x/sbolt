@@ -1,7 +1,8 @@
 #![cfg(test)]
-use crate::codegen::parser::tokenizer::Tokenizer;
+use crate::codegen::parser::types::context::{self, ParseContext};
 use crate::codegen::types::Block;
-use crate::types::result;
+use crate::codegen::{CompilerOptions, parser::tokenizer::Tokenizer};
+use crate::types::{result, template};
 use winnow::stream::{Stream as _, TokenSlice};
 
 // comments.
@@ -12,7 +13,14 @@ fn block_parse_comment() -> result::Result<()> {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     let token = token_stream.next_token().unwrap();
-    let block = Block::parse_comment(source, token, &mut token_stream)?;
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KCOMMENT,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    let block = Block::parse_comment(token, &mut token_stream, &mut context)?;
     assert!(matches!(block, Block::KCOMMENT(_)));
     assert_eq!(block.content(), source);
     assert_eq!(block.location().line, 0);
@@ -27,7 +35,14 @@ fn block_parse_comment_without_closing() {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     let token = token_stream.next_token().unwrap();
-    Block::parse_comment(source, token, &mut token_stream).unwrap();
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KCOMMENT,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    Block::parse_comment(token, &mut token_stream, &mut context).unwrap();
 }
 
 #[test]
@@ -38,7 +53,14 @@ fn block_parse_comment_invalid() {
     let tokens = tokenizer.into_vec();
     let mut token_stream = TokenSlice::new(&tokens);
     let token = token_stream.next_token().unwrap();
-    Block::parse_comment(source, token, &mut token_stream).unwrap();
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KCOMMENT,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    Block::parse_comment(token, &mut token_stream, &mut context).unwrap();
 }
 
 #[test]
@@ -50,5 +72,12 @@ fn block_parse_comment_invalid2() {
     // ignore the eof.
     let mut token_stream = TokenSlice::new(&tokens[0..=3]);
     let token = token_stream.next_token().unwrap();
-    Block::parse_comment(source, token, &mut token_stream).unwrap();
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(
+        context::Kind::KCOMMENT,
+        template::Kind::KHTML,
+        &options,
+        source,
+    );
+    Block::parse_comment(token, &mut token_stream, &mut context).unwrap();
 }

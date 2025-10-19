@@ -1,4 +1,5 @@
 #![cfg(test)]
+use crate::codegen::CompilerOptions;
 use crate::codegen::types::Block;
 use crate::codegen::types::Template;
 use crate::types::result;
@@ -7,13 +8,20 @@ use crate::types::template::Kind;
 #[test]
 #[should_panic]
 fn template_from_empty() {
-    Template::from("", None, Kind::KHTML).unwrap();
+    let options = CompilerOptions::default();
+    Template::from("", None, Kind::KHTML, &options).unwrap();
 }
 
 #[test]
 fn template_from_content() -> result::Result<()> {
     let content = "Hello, world!";
-    let template = Template::from(&content, Some(String::from("testns")), Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(
+        &content,
+        Some(String::from("testns")),
+        Kind::KHTML,
+        &options,
+    )?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     assert_eq!(block.location().line, 0);
@@ -31,7 +39,8 @@ fn template_from_content() -> result::Result<()> {
 fn template_from_code() -> result::Result<()> {
     let code = "let x = 10;";
     let content = &format!("@{{{}}}", code);
-    let template = Template::from(&content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     match block {
@@ -54,7 +63,8 @@ fn template_from_inline_code_in_content() -> result::Result<()> {
     let post_content = "!";
 
     let content = &format!("{}@{}{}", pre_content, code, post_content);
-    let template = Template::from(&content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     match block {
@@ -85,7 +95,8 @@ fn template_from_inlined_code_in_content_within_parentheses() -> result::Result<
     let post_content = "!";
 
     let content = &format!("{}@({}){}", pre_content, code, post_content);
-    let template = Template::from(&content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     match block {
@@ -116,7 +127,8 @@ fn template_from_code_block_in_content() -> result::Result<()> {
     let post_content = "!";
 
     let content = &format!("{}@{{{}}}{}", pre_content, code, post_content);
-    let template = Template::from(&content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     match block {
@@ -147,7 +159,8 @@ fn template_from_inlined_content_in_code_separated_by_lf() -> result::Result<()>
     let post_code = "println!(\"Hello, {}!\", name);";
 
     let raw_content = &format!("@{{{}@{}\n{}}}", pre_code, content, post_code);
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     match block {
@@ -187,7 +200,8 @@ fn template_from_inlined_content_in_code_separated_by_space() -> result::Result<
     let post_code = " println!(\"Hello, {}!\", name);";
 
     let raw_content = &format!("@{{{}@{}{}}}", pre_code, content, post_code);
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     match block {
@@ -225,7 +239,8 @@ fn template_from_content_block_in_code() -> result::Result<()> {
     let post_code = "println!(\"Hello, {}!\", name);";
 
     let raw_content = &format!("@{{{}@{{{}}}{}}}", pre_code, content, post_code);
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     match block {
@@ -263,9 +278,9 @@ fn template_from_inlined_content_in_code_within_by_parentheses() -> result::Resu
     let post_code = "println!(\"Hello, {}!\", name);";
 
     let raw_content = &format!("@{{{}@({}){}}}", pre_code, content, post_code);
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
-    assert!(matches!(block, Block::KROOT(_)));
     match block {
         Block::KROOT(span) => {
             assert_eq!(span.blocks().len(), 1);
@@ -312,7 +327,8 @@ fn template_from_doc() -> result::Result<()> {
         <div>@msg - from @name(@age)</div>
     </body>
 </html>"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();
@@ -380,7 +396,8 @@ fn template_from_doc_with_multiple_layouts() -> result::Result<()> {
    @layout test::test2;
 </html>
 @layout test::test3;"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();
@@ -422,7 +439,8 @@ fn template_from_doc_with_multiple_imports() -> result::Result<()> {
    @use test::test3;
 </html>
 @use test::test4;"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();
@@ -471,7 +489,8 @@ fn template_from_doc_with_simple_section() -> result::Result<()> {
 <html>
    <div>Test</div>
 </html>"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();
@@ -499,7 +518,8 @@ fn template_from_doc_content_composit_section() -> result::Result<()> {
    }
    after
 }"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();
@@ -536,7 +556,8 @@ fn template_from_doc_with_multiple_sections() -> result::Result<()> {
 @section test4 {
    this is test4
 }"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();
@@ -587,7 +608,8 @@ fn template_from_doc_with_nested_sections() {
    }
 }
 </html>"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML).unwrap();
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options).unwrap();
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
 }
@@ -601,7 +623,8 @@ fn template_from_doc_with_comment_in_content() -> result::Result<()> {
     @* This is a comment *@
 </html>
 "#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();
@@ -631,7 +654,8 @@ fn template_from_doc_with_comment_in_code() {
     let x = 10;
     @* This is a comment *@
 }"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML).unwrap();
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options).unwrap();
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
 }

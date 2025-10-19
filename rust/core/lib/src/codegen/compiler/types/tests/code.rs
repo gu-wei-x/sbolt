@@ -1,4 +1,5 @@
 #![cfg(test)]
+use crate::codegen::CompilerOptions;
 use crate::codegen::types;
 use crate::codegen::types::Block;
 use crate::codegen::types::Template;
@@ -13,7 +14,8 @@ fn to_code_token_on_non_code_block() {
         let test=1;
         let test2=2;
     "#;
-    let template = Template::from(&raw_content, None, Kind::KHTML).unwrap();
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options).unwrap();
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();
@@ -30,7 +32,8 @@ fn to_code_token_stream_with_no_from_block() {
         let test=1;
         let test2=2;
     }"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML);
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options);
     assert!(template.is_ok());
     let template = template.unwrap();
     let block = template.block();
@@ -52,7 +55,8 @@ fn to_code_token_stream_with_invalid_content() {
         abc);
         let test2=2;
     }"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML);
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options);
     assert!(template.is_ok());
     let template = template.unwrap();
     let block = template.block();
@@ -72,7 +76,8 @@ fn to_code_token_stream_simple() -> result::Result<()> {
         let test=1;
         let test2=2;
     }"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();
@@ -95,7 +100,8 @@ fn to_code_token_stream_with_block() -> result::Result<()> {
             @{<tr>}
         }
     }"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();
@@ -124,7 +130,8 @@ fn to_code_token_stream_with_complex_nested_block() -> result::Result<()> {
             @{</tr>}
         }
     }"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();
@@ -152,7 +159,8 @@ fn to_code_token_stream_with_complex_nested_block() -> result::Result<()> {
 #[should_panic]
 fn to_inline_code_token_stream_from_wrong_block() {
     let raw_content = r#"test"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML);
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options);
     assert!(template.is_ok());
     let template = template.unwrap();
     let block = template.block();
@@ -168,7 +176,8 @@ fn to_inline_code_token_stream_from_wrong_block() {
 #[test]
 fn to_inline_code_token_stream_from_content_block() -> result::Result<()> {
     let raw_content = r#"@{testcode;@{@name}}"#;
-    let template = Template::from(&raw_content, None, Kind::KHTML)?;
+    let options = CompilerOptions::default();
+    let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
     let root_span = block.span();

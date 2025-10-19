@@ -6,11 +6,11 @@ use crate::types::{error, result};
 use winnow::stream::Stream as _;
 
 impl<'a> Block<'a> {
-    pub(in crate::codegen::parser::types) fn parse_directive(
-        source: &'a str,
+    pub(in crate::codegen::parser::types) fn parse_directive<'s>(
+        source: &'s str,
         directive: &str,
         token_stream: &mut TokenStream,
-    ) -> result::Result<Block<'a>> {
+    ) -> result::Result<Block<'s>> {
         // token_stream starts with the directive.
         let start_token = match token_stream.peek_token() {
             Some(token) => match token.kind() {
