@@ -9,7 +9,7 @@ use crate::codegen::parser::Token;
 use crate::types::template;
 
 pub(in crate::codegen::parser) trait Optimizer {
-    fn accept(&mut self, token: &Token) -> bool;
+    fn accept<'s>(&mut self, source: &'s str, token: &Token) -> bool;
 }
 
 pub(in crate::codegen::parser) fn create_optimizer<'a>(

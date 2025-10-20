@@ -8,7 +8,7 @@ impl Default for DefaultOptimizer {
 }
 
 impl Optimizer for DefaultOptimizer {
-    fn accept(&mut self, token: &Token) -> bool {
+    fn accept<'s>(&mut self, _source: &'s str, token: &Token) -> bool {
         // EOF is special.
         if token.kind() == Kind::EOF {
             return false;

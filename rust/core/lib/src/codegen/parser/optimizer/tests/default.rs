@@ -12,8 +12,8 @@ fn accept_with_no_optimization() {
     let mut optimizer = create_optimizer(crate::types::template::Kind::KHTML, &options);
     for token in tokens {
         match token.kind() {
-            Kind::EOF => assert!(!optimizer.accept(&token)),
-            _ => assert!(optimizer.accept(&token)),
+            Kind::EOF => assert!(!optimizer.accept(source, &token)),
+            _ => assert!(optimizer.accept(source, &token)),
         }
     }
 }

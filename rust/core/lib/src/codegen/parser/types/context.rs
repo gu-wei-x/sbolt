@@ -93,7 +93,7 @@ impl<'a, 's> ParseContext<'a, 's> {
         let mut optimizer = optimizer::create_optimizer(self.template_kind, self.compiler_option);
         let mut span = Span::new(self.source);
         for token in &self.tokens {
-            if optimizer.accept(token) {
+            if optimizer.accept(self.source, token) {
                 span.push_token(*token);
             }
         }
