@@ -58,3 +58,17 @@ fn comp_home_view() -> result::RenderResult<()> {
 
     Ok(())
 }
+
+#[test]
+fn comp_jindex_view() -> result::RenderResult<()> {
+    let mut context = sbolt::context! {
+        name: "sbolt".to_string(),
+        age: 1,
+        msg: "Welcome!".to_string()
+    };
+    let result = lib_it_views::render("views/sub/jindex", &mut context)?;
+    let expected = "{\n  \"name\": \"sbolt\",\n  \"age\": 1,\n  \"msg\": \"Welcome!\"\n}";
+    assert_eq!(result.trim(), expected);
+
+    Ok(())
+}

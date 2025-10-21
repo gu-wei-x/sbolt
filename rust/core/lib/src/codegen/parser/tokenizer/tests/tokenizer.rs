@@ -37,7 +37,8 @@ tokenizer_test_case!(tokenizer_eof, vec![""], [token::Kind::EOF]);
 tokenizer_test_case!(
     tokenizer_symbols,
     vec![
-        "@", "=", "!", "-", "<", ">", "{", "}", "(", ")", "/", "*", ";", ",", "\r\n", "\n"
+        "@", "=", "!", "-", "<", ">", "{", "}", "(", ")", "/", "*", ";", ",", ":", "\"", "'",
+        "\r\n", "\n"
     ],
     vec![
         token::Kind::AT,
@@ -54,6 +55,9 @@ tokenizer_test_case!(
         token::Kind::ASTERISK,
         token::Kind::SEMICOLON,
         token::Kind::COMMA,
+        token::Kind::COLON,
+        token::Kind::DQMARK,
+        token::Kind::SQMAERK,
         token::Kind::NEWLINE,
         token::Kind::NEWLINE,
         token::Kind::EOF
