@@ -1,0 +1,16 @@
+@{
+    let name = match context.get_data::<String>("name") {
+        Some(str) => str,
+        None => "",
+    };
+    let age = sbolt::types::DisplayOptionRef(context.get_data::<i32>("age"));
+    let msg = sbolt::types::DisplayOptionRef(context.get_data::<String>("msg"));
+}
+<html>
+    <head>
+        <title>Welcome</title>
+    </head>
+    <body>
+        <div>@msg - from @name(@age)</div>
+    </body>
+</html>

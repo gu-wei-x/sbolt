@@ -79,3 +79,27 @@ fn parse_nested_nodes() {
     let expected = "<div ap1=\"ap1\">test<div ap2=\"ap2\">test2</div></div>";
     assert_eq!(content, expected);
 }
+
+#[test]
+fn parse_fragments_complicated() {
+    let source = r#"
+        <html>
+            <head>
+               <title>Welcome</title>
+            </head>
+        <body>"#;
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    let expected = "<html><head><title>Welcome</title></head><body>";
+    assert_eq!(content, expected);
+}
+
+// <div>@msg - from @name(@age)</div>
+
+#[test]
+fn parse_fragments_text() {
+    let source = " - from ";
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    assert_eq!(content, source);
+}

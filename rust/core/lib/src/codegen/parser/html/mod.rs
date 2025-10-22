@@ -12,5 +12,9 @@ mod tests;
 // "<div att1=" => n"<div att1="
 // "<div att=\"a\">test</div>" => "<div att=\"a\">test</div>"
 pub(in crate::codegen) fn parse_html<'s>(raw_html: &'s str) -> doc::HtmlDocument {
-    doc::HtmlDocument::parse(raw_html)
+    let dom = doc::HtmlDocument::parse(raw_html);
+    println!("*****************************");
+    println!("raw_html:{raw_html}");
+    println!("{dom:#?}");
+    dom
 }

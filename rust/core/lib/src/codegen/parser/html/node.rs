@@ -8,8 +8,8 @@ pub(in crate::codegen::parser::html) enum NodeKind {
     KELEMENT(String),
     // </div>, see statemachine why this is needed.
     KCELEMENT(String),
-    KTEXT(String),
-    KCOMMENT(String),
+    KTEXT,
+    KCOMMENT,
 }
 
 #[derive(Debug, Clone)]
@@ -19,6 +19,7 @@ pub(in crate::codegen::parser::html) struct Node {
     children: Vec<Node>,
     is_wellformed: bool,
     is_closed: bool,
+    text: String,
 }
 
 impl Default for Node {
@@ -29,6 +30,7 @@ impl Default for Node {
             children: vec![],
             is_wellformed: false,
             is_closed: false,
+            text: "".into(),
         }
     }
 }
@@ -61,17 +63,23 @@ impl Node {
             children: vec![],
             is_wellformed: false,
             is_closed: false,
+            text: "".into(),
         }
     }
 
-    pub(in crate::codegen::parser::html) fn new_text(name: &str) -> Self {
+    pub(in crate::codegen::parser::html) fn new_text() -> Self {
         Node {
-            kind: NodeKind::KTEXT(name.into()),
+            kind: NodeKind::KTEXT,
             attributes: map::IndexMap::new(),
             children: vec![],
             is_wellformed: true,
             is_closed: true,
+            text: "".into(),
         }
+    }
+
+    pub(in crate::codegen::parser::html) fn push_text(&mut self, text: &str) {
+        self.text.push_str(text);
     }
 
     pub(in crate::codegen::parser::html) fn new_close_element(name: &str) -> Self {
@@ -81,6 +89,7 @@ impl Node {
             children: vec![],
             is_wellformed: false,
             is_closed: false,
+            text: "".into(),
         }
     }
 
@@ -99,27 +108,48 @@ impl Node {
         self.children.push(node);
     }
 
-    pub(in crate::codegen::parser::html) fn to_string(&self) -> String {
+    pub(in crate::codegen::parser::html) fn to_string(&self, parent: Option<&Node>) -> String {
         let mut content = String::new();
         match &self.kind {
-            NodeKind::KTEXT(str) => content.push_str(&str),
-            NodeKind::KCOMMENT(_str) => {}
+            NodeKind::KTEXT => match parent {
+                Some(p) => match p.kind() {
+                    NodeKind::KELEMENT(tag_name) if tag_name.to_lowercase() == "pre" => {
+                        content.push_str(&self.text);
+                    }
+                    _ => {
+                        content.push_str(&self.text.trim());
+                    }
+                },
+                _ => content.push_str(&self.text),
+            },
+            NodeKind::KCOMMENT => { /* TODO */ }
             NodeKind::KELEMENT(tag_name) => {
                 content.push_str(&format!("<{}", tag_name));
                 for (attr_name, attr_value) in &self.attributes {
                     content.push_str(&format!(" {}=\"{}\"", attr_name, attr_value));
                 }
-                match self.children.is_empty() {
-                    true => {
-                        content.push_str("/>");
-                    }
-                    false => {
-                        content.push_str(">");
-                        for node in &self.children {
-                            let node_content = node.to_string();
-                            content.push_str(&node_content);
+
+                // children.
+                let mut c_content = String::new();
+                for node in &self.children {
+                    let node_content = node.to_string(Some(self));
+                    c_content.push_str(&node_content);
+                }
+
+                // whether wellformed: impossible to have child if not.
+                if self.is_wellformed() {
+                    // closed.
+                    match c_content.is_empty() {
+                        true if self.is_closed() => {
+                            content.push_str("/>");
                         }
-                        content.push_str(&format!("</{}>", tag_name));
+                        _ => {
+                            content.push_str(">");
+                            content.push_str(&c_content);
+                            if self.is_closed() {
+                                content.push_str(&format!("</{}>", tag_name));
+                            }
+                        }
                     }
                 }
             }

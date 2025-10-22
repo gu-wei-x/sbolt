@@ -36,7 +36,6 @@ pub(in crate::codegen::parser::html) struct StateMachine<'s> {
     source: &'s str,
     state: State,
     current_attr_name: String,
-    current_text: String,
 }
 
 impl<'s> StateMachine<'s> {
@@ -47,7 +46,6 @@ impl<'s> StateMachine<'s> {
             source: source,
             state: State::INIT,
             current_attr_name: "".into(),
-            current_text: "".into(),
         }
     }
 
@@ -55,11 +53,7 @@ impl<'s> StateMachine<'s> {
         let tokenizer = Tokenizer::new(self.source);
         let tokens = tokenizer.into_vec();
         let mut token_stream = TokenSlice::new(&tokens);
-        while let Some(token) = token_stream.peek_token() {
-            if token.kind() == tokenizer::Kind::EOF {
-                self.transit_to(State::DONE);
-                return &self.dom;
-            }
+        while let Some(_) = token_stream.peek_token() {
             match self.state {
                 State::INIT => self.process_with_init(&mut token_stream),
                 State::TAGOPEN => self.process_with_tag_open(&mut token_stream),
@@ -90,6 +84,9 @@ impl<'s> StateMachine<'s> {
                 token_stream.next_token();
                 self.transit_to(State::TAGOPEN);
             }
+            tokenizer::Kind::EOF => {
+                self.transit_to(State::DONE);
+            }
             _ => {
                 self.transit_to(State::TEXT);
             }
@@ -113,6 +110,9 @@ impl<'s> StateMachine<'s> {
                 tokenizer::Kind::SLASH => {
                     token_stream.next_token();
                     self.transit_to(State::TAGCLOSE);
+                }
+                tokenizer::Kind::EOF => {
+                    self.transit_to(State::DONE);
                 }
                 _ => {
                     token_stream.next_token();
@@ -140,6 +140,9 @@ impl<'s> StateMachine<'s> {
                     token_stream.next_token();
                     self.transit_to(State::INIT);
                 }
+                tokenizer::Kind::EOF => {
+                    self.transit_to(State::DONE);
+                }
                 _ => {
                     token_stream.next_token();
                     self.transit_to(State::TAGNAME);
@@ -160,6 +163,9 @@ impl<'s> StateMachine<'s> {
                 tokenizer::Kind::GREATTHAN => {
                     token_stream.next_token();
                     self.transit_to(State::INIT);
+                }
+                tokenizer::Kind::EOF => {
+                    self.transit_to(State::DONE);
                 }
                 _ => {
                     token_stream.next_token();
@@ -186,6 +192,9 @@ impl<'s> StateMachine<'s> {
                 tokenizer::Kind::GREATTHAN => {
                     token_stream.next_token();
                     self.transit_to(State::INIT);
+                }
+                tokenizer::Kind::EOF => {
+                    self.transit_to(State::DONE);
                 }
                 _ => {
                     token_stream.next_token();
@@ -229,6 +238,9 @@ impl<'s> StateMachine<'s> {
                     token_stream.next_token();
                     self.transit_to(State::INIT);
                 }
+                tokenizer::Kind::EOF => {
+                    self.transit_to(State::DONE);
+                }
                 _ => {
                     token_stream.next_token();
                     self.transit_to(State::ATTRNAME);
@@ -247,12 +259,14 @@ impl<'s> StateMachine<'s> {
                     token_stream.next_token();
                     self.transit_to(State::TAGOPEN);
                 }
+                tokenizer::Kind::EOF => {
+                    self.transit_to(State::DONE);
+                }
                 _ => {
                     // save text.
                     token_stream.next_token();
                     let part = &self.source[token.range()];
-                    self.current_text.push_str(part);
-                    self.state = State::TEXT;
+                    self.nodes.last_mut().unwrap().push_text(&part);
                 }
             }
         } else {
@@ -276,6 +290,9 @@ impl<'s> StateMachine<'s> {
                     token_stream.next_token();
                     self.transit_to(State::INIT);
                 }
+                tokenizer::Kind::EOF => {
+                    self.transit_to(State::DONE);
+                }
                 _ => {
                     token_stream.next_token();
                     self.transit_to(State::TAGCLOSE);
@@ -290,6 +307,7 @@ impl<'s> StateMachine<'s> {
         match state {
             State::DONE => {
                 // pop all nodes and added to dom.
+                self.nodes.reverse();
                 while let Some(node) = self.nodes.pop() {
                     self.dom.push_node(node);
                 }
@@ -340,8 +358,7 @@ impl<'s> StateMachine<'s> {
                                 self.dom.push_node(close_node);
                             }
                         }
-                        NodeKind::KTEXT(_) => {
-                            // do nth.
+                        NodeKind::KTEXT => {
                             let current_node = self.nodes.pop().unwrap();
                             if let Some(parent_node) = self.nodes.last_mut() {
                                 parent_node.push_node(current_node);
@@ -349,7 +366,7 @@ impl<'s> StateMachine<'s> {
                                 self.dom.push_node(current_node);
                             }
                         }
-                        NodeKind::KCOMMENT(_) => {
+                        NodeKind::KCOMMENT => {
                             node.set_wellformed();
                             let current_node = self.nodes.pop().unwrap();
                             if let Some(parent_node) = self.nodes.last_mut() {
@@ -362,39 +379,26 @@ impl<'s> StateMachine<'s> {
                 }
             }
             State::TAGOPEN => {
-                if !self.current_text.is_empty() {
-                    if let Some(node) = self.nodes.last_mut() {
-                        match node.kind() {
-                            NodeKind::KELEMENT(tage_name) => {
-                                // todo: create text node
-                                let text_content = if &tage_name.to_lowercase() == "pre" {
-                                    &self.current_text
-                                } else {
-                                    self.current_text.trim()
-                                };
-                                if !text_content.is_empty() {
-                                    let text_node = Node::new_text(text_content);
-                                    node.push_node(text_node);
-                                }
-                            }
-                            _ => {
-                                let text_content = self.current_text.trim();
-                                if !text_content.is_empty() {
-                                    let text_node = Node::new_text(text_content);
-                                    self.dom.push_node(text_node);
-                                }
+                if let Some(node) = self.nodes.last_mut() {
+                    match node.kind() {
+                        NodeKind::KTEXT => {
+                            // don't need to close add it to dom.
+                            let current_node = self.nodes.pop().unwrap();
+                            if let Some(parent_node) = self.nodes.last_mut() {
+                                parent_node.push_node(current_node);
+                            } else {
+                                self.dom.push_node(current_node);
                             }
                         }
-                    } else {
-                        let text_content = self.current_text.trim();
-                        if !text_content.is_empty() {
-                            let text_node = Node::new_text(text_content);
-                            self.dom.push_node(text_node);
+                        _ => {
+                            // do nth.
                         }
                     }
-
-                    self.current_text = "".into();
                 }
+            }
+            State::TEXT => {
+                let node = Node::new_text();
+                self.nodes.push(node);
             }
             _ => {}
         }
