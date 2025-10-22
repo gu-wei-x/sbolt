@@ -33,13 +33,14 @@ impl Default for CompilerOptions {
                 consts::DEFAULT_TEXT_TEMPLATE_FILE_EXTENSION,
                 template::Kind::KTEXT,
             );
-
-        if cfg!(not(debug_assertions)) {
+        options
+        // todo: uncomment to turn on in release build.
+        /*if cfg!(not(debug_assertions)) {
             let options = options.with_optimization(true);
             return options;
         } else {
             options
-        }
+        }*/
     }
 }
 
