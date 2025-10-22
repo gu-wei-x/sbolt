@@ -89,7 +89,10 @@ impl Node {
         attr_name: &str,
         attr_value: &str,
     ) {
-        self.attributes.insert(attr_name.into(), attr_value.into());
+        let attr_value = attr_value.trim();
+        if !attr_value.is_empty() {
+            self.attributes.insert(attr_name.into(), attr_value.into());
+        }
     }
 
     pub(in crate::codegen::parser::html) fn push_node(&mut self, node: Node) {

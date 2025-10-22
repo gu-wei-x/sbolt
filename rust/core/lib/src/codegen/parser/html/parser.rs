@@ -27,12 +27,6 @@ impl Default for State {
     }
 }
 
-// The impl is not to parse a welfomed doc but fragments as the whole doc is devided by diffrent type of blocks
-// the goal is to do as much as possible to optimize blocks to remove unneeded chars from static cotnent to reduce bits size and ops on str operations.
-// "<div att1="a">test " => node[node]
-// "<div att1=" => node(not welformed)
-// "<div att="a">test</div>" => node(welformed)
-
 #[derive(Debug)]
 pub(in crate::codegen::parser::html) struct StateMachine<'s> {
     // current dom.
