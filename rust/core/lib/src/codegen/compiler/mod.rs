@@ -1,4 +1,5 @@
 mod compiler;
+mod context;
 mod error;
 mod fsutil;
 mod module;

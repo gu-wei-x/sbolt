@@ -1,5 +1,6 @@
 #![cfg(test)]
 use crate::codegen::CompilerOptions;
+use crate::codegen::compiler::context::CodeGenContext;
 use crate::codegen::types::Block;
 use crate::codegen::types::Template;
 use crate::types::result;
@@ -16,8 +17,9 @@ fn to_section_token_stream_from_wrong_block() {
     let template = template.unwrap();
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
+    let context = CodeGenContext::new(Kind::KHTML, &options);
     block
-        .to_section_token_stream()
+        .to_section_token_stream(&context)
         .expect("Expect section block here");
 }
 
@@ -32,7 +34,8 @@ fn to_section_token_stream_simple() -> result::Result<()> {
     assert_eq!(root_span.blocks().len(), 1);
 
     let block = &root_span.blocks()[0];
-    let ts = block.to_section_token_stream()?;
+    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = block.to_section_token_stream(&context)?;
     let expected = quote! {
         let section_name = "test";
         let inner_writer = {
@@ -60,7 +63,8 @@ fn to_section_token_stream_composite() -> result::Result<()> {
     assert_eq!(root_span.blocks().len(), 1);
 
     let block = &root_span.blocks()[0];
-    let ts = block.to_section_token_stream()?;
+    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = block.to_section_token_stream(&context)?;
     let expected = quote! {
         let section_name = "test";
         let section_writer = {

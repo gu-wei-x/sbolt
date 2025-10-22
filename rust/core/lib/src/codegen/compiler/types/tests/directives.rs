@@ -1,5 +1,6 @@
 #![cfg(test)]
 use crate::codegen::CompilerOptions;
+use crate::codegen::compiler::context::CodeGenContext;
 use crate::codegen::types::Block;
 use crate::codegen::types::Template;
 use crate::types::result;
@@ -19,7 +20,8 @@ fn to_layout_token_stream_from_layout_block() {
     assert_eq!(root_span.blocks().len(), 1);
     let layout_block = &root_span.blocks()[0];
     assert!(matches!(layout_block, Block::KLAYOUT(_)));
-    layout_block.to_token_stream(Some(block)).unwrap();
+    let context = CodeGenContext::new(Kind::KHTML, &options);
+    layout_block.to_token_stream(Some(block), &context).unwrap();
 }
 
 #[test]
@@ -132,7 +134,8 @@ fn to_token_stream() -> result::Result<()> {
     assert_eq!(root_span.blocks().len(), 1);
     let use_block = &root_span.blocks()[0];
     assert!(matches!(use_block, Block::KUSE(_)));
-    let ts = &use_block.to_token_stream(Some(block))?[0];
+    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = &use_block.to_token_stream(Some(block), &context)?[0];
     let expected = quote! {
        use test::test1;
     };
