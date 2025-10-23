@@ -18,6 +18,9 @@ pub(in crate::codegen::parser::html) enum State {
     ATTRVAL,
     TEXT,
     TAGCLOSE,
+    // for doctype and comment.
+    INSTSTART,
+    INST,
     DONE,
 }
 
@@ -63,6 +66,8 @@ impl<'s> StateMachine<'s> {
                 State::ATTRVAL => self.process_with_attr_value(&mut token_stream),
                 State::TEXT => self.process_with_text(&mut token_stream),
                 State::TAGCLOSE => self.process_with_tag_close(&mut token_stream),
+                State::INSTSTART => self.process_with_instruction_start(&mut token_stream),
+                State::INST => self.process_with_instruction(&mut token_stream),
                 State::DONE => {
                     self.transit_to(State::DONE);
                     break;
@@ -100,12 +105,9 @@ impl<'s> StateMachine<'s> {
                     self.transit_to(State::TAGNAME);
                 }
                 tokenizer::Kind::EXCLAMATION => {
-                    // here not sure whether it's comment or doctype.
-                    // need to read ahead.
-                    // consume the '!'
-                    // todo: comment
+                    // doctype or comment
                     token_stream.next_token();
-                    self.transit_to(State::TAGNAME);
+                    self.transit_to(State::INSTSTART);
                 }
                 tokenizer::Kind::SLASH => {
                     token_stream.next_token();
@@ -129,6 +131,7 @@ impl<'s> StateMachine<'s> {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 tokenizer::Kind::EXPRESSION => {
+                    // todo: need to handle doctype
                     // save tag name if not quoated.
                     let tag_name = &self.source[token.range()];
                     let node = Node::new_element(tag_name);
@@ -136,6 +139,9 @@ impl<'s> StateMachine<'s> {
                     token_stream.next_token();
                     self.transit_to(State::ATTRS);
                 }
+                /*tokenizer::Kind::HYPHEN => {
+                    //
+                }*/
                 tokenizer::Kind::GREATTHAN => {
                     token_stream.next_token();
                     self.transit_to(State::INIT);
@@ -296,6 +302,63 @@ impl<'s> StateMachine<'s> {
                 _ => {
                     token_stream.next_token();
                     self.transit_to(State::TAGCLOSE);
+                }
+            }
+        } else {
+            self.transit_to(State::DONE);
+        }
+    }
+
+    fn process_with_instruction_start(&mut self, token_stream: &mut TokenStream) {
+        if let Some(token) = token_stream.peek_token() {
+            match token.kind() {
+                tokenizer::Kind::EXPRESSION => {
+                    // doctype
+                    token_stream.next_token();
+                    let tag_name = &self.source[token.range()];
+                    let node = Node::new_element(tag_name);
+                    self.nodes.push(node);
+                    self.transit_to(State::INST);
+                }
+                tokenizer::Kind::HYPHEN => {
+                    // comment.
+                    let node = Node::new_comment();
+                    self.nodes.push(node);
+                    self.transit_to(State::INST);
+                }
+                tokenizer::Kind::GREATTHAN => {
+                    // closed
+                    token_stream.next_token();
+                    self.transit_to(State::INIT);
+                }
+                tokenizer::Kind::EOF => {
+                    self.transit_to(State::DONE);
+                }
+                _ => {
+                    // error here: but this is not strict.
+                    token_stream.next_token();
+                }
+            }
+        } else {
+            self.transit_to(State::DONE);
+        }
+    }
+
+    fn process_with_instruction(&mut self, token_stream: &mut TokenStream) {
+        if let Some(token) = token_stream.peek_token() {
+            match token.kind() {
+                tokenizer::Kind::GREATTHAN => {
+                    // closed
+                    token_stream.next_token();
+                    self.transit_to(State::INIT);
+                }
+                tokenizer::Kind::EOF => {
+                    self.transit_to(State::DONE);
+                }
+                _ => {
+                    token_stream.next_token();
+                    let text = &self.source[token.range()];
+                    self.nodes.last_mut().unwrap().push_text(text);
                 }
             }
         } else {

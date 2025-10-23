@@ -21,65 +21,135 @@ impl Default for HtmlDocument {
 }
 
 impl HtmlDocument {
+    // Try to generate an optimized html string with limited context.
+    // Here dom is not a full/wellformed dom, not even from root but a fragment with unknow context to do a perfect optimization.
     pub(in crate::codegen) fn to_string(&self) -> String {
-        let mut html = String::new();
-        // here: context is unknow but only fragments.
-        // need to handle
-        // text(this we know it's not in pre, could trim end) - node - text(this one we know it's not in pre, could trim start.)
-        if self.nodes.len() <= 1 {
-            for node in &self.nodes {
-                // no context.
-                html.push_str(&node.to_string(None));
-            }
-            return html;
+        let count = self.nodes.len();
+        if count == 0 {
+            return "".into();
+        } else if count == 1 {
+            // no context with only one node.
+            return self.nodes[0].to_string(None);
         }
 
+        // at least 2 node.
+        // need to check the node context when generating the html string from node.
+        // (unknown)TEXTNODE - NODE - TEXTNODE(unknown) => left - NODE - right
+        // NODE:= ELMENT|ECLEMENT|COMENT
+        // ELEMENT:
+        //    left: could trim end as end context is NODE which spaces/lf have no meaning
+        //    right: could trim start if ELEMENT is not <pre>
+        //
+        // ECLEMENT:
+        //    left: could trim end if ECLEMENT is not </pre>
+        //    right: could trim left as start context is node.
+        //
+        // COMMENT: todo later
+        //    left: trim end
+        //    right: trim start.
+        // zip the nodes pairs.
         let result = self
             .nodes
             .iter()
             .zip(self.nodes.iter().skip(1))
-            .inspect(|(a, b)| {
-                println!("**************");
-                println!("a: {:?}\n b: {:?}", a, b);
-            })
             .collect::<Vec<_>>();
         let last_index = result.len() - 1;
-        for (index, (p, n)) in result.iter().enumerate() {
+        let mut html = String::new();
+        for (index, (c, n)) in result.iter().enumerate() {
             if index == last_index {
-                match (p.kind(), n.kind()) {
-                    (NodeKind::KELEMENT(_) | NodeKind::KCELEMENT(_), NodeKind::KTEXT) => {
-                        html.push_str(&p.to_string(None));
+                match (c.kind(), n.kind()) {
+                    (NodeKind::KELEMENT(_), NodeKind::KTEXT) => {
+                        html.push_str(&c.to_string(None));
+                        let content = n.to_string(None);
+                        let content = if c.is_pre() {
+                            &content
+                        } else {
+                            content.trim_start()
+                        };
+
+                        if !content.is_empty() {
+                            html.push_str(content);
+                        }
+                    }
+                    (NodeKind::KCELEMENT(_), NodeKind::KTEXT) => {
+                        html.push_str(&c.to_string(None));
                         let content = n.to_string(None);
                         let content = content.trim_start();
                         if !content.is_empty() {
                             html.push_str(content);
                         }
                     }
-                    (NodeKind::KTEXT, NodeKind::KELEMENT(_) | NodeKind::KCELEMENT(_)) => {
-                        let content = p.to_string(None);
+                    (NodeKind::KTEXT, NodeKind::KELEMENT(_)) => {
+                        let content = n.to_string(None);
                         let content = content.trim_end();
                         if !content.is_empty() {
                             html.push_str(content);
                         }
                         html.push_str(&n.to_string(None));
                     }
+                    (NodeKind::KTEXT, NodeKind::KCELEMENT(_)) => {
+                        let content = c.to_string(None);
+                        let content = if c.is_pre() {
+                            &content
+                        } else {
+                            content.trim_end()
+                        };
+                        if !content.is_empty() {
+                            html.push_str(content);
+                        }
+                        html.push_str(&n.to_string(None));
+                    }
+                    (NodeKind::KTEXT, _) => {
+                        let content = c.to_string(None);
+                        let content = content.trim_end();
+                        if !content.is_empty() {
+                            html.push_str(content);
+                        }
+                        html.push_str(&n.to_string(None));
+                    }
+                    (_, NodeKind::KTEXT) => {
+                        html.push_str(&c.to_string(None));
+                        let content = n.to_string(None);
+                        let content = content.trim_start();
+                        if !content.is_empty() {
+                            html.push_str(content);
+                        }
+                    }
                     (_, _) => {
-                        html.push_str(&p.to_string(None));
+                        html.push_str(&c.to_string(None));
                         html.push_str(&n.to_string(None));
                     }
                 }
             } else {
-                match (p.kind(), n.kind()) {
-                    (NodeKind::KTEXT, NodeKind::KELEMENT(_) | NodeKind::KCELEMENT(_)) => {
-                        let content = p.to_string(None);
+                match (c.kind(), n.kind()) {
+                    (NodeKind::KTEXT, NodeKind::KELEMENT(_)) => {
+                        let content = c.to_string(None);
+                        let content = content.trim_end();
+                        if !content.is_empty() {
+                            html.push_str(content);
+                        }
+                    }
+
+                    (NodeKind::KTEXT, NodeKind::KCELEMENT(_)) => {
+                        let content = c.to_string(None);
+                        let content = if c.is_pre() {
+                            &content
+                        } else {
+                            content.trim_end()
+                        };
+                        if !content.is_empty() {
+                            html.push_str(content);
+                        }
+                    }
+                    (NodeKind::KTEXT, _) => {
+                        let content = c.to_string(None);
                         let content = content.trim_end();
                         if !content.is_empty() {
                             html.push_str(content);
                         }
                     }
                     (_, _) => {
-                        // do nth for n, next iteration.
-                        html.push_str(&p.to_string(None));
+                        html.push_str(&c.to_string(None));
                     }
                 }
             }

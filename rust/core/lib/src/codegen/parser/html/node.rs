@@ -48,6 +48,26 @@ impl Node {
         self.is_wellformed
     }
 
+    pub(in crate::codegen::parser::html) fn is_pre(&self) -> bool {
+        let pre_tag_name = "pre";
+        match self.kind() {
+            NodeKind::KELEMENT(tag_name) | NodeKind::KCELEMENT(tag_name)
+                if tag_name.to_lowercase() == pre_tag_name =>
+            {
+                true
+            }
+            _ => false,
+        }
+    }
+
+    pub(in crate::codegen::parser::html) fn is_doctype(&self) -> bool {
+        let doctype_tag_name = "doctype";
+        match self.kind() {
+            NodeKind::KELEMENT(tag_name) if tag_name.to_lowercase() == doctype_tag_name => true,
+            _ => false,
+        }
+    }
+
     pub(in crate::codegen::parser::html) fn close(&mut self) {
         self.is_closed = true;
     }
@@ -74,6 +94,17 @@ impl Node {
             children: vec![],
             is_wellformed: true,
             is_closed: true,
+            text: "".into(),
+        }
+    }
+
+    pub(in crate::codegen::parser::html) fn new_comment() -> Self {
+        Node {
+            kind: NodeKind::KCOMMENT,
+            attributes: map::IndexMap::new(),
+            children: vec![],
+            is_wellformed: false,
+            is_closed: false,
             text: "".into(),
         }
     }
@@ -122,11 +153,22 @@ impl Node {
                 },
                 _ => content.push_str(&self.text),
             },
-            NodeKind::KCOMMENT => { /* TODO */ }
+            NodeKind::KCOMMENT => {
+                // no string for comment.
+                // content.push_str(&format!("<!{}>", self.text));
+            }
             NodeKind::KELEMENT(tag_name) => {
-                content.push_str(&format!("<{}", tag_name));
+                if self.is_doctype() {
+                    content.push_str(&format!("<!{}", tag_name));
+                } else {
+                    content.push_str(&format!("<{}", tag_name));
+                }
                 for (attr_name, attr_value) in &self.attributes {
                     content.push_str(&format!(" {}=\"{}\"", attr_name, attr_value));
+                }
+
+                if self.is_doctype() {
+                    content.push_str(&self.text);
                 }
 
                 // children.

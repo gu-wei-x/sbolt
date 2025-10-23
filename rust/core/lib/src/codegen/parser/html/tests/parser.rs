@@ -103,3 +103,40 @@ fn parse_fragments_text() {
     let content = dom.to_string();
     assert_eq!(content, source);
 }
+
+#[test]
+fn parse_doc_type_html5_node() {
+    // html5: <!DOCTYPE html>
+    let source = "<!doctype html>";
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    assert_eq!(content, source);
+}
+
+#[test]
+fn parse_doc_type_html4_node() {
+    // html 4.01: <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+    let source = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">";
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    assert_eq!(content, source);
+}
+
+#[test]
+fn parse_doc_type_xhtml_node() {
+    // XHTML 1.1: <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+    let source = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">";
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    assert_eq!(content, source);
+}
+
+#[test]
+fn parse_comment_type_node() {
+    let source = r#"
+       <!-- test -->
+    "#;
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    assert_eq!(content, "");
+}
