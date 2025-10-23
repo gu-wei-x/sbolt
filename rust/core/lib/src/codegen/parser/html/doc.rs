@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use crate::codegen::parser::html::{
     node::{Node, NodeKind},
     parser,
@@ -80,7 +79,7 @@ impl HtmlDocument {
                         }
                     }
                     (NodeKind::KTEXT, NodeKind::KELEMENT(_)) => {
-                        let content = n.to_string(None);
+                        let content = c.to_string(None);
                         let content = content.trim_end();
                         if !content.is_empty() {
                             html.push_str(content);

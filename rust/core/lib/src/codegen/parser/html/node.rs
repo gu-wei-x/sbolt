@@ -1,7 +1,4 @@
-#![allow(dead_code)]
-use crate::codegen::parser::tokenizer::{self, TokenStream, skip_whitespace_and_newline};
 use indexmap::map;
-use winnow::stream::Stream as _;
 
 #[derive(Clone, Debug)]
 pub(in crate::codegen::parser::html) enum NodeKind {
@@ -200,48 +197,5 @@ impl Node {
             }
         }
         content
-    }
-
-    pub(in crate::codegen::parser::html) fn from<'s>(
-        source: &'s str,
-        token_stream: &mut TokenStream,
-    ) -> Option<Self> {
-        let mut node = Node::default();
-        token_stream.next_token();
-
-        // starts with <
-        token_stream.next_token();
-        skip_whitespace_and_newline(token_stream);
-        while let Some(token) = token_stream.peek_token() {
-            match token.kind() {
-                tokenizer::Kind::EXPRESSION => {
-                    let tag_name = &source[token.range()];
-                    node = Node::new_element(tag_name);
-                    token_stream.next_token();
-
-                    // todo: attributes, text node.
-                }
-                tokenizer::Kind::SLASH => {
-                    // close tag
-                    token_stream.next_token();
-                }
-                tokenizer::Kind::GREATTHAN => {
-                    // close tag
-                    token_stream.next_token();
-                }
-                tokenizer::Kind::LESSTHAN => {
-                    // start new.
-                    let child_node = Node::from(source, token_stream);
-                    if child_node.is_some() {
-                        node.push_node(child_node.unwrap());
-                    }
-                }
-                _ => {
-                    token_stream.next_token();
-                }
-            }
-        }
-
-        Some(node)
     }
 }

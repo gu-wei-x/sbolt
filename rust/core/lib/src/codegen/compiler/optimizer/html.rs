@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use crate::codegen::{CompilerOptions, compiler::optimizer::Optimizer};
 
 pub(in crate::codegen::compiler::optimizer) struct HtmlOptimizer<'a> {

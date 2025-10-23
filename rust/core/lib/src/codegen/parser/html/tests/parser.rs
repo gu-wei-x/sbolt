@@ -140,3 +140,11 @@ fn parse_comment_type_node() {
     let content = dom.to_string();
     assert_eq!(content, "");
 }
+
+#[test]
+fn parse_html_open_tag() {
+    let source = "  <title>";
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    assert_eq!(content, "<title>");
+}
