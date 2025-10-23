@@ -1,5 +1,6 @@
 use crate::codegen::CompileResult;
 use crate::codegen::CompilerOptions;
+use crate::codegen::compiler::context::CodeGenContext;
 use crate::codegen::compiler::fsutil;
 use crate::codegen::compiler::name;
 use crate::codegen::consts;
@@ -47,7 +48,7 @@ impl<'a> Template<'a> {
         // a view must have render method.
         let render_content = self
             .block()
-            .generate_render_token_stream(compiler_options)?;
+            .generate_render_token_stream(&CodeGenContext::new(self.kind(), compiler_options))?;
         let code = quote! {
             use #template_type_ts;
             use sbolt::types::Template as _;

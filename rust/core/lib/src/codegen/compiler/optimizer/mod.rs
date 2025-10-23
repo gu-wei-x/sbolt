@@ -5,14 +5,13 @@ mod html;
 mod tests;
 
 use crate::codegen::CompilerOptions;
-use crate::codegen::parser::Token;
 use crate::types::template;
 
-pub(in crate::codegen::parser) trait Optimizer {
-    fn accept(&mut self, token: &Token) -> bool;
+pub(in crate::codegen::compiler) trait Optimizer {
+    fn optimize<'s>(&self, source: &'s str) -> String;
 }
 
-pub(in crate::codegen::parser) fn create_optimizer<'a>(
+pub(in crate::codegen::compiler) fn create_optimizer<'a>(
     template_kind: template::Kind,
     options: &'a CompilerOptions,
 ) -> Box<dyn Optimizer + 'a> {

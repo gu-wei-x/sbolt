@@ -1,3 +1,4 @@
+use crate::codegen::compiler::context::CodeGenContext;
 use crate::codegen::types::Block;
 use crate::types::{error, result};
 use proc_macro2::TokenStream;
@@ -7,6 +8,7 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_code_token_stream(
         &self,
         from: Option<&Block<'a>>,
+        context: &CodeGenContext,
     ) -> result::Result<TokenStream> {
         // validate parent block.
         from.ok_or(error::CompileError::from_codegen(
@@ -31,7 +33,7 @@ impl<'a> Block<'a> {
                     let raw_content = block.content();
                     code_content.push_str(&raw_content);
                 } else {
-                    for ts in block.to_token_stream(from)? {
+                    for ts in block.to_token_stream(from, context)? {
                         code_content.push_str(&ts.to_string());
                     }
                 }

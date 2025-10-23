@@ -1,8 +1,10 @@
 mod compiler;
+mod context;
 mod error;
 mod fsutil;
 mod module;
 mod name;
+mod optimizer;
 mod options;
 mod registry;
 mod result;

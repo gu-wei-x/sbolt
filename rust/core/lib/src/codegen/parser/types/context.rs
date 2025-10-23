@@ -1,4 +1,3 @@
-use crate::codegen::parser::optimizer;
 use crate::codegen::parser::tokenizer::{TokenStream, get_nth_token};
 use crate::codegen::parser::{Token, tokenizer};
 use crate::codegen::types::Block;
@@ -90,12 +89,12 @@ impl<'a, 's> ParseContext<'a, 's> {
     }
 
     pub(in crate::codegen) fn consume(&mut self) -> result::Result<Option<Block<'s>>> {
-        let mut optimizer = optimizer::create_optimizer(self.template_kind, self.compiler_option);
+        if self.tokens.is_empty() || self.tokens[0].kind() == tokenizer::Kind::EOF {
+            return Ok(None);
+        }
         let mut span = Span::new(self.source);
         for token in &self.tokens {
-            if optimizer.accept(token) {
-                span.push_token(*token);
-            }
+            span.push_token(*token);
         }
 
         self.tokens.clear();

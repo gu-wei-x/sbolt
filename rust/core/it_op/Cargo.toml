@@ -1,0 +1,11 @@
+[package]
+name = "lib_it_op"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+sbolt = { path = "../lib" }
+
+[build-dependencies]
+sbolt = { path = "../lib", features = ["pretty"] }

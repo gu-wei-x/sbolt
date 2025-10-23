@@ -20,6 +20,7 @@ winnow = "0.7"
 
 #optional
 prettyplease = { version = "0.2", optional = true }
+indexmap = "2"
 
 [features]
 pretty = [ "prettyplease"]

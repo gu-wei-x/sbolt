@@ -1,3 +1,4 @@
+use crate::codegen::compiler::context::CodeGenContext;
 use crate::codegen::types::Block;
 use crate::types::{error, result};
 use proc_macro2::TokenStream;
@@ -6,6 +7,7 @@ use quote::quote;
 impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_section_token_stream(
         &self,
+        context: &CodeGenContext,
     ) -> result::Result<TokenStream> {
         let (name, span) = match self {
             Block::KSECTION(name, span) => (name, span),
@@ -21,6 +23,8 @@ impl<'a> Block<'a> {
             true => {
                 // simple is content section.
                 let raw_content = span.content();
+                let optimizer = context.create_optimizer(self);
+                let raw_content = optimizer.optimize(&raw_content);
                 quote! {
                     let section_name = #name;
                     let inner_writer = {
@@ -34,7 +38,7 @@ impl<'a> Block<'a> {
             false => {
                 let mut tsv = vec![];
                 for block in span.blocks() {
-                    for rs in block.to_token_stream(Some(self))? {
+                    for rs in block.to_token_stream(Some(self), context)? {
                         tsv.push(rs);
                     }
                 }

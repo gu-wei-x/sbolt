@@ -1,4 +1,4 @@
-use crate::codegen::CompilerOptions;
+use crate::codegen::compiler::context::CodeGenContext;
 use crate::codegen::types::Block;
 use crate::types::error;
 use crate::types::result;
@@ -10,11 +10,12 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_token_stream(
         &self,
         from: Option<&Block<'a>>,
+        context: &CodeGenContext,
     ) -> result::Result<Vec<TokenStream>> {
         let mut result = vec![];
         match self {
             Block::KCODE(_) => {
-                let ts = self.to_code_token_stream(from)?;
+                let ts = self.to_code_token_stream(from, context)?;
                 result.push(ts);
             }
             Block::KCOMMENT(_) => {
@@ -22,7 +23,7 @@ impl<'a> Block<'a> {
                 // ignore the comment block
             }
             Block::KCONTENT(_) => {
-                let ts = self.to_content_token_stream()?;
+                let ts = self.to_content_token_stream(context)?;
                 result.push(ts);
             }
             Block::KFUNCTIONS(_) => todo!(),
@@ -31,7 +32,7 @@ impl<'a> Block<'a> {
                 result.push(ts);
             }
             Block::KINLINEDCONTENT(_) => {
-                let ts = self.to_inline_content_token_stream()?;
+                let ts = self.to_inline_content_token_stream(context)?;
                 result.push(ts);
             }
             Block::KROOT(span) => {
@@ -45,7 +46,7 @@ impl<'a> Block<'a> {
                 } else {
                     for block in span.blocks() {
                         if !matches!(block, Block::KLAYOUT(_) | Block::KUSE(_)) {
-                            for rs in block.to_token_stream(from)? {
+                            for rs in block.to_token_stream(from, context)? {
                                 result.push(rs);
                             }
                         }
@@ -57,7 +58,7 @@ impl<'a> Block<'a> {
                 result.push(ts);
             }
             Block::KSECTION(_, _) => {
-                let ts = self.to_section_token_stream()?;
+                let ts = self.to_section_token_stream(context)?;
                 result.push(ts);
             }
             Block::KUSE(_) => {
@@ -77,7 +78,7 @@ impl<'a> Block<'a> {
 
     pub(in crate::codegen::compiler::types) fn generate_render_token_stream(
         &self,
-        compiler_options: &CompilerOptions,
+        context: &CodeGenContext,
     ) -> result::Result<TokenStream> {
         if !matches!(self, Block::KROOT(_)) {
             return Err(error::CompileError::from_codegen(
@@ -86,7 +87,7 @@ impl<'a> Block<'a> {
             ));
         }
 
-        let ts = self.to_token_stream(Some(self))?;
+        let ts = self.to_token_stream(Some(self), context)?;
         let root_span = self.span();
         let has_layout = root_span
             .blocks()
@@ -94,7 +95,7 @@ impl<'a> Block<'a> {
             .any(|b| matches!(b, Block::KLAYOUT(_)));
         match has_layout {
             true => {
-                let view_root_mod_name = format_ident!("{}", compiler_options.mod_name());
+                let view_root_mod_name = format_ident!("{}", context.options().mod_name());
                 let code = quote! {
                     fn render(&self, context:&mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
                         let mut writer = self.create_writer(None);

@@ -1,5 +1,6 @@
 #![cfg(test)]
 use crate::codegen::CompilerOptions;
+use crate::codegen::compiler::context::CodeGenContext;
 use crate::codegen::types::Block;
 use crate::codegen::types::Span;
 use crate::codegen::types::Template;
@@ -21,7 +22,10 @@ fn to_content_token_stream_from_wrong_block() {
     assert_eq!(root_span.blocks().len(), 1);
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KLAYOUT(_)));
-    block.to_content_token_stream().expect("wrong block type");
+    let context = CodeGenContext::new(Kind::KHTML, &options);
+    block
+        .to_content_token_stream(&context)
+        .expect("wrong block type");
 }
 
 #[test]
@@ -35,7 +39,8 @@ fn to_content_token_stream_from_simple_content() -> result::Result<()> {
     assert_eq!(root_span.blocks().len(), 1);
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KCONTENT(_)));
-    let ts = &block.to_content_token_stream()?;
+    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = &block.to_content_token_stream(&context)?;
     let expected = quote! {
         writer.write("test::test1");
     };
@@ -57,8 +62,9 @@ fn to_inline_content_token_stream_from_wrong_block() {
     assert_eq!(root_span.blocks().len(), 1);
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KLAYOUT(_)));
+    let context = CodeGenContext::new(Kind::KHTML, &options);
     block
-        .to_inline_content_token_stream()
+        .to_inline_content_token_stream(&context)
         .expect("wrong block type");
 }
 
@@ -74,7 +80,8 @@ fn to_inline_content_token_stream_from_code_block() -> result::Result<()> {
     let code_block = &root_span.blocks()[0];
     assert!(matches!(code_block, Block::KCODE(_)));
 
-    let ts = code_block.to_token_stream(Some(&block))?;
+    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = code_block.to_token_stream(Some(&block), &context)?;
     let expected = quote! {
         123;
         writer.write("test");
@@ -92,7 +99,9 @@ fn to_inline_content_token_stream_from_inline_content_with_wrong_content() {
     span.push_block(Block::new_content(Span::new(raw_content)));
     span.push_block(Block::new_content(Span::new(raw_content)));
     let render_block = Block::new_inline_content(span);
+    let options = CompilerOptions::default();
+    let context = CodeGenContext::new(Kind::KHTML, &options);
     render_block
-        .to_inline_content_token_stream()
+        .to_inline_content_token_stream(&context)
         .expect("wrong content");
 }

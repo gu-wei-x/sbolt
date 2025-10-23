@@ -1,5 +1,6 @@
 #![cfg(test)]
 use crate::codegen::CompilerOptions;
+use crate::codegen::compiler::context::CodeGenContext;
 use crate::codegen::types;
 use crate::codegen::types::Block;
 use crate::codegen::types::Template;
@@ -22,7 +23,8 @@ fn to_code_token_on_non_code_block() {
     assert_eq!(root_span.blocks().len(), 1);
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KCONTENT(_)));
-    block.to_code_token_stream(Some(block)).unwrap();
+    let context = CodeGenContext::new(Kind::KHTML, &options);
+    block.to_code_token_stream(Some(block), &context).unwrap();
 }
 
 #[test]
@@ -42,8 +44,9 @@ fn to_code_token_stream_with_no_from_block() {
     assert_eq!(root_span.blocks().len(), 1);
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KCODE(_)));
+    let context = CodeGenContext::new(Kind::KHTML, &options);
     block
-        .to_code_token_stream(None)
+        .to_code_token_stream(None, &context)
         .expect("Expected from block here");
 }
 
@@ -65,8 +68,9 @@ fn to_code_token_stream_with_invalid_content() {
     assert_eq!(root_span.blocks().len(), 1);
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KCODE(_)));
+    let context = CodeGenContext::new(Kind::KHTML, &options);
     block
-        .to_code_token_stream(Some(block))
+        .to_code_token_stream(Some(block), &context)
         .expect("Expected valid code block here");
 }
 
@@ -84,7 +88,8 @@ fn to_code_token_stream_simple() -> result::Result<()> {
     assert_eq!(root_span.blocks().len(), 1);
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KCODE(_)));
-    let ts = &block.to_code_token_stream(Some(block))?;
+    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = &block.to_code_token_stream(Some(block), &context)?;
     let expected = quote! {
         let test=1;
         let test2=2;
@@ -108,7 +113,8 @@ fn to_code_token_stream_with_block() -> result::Result<()> {
     assert_eq!(root_span.blocks().len(), 1);
     let code_block = &root_span.blocks()[0];
     assert!(matches!(code_block, Block::KCODE(_)));
-    let ts = block.to_token_stream(Some(block))?;
+    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = block.to_token_stream(Some(block), &context)?;
     let ts = quote! { #(#ts)* };
     let expected = quote! {
         for i in 0..5 {
@@ -138,7 +144,8 @@ fn to_code_token_stream_with_complex_nested_block() -> result::Result<()> {
     assert_eq!(root_span.blocks().len(), 1);
     let code_block = &root_span.blocks()[0];
     assert!(matches!(code_block, Block::KCODE(_)));
-    let ts = block.to_token_stream(Some(block))?;
+    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = block.to_token_stream(Some(block), &context)?;
     let ts = quote! { #(#ts)* };
     let expected = quote! {
         for i in 0..5 {
@@ -185,7 +192,8 @@ fn to_inline_code_token_stream_from_content_block() -> result::Result<()> {
     let code_block = &root_span.blocks()[0];
     assert!(matches!(code_block, Block::KCODE(_)));
 
-    let ts = code_block.to_token_stream(Some(&block))?;
+    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = code_block.to_token_stream(Some(&block), &context)?;
     let expected = quote! {
        testcode;
        writer.write(&name.to_string());
