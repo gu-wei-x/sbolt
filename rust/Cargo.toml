@@ -2,9 +2,9 @@
 resolver = "2"
 members = [ 
   "benchmark",
-  "core/it",
-  "core/it_op",
   "core/lib",
+  "core/lib_it/no_op",
+  "core/lib_it/op",
 ]
 
 [workspace.lints.rust]
