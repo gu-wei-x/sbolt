@@ -148,3 +148,17 @@ fn parse_html_open_tag() {
     let content = dom.to_string();
     assert_eq!(content, "<title>");
 }
+
+#[test]
+fn parse_html_self_close_tag() {
+    // In HTML5, closing tags for tags like link , meta , img , hr , br are not mandatory.
+    // But if following XHTML principles, it is considered to add closing tags to those HTML tags
+    // (ex: "<meta />, <link />, <img />, <hr/>, <br/>")
+    let source = "<head><link rel=\"dns-prefetch\" href=\"https://www.test.com\">test<br></head>";
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    // here: close the tag to follow XHTML principles.
+    let expected =
+        "<head><link rel=\"dns-prefetch\" href=\"https://www.test.com\"/>test<br/></head>";
+    assert_eq!(content, expected);
+}

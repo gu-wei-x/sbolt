@@ -369,6 +369,7 @@ impl<'s> StateMachine<'s> {
         match state {
             State::DONE => {
                 // pop all nodes and added to dom.
+                self.unwind_if_possible();
                 self.nodes.reverse();
                 while let Some(node) = self.nodes.pop() {
                     self.dom.push_node(node);
@@ -378,10 +379,18 @@ impl<'s> StateMachine<'s> {
                 // a node closed
                 if let Some(node) = self.nodes.last_mut() {
                     match node.kind() {
-                        NodeKind::KELEMENT(_tage_name) => {
+                        NodeKind::KELEMENT(tag_name) => {
                             // check whether current is self-closed.
                             // remove from stack and push it to dom.
                             node.set_wellformed();
+                            let tag_name = &tag_name.to_lowercase();
+                            let self_close_tags = [
+                                "meta".to_string(),
+                                "link".to_string(),
+                                "img".to_string(),
+                                "hr".to_string(),
+                                "br".to_string(),
+                            ];
                             if node.is_closed() {
                                 let current_node = self.nodes.pop().unwrap();
                                 if let Some(parent_node) = self.nodes.last_mut() {
@@ -389,6 +398,9 @@ impl<'s> StateMachine<'s> {
                                 } else {
                                     self.dom.push_node(current_node);
                                 }
+                            } else if self_close_tags.contains(tag_name) {
+                                // let next state to unwind.
+                                node.close();
                             }
                         }
                         NodeKind::KCELEMENT(c_name) => {
@@ -441,6 +453,7 @@ impl<'s> StateMachine<'s> {
                 }
             }
             State::TAGOPEN => {
+                self.unwind_if_possible();
                 if let Some(node) = self.nodes.last_mut() {
                     match node.kind() {
                         NodeKind::KTEXT => {
@@ -459,13 +472,36 @@ impl<'s> StateMachine<'s> {
                 }
             }
             State::TEXT => {
+                self.unwind_if_possible();
                 let node = Node::new_text();
                 self.nodes.push(node);
             }
-            _ => {}
+            _ => {
+                self.unwind_if_possible();
+            }
         }
 
         self.state = state;
+    }
+
+    fn unwind_if_possible(&mut self) {
+        if let Some(node) = self.nodes.last_mut() {
+            match node.kind() {
+                NodeKind::KELEMENT(_) => {
+                    if node.is_closed() {
+                        let current_node = self.nodes.pop().unwrap();
+                        if let Some(parent_node) = self.nodes.last_mut() {
+                            parent_node.push_node(current_node);
+                        } else {
+                            self.dom.push_node(current_node);
+                        }
+                    }
+                }
+                _ => {
+                    // do nth.
+                }
+            }
+        }
     }
 }
 
