@@ -162,3 +162,44 @@ fn parse_html_self_close_tag() {
         "<head><link rel=\"dns-prefetch\" href=\"https://www.test.com\"/>test<br/></head>";
     assert_eq!(content, expected);
 }
+
+#[test]
+fn parse_html_custom_tagname() {
+    // Custom Element
+    let source = "<test-tag name=\"route-action\" content=\"pull_request_layout\">";
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    assert_eq!(content, source);
+
+    let source = "<test_tag name=\"route-action\" content=\"pull_request_layout\">";
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    assert_eq!(content, source);
+
+    let source = "<test:tag name=\"route-action\" content=\"pull_request_layout\">";
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    assert_eq!(content, source);
+}
+
+#[test]
+fn parse_html_custome_attr_name() {
+    let source =
+        "<meta name=\"route-action\" content=\"pull_request_layout\" data-turbo-transient>";
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    assert_eq!(content, source);
+}
+
+#[test]
+fn parse_html_attr_without_value() {
+    let source =
+        "<meta name=\"route-action\" content=\"pull_request_layout\" data-turbo-transient>";
+    let dom = parse_html(source);
+    let content = dom.to_string();
+
+    // close meta to following xhtml principles.
+    let expected =
+        "<meta name=\"route-action\" content=\"pull_request_layout\" data-turbo-transient/>";
+    assert_eq!(content, expected);
+}

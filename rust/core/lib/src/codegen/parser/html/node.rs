@@ -126,10 +126,7 @@ impl Node {
         attr_name: &str,
         attr_value: &str,
     ) {
-        let attr_value = attr_value.trim();
-        if !attr_value.is_empty() {
-            self.attributes.insert(attr_name.into(), attr_value.into());
-        }
+        self.attributes.insert(attr_name.into(), attr_value.into());
     }
 
     pub(in crate::codegen::parser::html) fn push_node(&mut self, node: Node) {
@@ -161,7 +158,11 @@ impl Node {
                     content.push_str(&format!("<{}", tag_name));
                 }
                 for (attr_name, attr_value) in &self.attributes {
-                    content.push_str(&format!(" {}=\"{}\"", attr_name, attr_value));
+                    content.push_str(&format!(" {}", attr_name));
+                    let attr_value = attr_value.trim();
+                    if !attr_value.is_empty() {
+                        content.push_str(&format!("=\"{}\"", attr_value));
+                    }
                 }
 
                 if self.is_doctype() {

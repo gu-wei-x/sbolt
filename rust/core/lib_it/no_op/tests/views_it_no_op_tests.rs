@@ -9,7 +9,7 @@ fn no_existing_view() {
 }
 
 #[test]
-fn comp_test_view() -> result::RenderResult<()> {
+fn default_view() -> result::RenderResult<()> {
     let result = lib_it_no_op_views::render("views/default", &mut sbolt::context!())?;
     let expected = r#"
 <html>
@@ -27,7 +27,7 @@ fn comp_test_view() -> result::RenderResult<()> {
 }
 
 #[test]
-fn comp_index_view() -> result::RenderResult<()> {
+fn sub_index_view() -> result::RenderResult<()> {
     let mut context = sbolt::context! {
         name: "sbolt".to_string(),
         age: 1,
@@ -50,7 +50,7 @@ fn comp_index_view() -> result::RenderResult<()> {
 }
 
 #[test]
-fn comp_home_view() -> result::RenderResult<()> {
+fn sub_home_view() -> result::RenderResult<()> {
     let result = lib_it_no_op_views::render("views/sub/home", &mut sbolt::context!())?;
     assert!(result.contains("<title>Home</title>"));
     assert!(result.contains("<li>menu 1</li>"));
@@ -60,7 +60,7 @@ fn comp_home_view() -> result::RenderResult<()> {
 }
 
 #[test]
-fn comp_jindex_view() -> result::RenderResult<()> {
+fn sub_jindex_view() -> result::RenderResult<()> {
     let mut context = sbolt::context! {
         name: "sbolt".to_string(),
         age: 1,

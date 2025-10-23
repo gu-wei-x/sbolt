@@ -138,9 +138,6 @@ impl<'s> StateMachine<'s> {
                     token_stream.next_token();
                     self.transit_to(State::ATTRS);
                 }
-                /*tokenizer::Kind::HYPHEN => {
-                    //
-                }*/
                 tokenizer::Kind::GREATTHAN => {
                     token_stream.next_token();
                     self.transit_to(State::INIT);
@@ -188,7 +185,7 @@ impl<'s> StateMachine<'s> {
                 tokenizer::Kind::EXPRESSION => {
                     token_stream.next_token();
                     let attr_name = &self.source[token.range()];
-                    self.current_attr_name = attr_name.into();
+                    self.current_attr_name.push_str(attr_name);
                 }
                 tokenizer::Kind::EQUALS => {
                     token_stream.next_token();
@@ -196,14 +193,32 @@ impl<'s> StateMachine<'s> {
                 }
                 tokenizer::Kind::GREATTHAN => {
                     token_stream.next_token();
+                    if !self.current_attr_name.is_empty() {
+                        let node = self.nodes.last_mut().unwrap();
+                        node.push_attr(&self.current_attr_name, "");
+                        println!("{node:#?}: {}", self.current_attr_name);
+                        self.current_attr_name = "".into();
+                    }
+
                     self.transit_to(State::INIT);
                 }
                 tokenizer::Kind::EOF => {
                     self.transit_to(State::DONE);
                 }
-                _ => {
+                tokenizer::Kind::WHITESPACE | tokenizer::Kind::NEWLINE => {
                     token_stream.next_token();
-                    self.transit_to(State::ATTRNAME);
+                    if !self.current_attr_name.is_empty() {
+                        self.nodes
+                            .last_mut()
+                            .unwrap()
+                            .push_attr(&self.current_attr_name, "");
+                        self.current_attr_name = "".into();
+                    }
+                }
+                _ => {
+                    let attr_name = &self.source[token.range()];
+                    self.current_attr_name.push_str(attr_name);
+                    token_stream.next_token();
                 }
             }
         } else {
@@ -535,4 +550,17 @@ fn get_possible_quotated_string_from_stream(
         }
     }
     content
+}
+
+#[allow(dead_code)]
+fn is_valid_name_token(_token_kind: tokenizer::Kind) -> bool {
+    true
+}
+
+#[allow(dead_code)]
+fn is_valid_atti_name_token(_token_kind: tokenizer::Kind) -> bool {
+    // start-with: data-
+    // lowercase
+    // a-z, -, :, ., _
+    true
 }
