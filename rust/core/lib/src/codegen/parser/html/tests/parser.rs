@@ -63,6 +63,16 @@ fn parse_fragments() {
 }
 
 #[test]
+fn parse_fragments2() {
+    let source = r#"
+        <div>Welcome: "#;
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    let expected = r#"<div>Welcome: "#;
+    assert_eq!(content, expected);
+}
+
+#[test]
 fn parse_node_with_whitespaces() {
     let source = r#"
         < div a1="a0"    a2="a2" >

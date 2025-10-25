@@ -144,7 +144,11 @@ impl Node {
                         content.push_str(&self.text);
                     }
                     _ => {
-                        content.push_str(&self.text.trim());
+                        if p.is_closed() {
+                            content.push_str(&self.text.trim());
+                        } else {
+                            content.push_str(&self.text.trim_start());
+                        }
                     }
                 },
                 _ => content.push_str(&self.text),
