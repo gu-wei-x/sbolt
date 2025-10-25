@@ -159,8 +159,7 @@ impl HtmlDocument {
 
     pub(in crate::codegen::parser) fn parse<'s>(source: &'s str) -> HtmlDocument {
         let mut state_machine = parser::StateMachine::new(source);
-        let dom = state_machine.process();
-        dom.clone()
+        state_machine.process()
     }
 
     pub(in crate::codegen::parser::html) fn push_node(&mut self, node: Node) {

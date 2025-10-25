@@ -1,6 +1,6 @@
 use indexmap::map;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(in crate::codegen::parser::html) enum NodeKind {
     KELEMENT(String),
     // </div>, see statemachine why this is needed.
@@ -126,7 +126,9 @@ impl Node {
         attr_name: &str,
         attr_value: &str,
     ) {
-        self.attributes.insert(attr_name.into(), attr_value.into());
+        if !attr_name.is_empty() {
+            self.attributes.insert(attr_name.into(), attr_value.into());
+        }
     }
 
     pub(in crate::codegen::parser::html) fn push_node(&mut self, node: Node) {

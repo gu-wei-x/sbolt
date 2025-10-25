@@ -38,6 +38,17 @@ fn parse_wellformed_node_with_spaces_in_attrs() {
 }
 
 #[test]
+fn parse_open_tag() {
+    let source = r#"
+        <div a1="a1" a2="a2"
+    "#;
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    let expected = r#"<div a1="a1" a2="a2""#;
+    assert_eq!(content, expected);
+}
+
+#[test]
 fn parse_fragments() {
     let source = r#"
         </div>
@@ -150,7 +161,7 @@ fn parse_html_open_tag() {
 }
 
 #[test]
-fn parse_html_self_close_tag() {
+fn parse_void_tag() {
     // In HTML5, closing tags for tags like link , meta , img , hr , br are not mandatory.
     // But if following XHTML principles, it is considered to add closing tags to those HTML tags
     // (ex: "<meta />, <link />, <img />, <hr/>, <br/>")
@@ -188,7 +199,9 @@ fn parse_html_custome_attr_name() {
         "<meta name=\"route-action\" content=\"pull_request_layout\" data-turbo-transient>";
     let dom = parse_html(source);
     let content = dom.to_string();
-    assert_eq!(content, source);
+    let expected =
+        "<meta name=\"route-action\" content=\"pull_request_layout\" data-turbo-transient/>";
+    assert_eq!(content, expected);
 }
 
 #[test]
@@ -201,5 +214,30 @@ fn parse_html_attr_without_value() {
     // close meta to following xhtml principles.
     let expected =
         "<meta name=\"route-action\" content=\"pull_request_layout\" data-turbo-transient/>";
+    assert_eq!(content, expected);
+}
+
+#[test]
+fn parse_html_void_tag_with_close_tag() {
+    let source = "<link rel=\"dns-prefetch\" href=\"https://www.test.com\"></link>";
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    // extra </link> is ilegal but leave it to browser.
+    let expected = "<link rel=\"dns-prefetch\" href=\"https://www.test.com\"/></link>";
+    assert_eq!(content, expected);
+}
+
+#[test]
+fn parse_html_self_close_tag_without_attribute() {
+    let source = "<test/>";
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    let expected = "<test/>";
+    assert_eq!(content, expected);
+
+    let source = "<test></test>";
+    let dom = parse_html(source);
+    let content = dom.to_string();
+    let expected = "<test/>";
     assert_eq!(content, expected);
 }
