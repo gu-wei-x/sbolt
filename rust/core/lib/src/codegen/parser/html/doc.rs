@@ -3,7 +3,7 @@ use crate::codegen::parser::html::{
     parser,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(in crate::codegen) struct HtmlDocument {
     nodes: Vec<Node>,
     // is closed fragment.
@@ -159,8 +159,7 @@ impl HtmlDocument {
 
     pub(in crate::codegen::parser) fn parse<'s>(source: &'s str) -> HtmlDocument {
         let mut state_machine = parser::StateMachine::new(source);
-        let dom = state_machine.process();
-        dom.clone()
+        state_machine.process()
     }
 
     pub(in crate::codegen::parser::html) fn push_node(&mut self, node: Node) {

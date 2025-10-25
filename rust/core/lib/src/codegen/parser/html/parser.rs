@@ -1,4 +1,5 @@
 use crate::codegen::parser::{
+    Token,
     html::{
         doc::HtmlDocument,
         node::{Node, NodeKind},
@@ -19,199 +20,219 @@ pub(in crate::codegen::parser::html) enum State {
     TAGCLOSE,
     // for doctype and comment.
     INSTSTART,
-    INST,
+    COMMENT,
     DONE,
-}
-
-impl Default for State {
-    fn default() -> Self {
-        State::INIT
-    }
 }
 
 #[derive(Debug)]
 pub(in crate::codegen::parser::html) struct StateMachine<'s> {
-    // current dom.
-    dom: HtmlDocument,
     // statck of nodes needs to be parsed.
     nodes: Vec<Node>,
+    pending_name: String,
     source: &'s str,
     state: State,
-    current_attr_name: String,
 }
 
 impl<'s> StateMachine<'s> {
     pub(in crate::codegen::parser::html) fn new(source: &'s str) -> Self {
         Self {
-            dom: HtmlDocument::default(),
             nodes: vec![],
+            pending_name: "".into(),
             source: source,
             state: State::INIT,
-            current_attr_name: "".into(),
         }
     }
 
-    pub(in crate::codegen::parser::html) fn process(&mut self) -> &HtmlDocument {
+    pub(in crate::codegen::parser::html) fn process(&mut self) -> HtmlDocument {
         let tokenizer = Tokenizer::new(self.source);
         let tokens = tokenizer.into_vec();
         let mut token_stream = TokenSlice::new(&tokens);
-        while let Some(_) = token_stream.peek_token() {
+        let mut dom = HtmlDocument::default();
+        while let Some(token) = token_stream.peek_token() {
+            if token.kind() == tokenizer::Kind::EOF {
+                self.transit_to(State::DONE, &mut dom);
+                break;
+            }
             match self.state {
-                State::INIT => self.process_with_init(&mut token_stream),
-                State::TAGOPEN => self.process_with_tag_open(&mut token_stream),
-                State::TAGNAME => self.process_with_tag_name(&mut token_stream),
-                State::ATTRS => self.process_with_attributes(&mut token_stream),
-                State::ATTRNAME => self.process_with_attr_name(&mut token_stream),
-                State::ATTRVAL => self.process_with_attr_value(&mut token_stream),
-                State::TEXT => self.process_with_text(&mut token_stream),
-                State::TAGCLOSE => self.process_with_tag_close(&mut token_stream),
-                State::INSTSTART => self.process_with_instruction_start(&mut token_stream),
-                State::INST => self.process_with_instruction(&mut token_stream),
+                State::INIT => self.process_with_init(&mut token_stream, &mut dom),
+                State::TAGOPEN => self.process_with_tag_open(&mut token_stream, &mut dom),
+                State::TAGNAME => self.process_with_tag_name(&mut token_stream, &mut dom),
+                State::ATTRS => self.process_with_attributes(&mut token_stream, &mut dom),
+                State::ATTRNAME => self.process_with_attr_name(&mut token_stream, &mut dom),
+                State::ATTRVAL => self.process_with_attr_value(&mut token_stream, &mut dom),
+                State::TEXT => self.process_with_text(&mut token_stream, &mut dom),
+                State::TAGCLOSE => self.process_with_tag_close(&mut token_stream, &mut dom),
+                State::INSTSTART => {
+                    self.process_with_instruction_start(&mut token_stream, &mut dom)
+                }
+                State::COMMENT => self.process_with_comment(&mut token_stream, &mut dom),
                 State::DONE => {
-                    self.transit_to(State::DONE);
+                    self.transit_to(State::DONE, &mut dom);
                     break;
                 }
             }
         }
-
-        &self.dom
+        dom
     }
 }
 
 impl<'s> StateMachine<'s> {
-    fn process_with_init(&mut self, token_stream: &mut TokenStream) {
+    fn process_with_init(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
         // we know there is valid token;
         let token = token_stream.peek_token().unwrap();
         match token.kind() {
             tokenizer::Kind::LESSTHAN => {
                 // consmue '<'
                 token_stream.next_token();
-                self.transit_to(State::TAGOPEN);
-            }
-            tokenizer::Kind::EOF => {
-                self.transit_to(State::DONE);
+                self.transit_to(State::TAGOPEN, dom);
             }
             _ => {
-                self.transit_to(State::TEXT);
+                self.transit_to(State::TEXT, dom);
             }
         }
     }
 
-    fn process_with_tag_open(&mut self, token_stream: &mut TokenStream) {
+    fn process_with_tag_open(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
-                tokenizer::Kind::EXPRESSION => {
-                    self.transit_to(State::TAGNAME);
-                }
                 tokenizer::Kind::EXCLAMATION => {
                     // doctype or comment
                     token_stream.next_token();
-                    self.transit_to(State::INSTSTART);
+                    self.transit_to(State::INSTSTART, dom);
                 }
                 tokenizer::Kind::SLASH => {
                     token_stream.next_token();
-                    self.transit_to(State::TAGCLOSE);
+                    self.transit_to(State::TAGCLOSE, dom);
                 }
-                tokenizer::Kind::EOF => {
-                    self.transit_to(State::DONE);
+                _ if is_valid_name_token(token) => {
+                    self.transit_to(State::TAGNAME, dom);
                 }
                 _ => {
                     token_stream.next_token();
-                    self.transit_to(State::TAGOPEN);
+                    self.transit_to(State::TAGOPEN, dom);
                 }
             }
         } else {
-            self.transit_to(State::DONE);
+            self.transit_to(State::DONE, dom);
         }
     }
 
-    fn process_with_tag_name(&mut self, token_stream: &mut TokenStream) {
+    fn process_with_tag_name(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
         // here we know there is valid token.
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
-                tokenizer::Kind::EXPRESSION => {
-                    // todo: need to handle doctype
-                    // save tag name if not quoated.
-                    let tag_name = &self.source[token.range()];
-                    let node = Node::new_element(tag_name);
+                tokenizer::Kind::GREATTHAN => {
+                    let node = Node::new_element(&self.pending_name);
                     self.nodes.push(node);
+                    self.pending_name.clear();
+
                     token_stream.next_token();
-                    self.transit_to(State::ATTRS);
+                    self.transit_to(State::INIT, dom);
                 }
-                /*tokenizer::Kind::HYPHEN => {
-                    //
-                }*/
-                tokenizer::Kind::GREATTHAN => {
+                tokenizer::Kind::WHITESPACE | tokenizer::Kind::NEWLINE => {
+                    let node = Node::new_element(&self.pending_name);
+                    self.nodes.push(node);
+                    self.pending_name.clear();
+
                     token_stream.next_token();
-                    self.transit_to(State::INIT);
+                    self.transit_to(State::ATTRS, dom);
                 }
-                tokenizer::Kind::EOF => {
-                    self.transit_to(State::DONE);
+                _ if is_valid_name_token(token) => {
+                    let name_part = &self.source[token.range()];
+                    self.pending_name.push_str(&name_part);
+                    token_stream.next_token();
                 }
                 _ => {
+                    // ignore.
                     token_stream.next_token();
-                    self.transit_to(State::TAGNAME);
                 }
             }
         } else {
-            self.transit_to(State::DONE);
+            self.transit_to(State::DONE, dom);
         }
     }
 
-    fn process_with_attributes(&mut self, token_stream: &mut TokenStream) {
+    fn process_with_attributes(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
-                tokenizer::Kind::EXPRESSION => {
-                    // save att name if not quoated.
-                    self.transit_to(State::ATTRNAME)
-                }
                 tokenizer::Kind::GREATTHAN => {
                     token_stream.next_token();
-                    self.transit_to(State::INIT);
+                    self.transit_to(State::INIT, dom);
                 }
-                tokenizer::Kind::EOF => {
-                    self.transit_to(State::DONE);
-                }
+                _ if is_valid_name_token(token) => self.transit_to(State::ATTRNAME, dom),
                 _ => {
                     token_stream.next_token();
-                    self.transit_to(State::ATTRS);
                 }
             }
         } else {
-            self.transit_to(State::DONE);
+            self.transit_to(State::DONE, dom);
         }
     }
 
-    fn process_with_attr_name(&mut self, token_stream: &mut TokenStream) {
+    fn process_with_attr_name(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
-                tokenizer::Kind::EXPRESSION => {
-                    token_stream.next_token();
-                    let attr_name = &self.source[token.range()];
-                    self.current_attr_name = attr_name.into();
-                }
                 tokenizer::Kind::EQUALS => {
                     token_stream.next_token();
-                    self.transit_to(State::ATTRVAL);
+                    self.transit_to(State::ATTRVAL, dom);
                 }
                 tokenizer::Kind::GREATTHAN => {
+                    let node = self.nodes.last_mut().unwrap();
+                    node.push_attr(&self.pending_name, "");
+                    self.pending_name.clear();
                     token_stream.next_token();
-                    self.transit_to(State::INIT);
+                    self.transit_to(State::INIT, dom);
                 }
-                tokenizer::Kind::EOF => {
-                    self.transit_to(State::DONE);
+                tokenizer::Kind::WHITESPACE | tokenizer::Kind::NEWLINE => {
+                    let node = self.nodes.last_mut().unwrap();
+                    node.push_attr(&self.pending_name, "");
+                    self.pending_name.clear();
+
+                    // keep state for next name.
+                    token_stream.next_token();
+                }
+                // doctype attr_name could be quotated.
+                tokenizer::Kind::DQMARK => {
+                    let attr_name = get_possible_quotated_string_from_stream(
+                        self.source,
+                        token_stream,
+                        tokenizer::Kind::DQMARK,
+                    );
+                    self.nodes
+                        .last_mut()
+                        .unwrap()
+                        .push_attr(&format!("\"{}\"", attr_name), "");
+                    self.pending_name.clear();
+                    self.transit_to(State::ATTRNAME, dom);
+                }
+                tokenizer::Kind::SQMAERK => {
+                    let attr_name = get_possible_quotated_string_from_stream(
+                        self.source,
+                        token_stream,
+                        tokenizer::Kind::SQMAERK,
+                    );
+                    self.nodes
+                        .last_mut()
+                        .unwrap()
+                        .push_attr(&format!("'{}'", attr_name), "");
+                    self.pending_name.clear();
+                    self.transit_to(State::ATTRNAME, dom);
+                }
+                _ if is_valid_name_token(token) => {
+                    let attr_name = &self.source[token.range()];
+                    self.pending_name.push_str(attr_name);
+                    token_stream.next_token();
                 }
                 _ => {
                     token_stream.next_token();
-                    self.transit_to(State::ATTRNAME);
                 }
             }
         } else {
-            self.transit_to(State::DONE);
+            self.transit_to(State::DONE, dom);
         }
     }
 
-    fn process_with_attr_value(&mut self, token_stream: &mut TokenStream) {
+    fn process_with_attr_value(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 tokenizer::Kind::DQMARK => {
@@ -223,9 +244,9 @@ impl<'s> StateMachine<'s> {
                     self.nodes
                         .last_mut()
                         .unwrap()
-                        .push_attr(&self.current_attr_name, &attr_value);
-                    self.current_attr_name = "".into();
-                    self.transit_to(State::ATTRNAME);
+                        .push_attr(&self.pending_name, &attr_value);
+                    self.pending_name.clear();
+                    self.transit_to(State::ATTRNAME, dom);
                 }
                 tokenizer::Kind::SQMAERK => {
                     let attr_value = get_possible_quotated_string_from_stream(
@@ -236,36 +257,34 @@ impl<'s> StateMachine<'s> {
                     self.nodes
                         .last_mut()
                         .unwrap()
-                        .push_attr(&self.current_attr_name, &attr_value);
-                    self.transit_to(State::ATTRNAME);
+                        .push_attr(&self.pending_name, &attr_value);
+                    self.pending_name.clear();
+                    self.transit_to(State::ATTRNAME, dom);
                 }
                 tokenizer::Kind::GREATTHAN => {
                     token_stream.next_token();
-                    self.transit_to(State::INIT);
-                }
-                tokenizer::Kind::EOF => {
-                    self.transit_to(State::DONE);
+                    self.transit_to(State::INIT, dom);
                 }
                 _ => {
                     token_stream.next_token();
-                    self.transit_to(State::ATTRNAME);
+                    self.transit_to(State::ATTRNAME, dom);
                 }
             }
         } else {
-            self.transit_to(State::DONE);
+            self.transit_to(State::DONE, dom);
         }
     }
 
-    fn process_with_text(&mut self, token_stream: &mut TokenStream) {
+    fn process_with_text(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 tokenizer::Kind::LESSTHAN => {
                     // consmue '<'
                     token_stream.next_token();
-                    self.transit_to(State::TAGOPEN);
+                    self.transit_to(State::TAGOPEN, dom);
                 }
                 tokenizer::Kind::EOF => {
-                    self.transit_to(State::DONE);
+                    self.transit_to(State::DONE, dom);
                 }
                 _ => {
                     // save text.
@@ -275,63 +294,56 @@ impl<'s> StateMachine<'s> {
                 }
             }
         } else {
-            self.transit_to(State::DONE);
+            self.transit_to(State::DONE, dom);
         }
     }
 
-    fn process_with_tag_close(&mut self, token_stream: &mut TokenStream) {
+    fn process_with_tag_close(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
-                tokenizer::Kind::EXPRESSION => {
-                    // tag name.
-                    token_stream.next_token();
-                    let tag_name = &self.source[token.range()];
-                    let node = Node::new_close_element(tag_name);
-                    self.nodes.push(node);
-                    self.transit_to(State::TAGCLOSE);
-                }
                 tokenizer::Kind::GREATTHAN => {
                     // closed
                     token_stream.next_token();
-                    self.transit_to(State::INIT);
+                    self.transit_to(State::INIT, dom);
                 }
-                tokenizer::Kind::EOF => {
-                    self.transit_to(State::DONE);
+                _ if is_valid_name_token(token) => {
+                    let tag_name = &self.source[token.range()];
+                    let node = Node::new_close_element(tag_name);
+                    self.nodes.push(node);
+
+                    // todo: tag name but tag is close tag.
+
+                    token_stream.next_token();
                 }
                 _ => {
                     token_stream.next_token();
-                    self.transit_to(State::TAGCLOSE);
                 }
             }
         } else {
-            self.transit_to(State::DONE);
+            self.transit_to(State::DONE, dom);
         }
     }
 
-    fn process_with_instruction_start(&mut self, token_stream: &mut TokenStream) {
+    fn process_with_instruction_start(
+        &mut self,
+        token_stream: &mut TokenStream,
+        dom: &mut HtmlDocument,
+    ) {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
-                tokenizer::Kind::EXPRESSION => {
-                    // doctype
-                    token_stream.next_token();
-                    let tag_name = &self.source[token.range()];
-                    let node = Node::new_element(tag_name);
-                    self.nodes.push(node);
-                    self.transit_to(State::INST);
-                }
                 tokenizer::Kind::HYPHEN => {
                     // comment.
                     let node = Node::new_comment();
                     self.nodes.push(node);
-                    self.transit_to(State::INST);
+                    self.transit_to(State::COMMENT, dom);
                 }
                 tokenizer::Kind::GREATTHAN => {
                     // closed
                     token_stream.next_token();
-                    self.transit_to(State::INIT);
+                    self.transit_to(State::INIT, dom);
                 }
-                tokenizer::Kind::EOF => {
-                    self.transit_to(State::DONE);
+                _ if is_valid_name_token(token) => {
+                    self.transit_to(State::TAGNAME, dom);
                 }
                 _ => {
                     // error here: but this is not strict.
@@ -339,56 +351,61 @@ impl<'s> StateMachine<'s> {
                 }
             }
         } else {
-            self.transit_to(State::DONE);
+            self.transit_to(State::DONE, dom);
         }
     }
 
-    fn process_with_instruction(&mut self, token_stream: &mut TokenStream) {
+    fn process_with_comment(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 tokenizer::Kind::GREATTHAN => {
                     // closed
                     token_stream.next_token();
-                    self.transit_to(State::INIT);
-                }
-                tokenizer::Kind::EOF => {
-                    self.transit_to(State::DONE);
+                    self.transit_to(State::INIT, dom);
                 }
                 _ => {
+                    let parts = &self.source[token.range()];
+                    self.nodes.last_mut().unwrap().push_text(parts);
                     token_stream.next_token();
-                    let text = &self.source[token.range()];
-                    self.nodes.last_mut().unwrap().push_text(text);
                 }
             }
         } else {
-            self.transit_to(State::DONE);
+            self.transit_to(State::DONE, dom);
         }
     }
 
-    fn transit_to(&mut self, state: State) {
+    fn transit_to(&mut self, state: State, dom: &mut HtmlDocument) {
         match state {
             State::DONE => {
-                // pop all nodes and added to dom.
+                // unwind last one.
+                let current_node = self.nodes.pop();
+                if let Some(node) = current_node {
+                    self.push_to_dom_or_unwind(node, dom);
+                }
+
+                // push all remaining node.
                 self.nodes.reverse();
                 while let Some(node) = self.nodes.pop() {
-                    self.dom.push_node(node);
+                    dom.push_node(node);
                 }
             }
             State::INIT => {
-                // a node closed
+                // saw '>' and '>' was consumed by caller, need to check the stack.
                 if let Some(node) = self.nodes.last_mut() {
                     match node.kind() {
-                        NodeKind::KELEMENT(_tage_name) => {
+                        NodeKind::KELEMENT(tag_name) => {
                             // check whether current is self-closed.
                             // remove from stack and push it to dom.
                             node.set_wellformed();
+                            let tag_name = &tag_name.to_lowercase();
                             if node.is_closed() {
                                 let current_node = self.nodes.pop().unwrap();
-                                if let Some(parent_node) = self.nodes.last_mut() {
-                                    parent_node.push_node(current_node);
-                                } else {
-                                    self.dom.push_node(current_node);
-                                }
+                                self.push_to_dom_or_unwind(current_node, dom);
+                            } else if is_void_tag(tag_name) {
+                                // a following close tag for void is illegal, leave it to browser.
+                                let mut current_node = self.nodes.pop().unwrap();
+                                current_node.close();
+                                self.push_to_dom_or_unwind(current_node, dom);
                             }
                         }
                         NodeKind::KCELEMENT(c_name) => {
@@ -403,69 +420,62 @@ impl<'s> StateMachine<'s> {
 
                                         // add parent to dom tree.
                                         let current_node = self.nodes.pop().unwrap();
-                                        if let Some(parent_node) = self.nodes.last_mut() {
-                                            parent_node.push_node(current_node);
-                                        } else {
-                                            self.dom.push_node(current_node);
-                                        }
+                                        self.push_to_dom_or_unwind(current_node, dom);
                                     }
                                     _ => {
-                                        // doen't match: <div>test</a>
-                                        // ignore.
-                                        return;
+                                        // doen't match: <div>test</a> ignore.
                                     }
                                 }
                             } else {
-                                // </a>test -- valid and let browser to decide.
-                                self.dom.push_node(close_node);
-                            }
-                        }
-                        NodeKind::KTEXT => {
-                            let current_node = self.nodes.pop().unwrap();
-                            if let Some(parent_node) = self.nodes.last_mut() {
-                                parent_node.push_node(current_node);
-                            } else {
-                                self.dom.push_node(current_node);
+                                // </a>< -- pre might be generated at runtime.
+                                dom.push_node(close_node);
                             }
                         }
                         NodeKind::KCOMMENT => {
+                            // comment is a special node <!----> end with '>'.
+                            // doesn't matter whether close or wellformed.
                             node.set_wellformed();
+                            node.close();
                             let current_node = self.nodes.pop().unwrap();
-                            if let Some(parent_node) = self.nodes.last_mut() {
-                                parent_node.push_node(current_node);
-                            } else {
-                                self.dom.push_node(current_node);
-                            }
+                            self.push_to_dom_or_unwind(current_node, dom);
+                        }
+                        NodeKind::KTEXT => {
+                            // impossible as '>' would be treated as text.
+                            // do nth here to have full arms.
                         }
                     }
                 }
             }
             State::TAGOPEN => {
-                if let Some(node) = self.nodes.last_mut() {
-                    match node.kind() {
-                        NodeKind::KTEXT => {
-                            // don't need to close add it to dom.
-                            let current_node = self.nodes.pop().unwrap();
-                            if let Some(parent_node) = self.nodes.last_mut() {
-                                parent_node.push_node(current_node);
-                            } else {
-                                self.dom.push_node(current_node);
-                            }
-                        }
-                        _ => {
-                            // do nth.
-                        }
-                    }
+                // saw '<' and '<' was consumed by caller, need to check the stack.
+                // for text: need to add it to dom
+                // scenario: node<,
+                let current_node = self.nodes.last_mut();
+                if let Some(node) = current_node
+                    && node.kind() == NodeKind::KTEXT
+                {
+                    // pop from stack and add to dom tree.
+                    let current_node = self.nodes.pop().unwrap();
+                    self.push_to_dom_or_unwind(current_node, dom);
                 }
             }
             State::TEXT => {
                 let node = Node::new_text();
                 self.nodes.push(node);
             }
-            _ => {}
+            _ => {
+                // do nth.
+            }
         }
 
         self.state = state;
+    }
+    fn push_to_dom_or_unwind(&mut self, node: Node, dom: &mut HtmlDocument) {
+        if let Some(parent_node) = self.nodes.last_mut() {
+            parent_node.push_node(node);
+        } else {
+            dom.push_node(node);
+        }
     }
 }
 
@@ -499,4 +509,18 @@ fn get_possible_quotated_string_from_stream(
         }
     }
     content
+}
+
+static VOID_TAGS: [&'static str; 14] = [
+    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source",
+    "track", "wbr",
+];
+fn is_void_tag(tag_name: &str) -> bool {
+    VOID_TAGS.contains(&tag_name)
+}
+
+fn is_valid_name_token(token: &Token) -> bool {
+    // here: don't valid whether it's a html name, will put all tokens in name
+    // and let browser to decide it.
+    token.kind() != tokenizer::Kind::WHITESPACE && token.kind() != tokenizer::Kind::NEWLINE
 }

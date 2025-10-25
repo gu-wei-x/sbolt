@@ -1,6 +1,6 @@
 use indexmap::map;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(in crate::codegen::parser::html) enum NodeKind {
     KELEMENT(String),
     // </div>, see statemachine why this is needed.
@@ -9,7 +9,7 @@ pub(in crate::codegen::parser::html) enum NodeKind {
     KCOMMENT,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(in crate::codegen::parser::html) struct Node {
     kind: NodeKind,
     attributes: map::IndexMap<String, String>,
@@ -126,8 +126,7 @@ impl Node {
         attr_name: &str,
         attr_value: &str,
     ) {
-        let attr_value = attr_value.trim();
-        if !attr_value.is_empty() {
+        if !attr_name.is_empty() {
             self.attributes.insert(attr_name.into(), attr_value.into());
         }
     }
@@ -145,7 +144,11 @@ impl Node {
                         content.push_str(&self.text);
                     }
                     _ => {
-                        content.push_str(&self.text.trim());
+                        if p.is_closed() {
+                            content.push_str(&self.text.trim());
+                        } else {
+                            content.push_str(&self.text.trim_start());
+                        }
                     }
                 },
                 _ => content.push_str(&self.text),
@@ -161,7 +164,11 @@ impl Node {
                     content.push_str(&format!("<{}", tag_name));
                 }
                 for (attr_name, attr_value) in &self.attributes {
-                    content.push_str(&format!(" {}=\"{}\"", attr_name, attr_value));
+                    content.push_str(&format!(" {}", attr_name));
+                    let attr_value = attr_value.trim();
+                    if !attr_value.is_empty() {
+                        content.push_str(&format!("=\"{}\"", attr_value));
+                    }
                 }
 
                 if self.is_doctype() {
