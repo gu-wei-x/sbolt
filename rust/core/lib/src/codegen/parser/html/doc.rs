@@ -3,7 +3,7 @@ use crate::codegen::parser::html::{
     parser,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(in crate::codegen) struct HtmlDocument {
     nodes: Vec<Node>,
     // is closed fragment.

@@ -9,7 +9,7 @@ pub(in crate::codegen::parser::html) enum NodeKind {
     KCOMMENT,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(in crate::codegen::parser::html) struct Node {
     kind: NodeKind,
     attributes: map::IndexMap<String, String>,
