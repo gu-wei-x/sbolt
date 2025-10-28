@@ -1,10 +1,13 @@
-use crate::codegen::parser::{
-    Token,
-    html::{
-        doc::HtmlDocument,
-        node::{Node, NodeKind},
+use crate::{
+    codegen::parser::{
+        Token,
+        html::{
+            doc::HtmlDocument,
+            node::{Node, NodeKind},
+        },
+        tokenizer::{self, Kind, TokenStream, Tokenizer},
     },
-    tokenizer::{self, Kind, TokenStream, Tokenizer},
+    types::result,
 };
 use winnow::stream::{Stream, TokenSlice};
 
@@ -43,7 +46,7 @@ impl<'s> StateMachine<'s> {
         }
     }
 
-    pub(in crate::codegen::parser::html) fn process(&mut self) -> HtmlDocument {
+    pub(in crate::codegen::parser::html) fn process(&mut self) -> result::Result<HtmlDocument> {
         let tokenizer = Tokenizer::new(self.source);
         let tokens = tokenizer.into_vec();
         let mut token_stream = TokenSlice::new(&tokens);
@@ -56,14 +59,14 @@ impl<'s> StateMachine<'s> {
             match self.state {
                 State::INIT => self.process_with_init(&mut token_stream, &mut dom),
                 State::TAGOPEN => self.process_with_tag_open(&mut token_stream, &mut dom),
-                State::TAGNAME => self.process_with_tag_name(&mut token_stream, &mut dom),
+                State::TAGNAME => self.process_with_tag_name(&mut token_stream, &mut dom)?,
                 State::ATTRS => self.process_with_attributes(&mut token_stream, &mut dom),
                 State::ATTRNAME => self.process_with_attr_name(&mut token_stream, &mut dom),
                 State::ATTRVAL => self.process_with_attr_value(&mut token_stream, &mut dom),
                 State::TEXT => self.process_with_text(&mut token_stream, &mut dom),
                 State::TAGCLOSE => self.process_with_tag_close(&mut token_stream, &mut dom),
                 State::INSTSTART => {
-                    self.process_with_instruction_start(&mut token_stream, &mut dom)
+                    self.process_with_instruction_start(&mut token_stream, &mut dom)?
                 }
                 State::COMMENT => self.process_with_comment(&mut token_stream, &mut dom),
                 State::DONE => {
@@ -72,7 +75,7 @@ impl<'s> StateMachine<'s> {
                 }
             }
         }
-        dom
+        Ok(dom)
     }
 }
 
@@ -117,7 +120,11 @@ impl<'s> StateMachine<'s> {
         }
     }
 
-    fn process_with_tag_name(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
+    fn process_with_tag_name(
+        &mut self,
+        token_stream: &mut TokenStream,
+        dom: &mut HtmlDocument,
+    ) -> result::Result<()> {
         // here we know there is valid token.
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
@@ -144,12 +151,18 @@ impl<'s> StateMachine<'s> {
                 }
                 _ => {
                     // ignore.
-                    token_stream.next_token();
+                    return Err(crate::types::error::CompileError::from_parser(
+                        self.source,
+                        Some(*token),
+                        "Illegal char",
+                    ));
                 }
             }
         } else {
             self.transit_to(State::DONE, dom);
         }
+
+        Ok(())
     }
 
     fn process_with_attributes(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
@@ -328,7 +341,7 @@ impl<'s> StateMachine<'s> {
         &mut self,
         token_stream: &mut TokenStream,
         dom: &mut HtmlDocument,
-    ) {
+    ) -> result::Result<()> {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 tokenizer::Kind::HYPHEN => {
@@ -346,13 +359,18 @@ impl<'s> StateMachine<'s> {
                     self.transit_to(State::TAGNAME, dom);
                 }
                 _ => {
-                    // error here: but this is not strict.
-                    token_stream.next_token();
+                    return Err(crate::types::error::CompileError::from_parser(
+                        self.source,
+                        Some(*token),
+                        "Illegal char",
+                    ));
                 }
             }
         } else {
             self.transit_to(State::DONE, dom);
         }
+
+        Ok(())
     }
 
     fn process_with_comment(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {

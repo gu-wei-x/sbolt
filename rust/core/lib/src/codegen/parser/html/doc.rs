@@ -1,6 +1,9 @@
-use crate::codegen::parser::html::{
-    node::{Node, NodeKind},
-    parser,
+use crate::{
+    codegen::parser::html::{
+        node::{Node, NodeKind},
+        parser,
+    },
+    types::result,
 };
 
 #[derive(Debug)]
@@ -157,7 +160,7 @@ impl HtmlDocument {
         html
     }
 
-    pub(in crate::codegen::parser) fn parse<'s>(source: &'s str) -> HtmlDocument {
+    pub(in crate::codegen::parser) fn parse<'s>(source: &'s str) -> result::Result<HtmlDocument> {
         let mut state_machine = parser::StateMachine::new(source);
         state_machine.process()
     }
