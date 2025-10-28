@@ -19,8 +19,11 @@ impl<'a> Optimizer for HtmlOptimizer<'a> {
         match self.compiler_options.need_optimization() {
             false => source.into(),
             true => {
-                let dom = crate::codegen::parser::html::parse_html(source);
-                dom.to_string()
+                let result = crate::codegen::parser::html::parse_html(source);
+                match result {
+                    Ok(dom) => dom.to_string(),
+                    Err(_) => source.into(),
+                }
             }
         }
     }
