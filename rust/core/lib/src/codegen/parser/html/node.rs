@@ -1,3 +1,4 @@
+use super::parser::is_void_tag;
 use indexmap::map;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -167,6 +168,7 @@ impl Node {
                     content.push_str(&format!(" {}", attr_name));
                     let attr_value = attr_value.trim();
                     if !attr_value.is_empty() {
+                        let attr_value = attr_value.replace('"', "&quot;");
                         content.push_str(&format!("=\"{}\"", attr_value));
                     }
                 }
@@ -186,7 +188,7 @@ impl Node {
                 if self.is_wellformed() {
                     // closed.
                     match c_content.is_empty() {
-                        true if self.is_closed() => {
+                        true if self.is_closed() && is_void_tag(&tag_name.to_lowercase()) => {
                             content.push_str("/>");
                         }
                         _ => {

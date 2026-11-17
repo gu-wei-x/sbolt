@@ -52,11 +52,19 @@ impl<'a> Block<'a> {
             2 => {
                 // todo: envaluated dynamically.
                 let section_name = content_span.blocks()[0].content();
-                let is_required = content_span.blocks()[1].content(); // let is_bool = text.parse::<bool>().is_ok();
+                let is_required = content_span.blocks()[1]
+                    .content()
+                    .parse::<bool>()
+                    .map_err(|_| {
+                        error::CompileError::from_codegen(
+                            &self,
+                            "Expected boolean literal (true or false) as second parameter for 'render'",
+                        )
+                    })?;
                 let ts = quote! {
                     // 2 parameters in @render()
                    let section_name = #section_name;
-                   let is_required = #is_required.parse::<bool>().is_ok();
+                   let is_required = #is_required;
                    let sections = context.get_section(section_name);
                    match sections {
                        Some(contents) => {

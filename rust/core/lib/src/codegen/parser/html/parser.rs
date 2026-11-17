@@ -315,17 +315,15 @@ impl<'s> StateMachine<'s> {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 tokenizer::Kind::GREATTHAN => {
-                    // closed
+                    let node = Node::new_close_element(&self.pending_name);
+                    self.nodes.push(node);
+                    self.pending_name.clear();
                     token_stream.next_token();
                     self.transit_to(State::INIT, dom);
                 }
                 _ if is_valid_name_token(token) => {
                     let tag_name = &self.source[token.range()];
-                    let node = Node::new_close_element(tag_name);
-                    self.nodes.push(node);
-
-                    // todo: tag name but tag is close tag.
-
+                    self.pending_name.push_str(tag_name);
                     token_stream.next_token();
                 }
                 _ => {
@@ -395,6 +393,11 @@ impl<'s> StateMachine<'s> {
     fn transit_to(&mut self, state: State, dom: &mut HtmlDocument) {
         match state {
             State::DONE => {
+                if matches!(self.state, State::TAGCLOSE) && !self.pending_name.is_empty() {
+                    self.nodes.push(Node::new_close_element(&self.pending_name));
+                    self.pending_name.clear();
+                }
+
                 // unwind last one.
                 let current_node = self.nodes.pop();
                 if let Some(node) = current_node {
@@ -533,7 +536,7 @@ static VOID_TAGS: [&'static str; 14] = [
     "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source",
     "track", "wbr",
 ];
-fn is_void_tag(tag_name: &str) -> bool {
+pub(in crate::codegen::parser::html) fn is_void_tag(tag_name: &str) -> bool {
     VOID_TAGS.contains(&tag_name)
 }
 

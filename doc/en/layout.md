@@ -39,6 +39,8 @@ define a anonymous section.
 </div>
 ```
 
+Multiple sections with the same name are rendered in the order they are added.
+
 - **use `@render`** render anonymous section inside it's layout. 
 ```
 <div>
@@ -47,6 +49,9 @@ define a anonymous section.
 ```
 
 - **use `@render(name, true|false)`** render a named section required or optional.
+
+`true` (the default) returns an error if the section is missing. `false` skips a
+missing section.
 
 render as required
 ```
@@ -68,7 +73,7 @@ render as optional
 ```
 <div>
     @** render as optional **@
-    @render(s2, true)
+    @render(s2, false)
 </div>
 ```
 

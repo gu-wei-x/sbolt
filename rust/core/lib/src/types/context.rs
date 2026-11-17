@@ -51,7 +51,8 @@ impl Context for DefaultViewContext {
     fn add_section(&mut self, name: &str, content: String) -> &mut Self {
         self.sections
             .entry(name.to_owned())
-            .or_insert(vec![content]);
+            .or_default()
+            .push(content);
         self
     }
 

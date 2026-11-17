@@ -3,6 +3,16 @@ use sbolt::types::result;
 sbolt::include_views!();
 
 #[test]
+fn optimized_html_preserves_structure_and_attribute_values() -> result::RenderResult<()> {
+    let result = lib_it_op_views::render("views/html_regressions", &mut sbolt::context!())?;
+    assert_eq!(
+        result.trim(),
+        r#"<div></div><my-widget>hello</my-widget><p title="say &quot;hi&quot; &amp; goodbye">after</p>"#
+    );
+    Ok(())
+}
+
+#[test]
 fn default_view() -> result::RenderResult<()> {
     let result = lib_it_op_views::render("views/default", &mut sbolt::context!())?;
     let expected =
