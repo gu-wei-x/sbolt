@@ -3,6 +3,30 @@ use sbolt::types::result;
 sbolt::include_views!();
 
 #[test]
+fn optional_and_repeated_sections() -> result::RenderResult<()> {
+    use sbolt::types::Context;
+
+    let mut context = sbolt::context!();
+    context.add_section("required", "required".into());
+    let result = lib_it_no_op_views::render("views/sections", &mut context)?;
+    assert_eq!(result.trim(), "required");
+
+    context.add_section("optional", "first".into());
+    context.add_section("optional", "second".into());
+    let result = lib_it_no_op_views::render("views/sections", &mut context)?;
+    assert_eq!(result.trim(), "firstsecondrequired");
+    Ok(())
+}
+
+#[test]
+fn missing_required_section_returns_error() {
+    let error = lib_it_no_op_views::render("views/sections", &mut sbolt::context!()).unwrap_err();
+    assert!(
+        matches!(error, sbolt::types::error::RuntimeError::NotFound(message, _) if message.contains("required"))
+    );
+}
+
+#[test]
 #[should_panic]
 fn no_existing_view() {
     lib_it_no_op_views::render("views/no_existing", &mut sbolt::context!()).unwrap();

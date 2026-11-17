@@ -96,7 +96,7 @@ fn to_render_token_stream_with_two_params() -> result::Result<()> {
     let ts = block.to_render_token_stream()?;
     let expected = quote! {
         let section_name = "test";
-        let is_required = "false".parse::<bool>().is_ok();
+        let is_required = false;
         let sections = context.get_section(section_name);
         match sections {
             Some(contents) => {

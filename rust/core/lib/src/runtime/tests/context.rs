@@ -49,3 +49,14 @@ fn default_context_default_section() {
     let default_section_content = default_section_content.unwrap();
     assert_eq!(default_section_content, "S2");
 }
+
+#[test]
+fn default_context_appends_sections_in_order() {
+    let mut context = DefaultViewContext::new();
+    context.add_section("scripts", "first".into());
+    context.add_section("scripts", "second".into());
+    assert_eq!(
+        context.get_section("scripts").unwrap(),
+        &["first", "second"]
+    );
+}

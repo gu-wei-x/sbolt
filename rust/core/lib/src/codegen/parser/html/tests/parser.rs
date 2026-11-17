@@ -7,7 +7,7 @@ fn parse_wellformed_node_with_no_meaningful_content() -> result::Result<()> {
     let source = "<div>\n  </div>";
     let dom = parse_html(source)?;
     let content = dom.to_string();
-    let expected = "<div/>";
+    let expected = "<div></div>";
     assert_eq!(content, expected);
 
     Ok(())
@@ -225,6 +225,14 @@ fn parse_html_custom_tagname() -> result::Result<()> {
     let content = dom.to_string();
     assert_eq!(content, source);
 
+    for tag in ["my-widget", "test_tag", "test:tag"] {
+        let source = format!("<{tag}>hello</{tag}><p>after</p>");
+        assert_eq!(parse_html(&source)?.to_string(), source);
+
+        let source = format!("</{tag}><p>after</p>");
+        assert_eq!(parse_html(&source)?.to_string(), source);
+    }
+
     let source = "<test_tag name=\"route-action\" content=\"pull_request_layout\">";
     let dom = parse_html(source)?;
     let content = dom.to_string();
@@ -289,7 +297,7 @@ fn parse_html_self_close_tag_without_attribute() -> result::Result<()> {
     let source = "<test></test>";
     let dom = parse_html(source)?;
     let content = dom.to_string();
-    let expected = "<test/>";
+    let expected = "<test></test>";
     assert_eq!(content, expected);
 
     Ok(())
