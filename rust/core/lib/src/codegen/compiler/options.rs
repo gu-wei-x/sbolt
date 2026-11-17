@@ -67,6 +67,9 @@ impl CompilerOptions {
         self.need_optimization
     }
 
+    /// Merge static HTML writes and compact tag syntax and inter-tag whitespace.
+    /// Assumes default HTML whitespace/display rules, not CSS overrides.
+    /// Attribute values, protected content, and unknown insertion contexts are preserved.
     pub fn with_optimization(mut self, need_optimization: bool) -> Self {
         self.need_optimization = need_optimization;
         self

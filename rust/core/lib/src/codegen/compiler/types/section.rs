@@ -18,30 +18,26 @@ impl<'a> Block<'a> {
                 ));
             }
         };
+        let section_context = context.section_context();
+        let context = &section_context;
 
         let ts = match span.is_simple() {
             true => {
                 // simple is content section.
-                let raw_content = span.content();
-                let optimizer = context.create_optimizer(self);
-                let raw_content = optimizer.optimize(&raw_content);
+                let content = Block::new_content(span.clone());
+                let write = content.to_content_token_stream(context)?;
                 quote! {
                     let section_name = #name;
                     let inner_writer = {
                         let mut writer = self.create_writer(None);
-                        writer.write(#raw_content);
+                        #write
                         writer
                     };
                     context.add_section(section_name, inner_writer.into_string());
                 }
             }
             false => {
-                let mut tsv = vec![];
-                for block in span.blocks() {
-                    for rs in block.to_token_stream(Some(self), context)? {
-                        tsv.push(rs);
-                    }
-                }
+                let tsv = Self::content_blocks_to_token_stream(span.blocks(), Some(self), context)?;
                 quote! {
                     let section_name = #name;
                     let section_writer = {

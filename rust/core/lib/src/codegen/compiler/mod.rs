@@ -16,4 +16,4 @@ mod tests;
 // re-export
 pub use self::compiler::Compiler;
 pub use self::options::CompilerOptions;
-pub use self::result::CompileResult;
+pub use self::result::{CompileResult, StaticOutputStats};

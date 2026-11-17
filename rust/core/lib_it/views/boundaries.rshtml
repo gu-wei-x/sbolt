@@ -1,0 +1,11 @@
+<div    class = 'x' >a@*join*@b</div>
+<p>block</p>
+<span>one</span>
+<span>two</span>
+@section fragment{<span   title = ' a  b '> hello  world </span>}
+<pre>@render(fragment)</pre>
+@{
+    for i in 0..2 {
+        @{<span   data-x = 'y'>@i </span>}
+    }
+}

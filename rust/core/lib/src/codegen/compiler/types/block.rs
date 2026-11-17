@@ -28,6 +28,7 @@ impl<'a> Block<'a> {
             }
             Block::KFUNCTIONS(_) => todo!(),
             Block::KINLINEDCODE(_) => {
+                context.invalidate_html_context();
                 let ts = self.to_inline_code_token_stream()?;
                 result.push(ts);
             }
@@ -44,24 +45,25 @@ impl<'a> Block<'a> {
                         "Wrong method call: couldn't generate code",
                     ));
                 } else {
-                    for block in span.blocks() {
-                        if !matches!(block, Block::KLAYOUT(_) | Block::KUSE(_)) {
-                            for rs in block.to_token_stream(from, context)? {
-                                result.push(rs);
-                            }
-                        }
-                    }
+                    let blocks = span
+                        .blocks()
+                        .iter()
+                        .filter(|b| !matches!(b, Block::KLAYOUT(_) | Block::KUSE(_)));
+                    result.extend(Self::content_blocks_to_token_stream(blocks, from, context)?);
                 }
             }
             Block::KRENDER(_) => {
+                context.invalidate_html_context();
                 let ts = self.to_render_token_stream()?;
                 result.push(ts);
             }
             Block::KSECTION(_, _) => {
+                context.invalidate_html_context();
                 let ts = self.to_section_token_stream(context)?;
                 result.push(ts);
             }
             Block::KUSE(_) => {
+                context.invalidate_html_context();
                 let use_ts = self.to_use_token_stream()?;
                 result.push(use_ts);
             }
@@ -87,12 +89,15 @@ impl<'a> Block<'a> {
             ));
         }
 
-        let ts = self.to_token_stream(Some(self), context)?;
         let root_span = self.span();
         let has_layout = root_span
             .blocks()
             .iter()
             .any(|b| matches!(b, Block::KLAYOUT(_)));
+        if has_layout {
+            context.invalidate_html_context();
+        }
+        let ts = self.to_token_stream(Some(self), context)?;
         match has_layout {
             true => {
                 let view_root_mod_name = format_ident!("{}", context.options().mod_name());
