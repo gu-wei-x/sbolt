@@ -12,7 +12,7 @@ use winnow::stream::Stream as _;
 
 impl<'a> Block<'a> {
     pub(in crate::codegen::parser::types) fn parse<'s>(
-        token_stream: &mut TokenStream,
+        token_stream: &mut TokenStream<'_>,
         context: &mut ParseContext<'_, 's>,
     ) -> result::Result<Block<'s>> {
         tokenizer::skip_whitespace_and_newline(token_stream);
@@ -96,7 +96,7 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::parser::types) fn parse_block_within_kinds<'s>(
         open_kind: tokenizer::Kind,
         close_kind: tokenizer::Kind,
-        token_stream: &mut TokenStream,
+        token_stream: &mut TokenStream<'_>,
         context: &mut ParseContext<'_, 's>,
     ) -> result::Result<Block<'s>> {
         let source = context.source();

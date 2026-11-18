@@ -10,7 +10,7 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_token_stream(
         &self,
         from: Option<&Block<'a>>,
-        context: &CodeGenContext,
+        context: &CodeGenContext<'_>,
     ) -> result::Result<Vec<TokenStream>> {
         let mut result = vec![];
         match self {
@@ -90,7 +90,7 @@ impl<'a> Block<'a> {
 
     pub(in crate::codegen::compiler::types) fn generate_render_token_stream(
         &self,
-        context: &CodeGenContext,
+        context: &CodeGenContext<'_>,
     ) -> result::Result<TokenStream> {
         if !matches!(self, Block::KROOT(_)) {
             return Err(error::CompileError::from_codegen(

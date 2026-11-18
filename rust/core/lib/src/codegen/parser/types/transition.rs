@@ -10,7 +10,7 @@ use winnow::stream::Stream as _;
 impl<'a> Block<'a> {
     // @exp, @{}, @()
     pub(in crate::codegen::parser::types) fn parse_transition_block<'s>(
-        token_stream: &mut TokenStream,
+        token_stream: &mut TokenStream<'_>,
         context: &mut ParseContext<'_, 's>,
     ) -> result::Result<Block<'s>> {
         // first token must be '@'
@@ -120,7 +120,7 @@ impl<'a> Block<'a> {
 
     fn create_inlined_code_block<'s>(
         token: &Token,
-        token_stream: &mut TokenStream,
+        token_stream: &mut TokenStream<'_>,
         context: &ParseContext<'_, 's>,
     ) -> result::Result<Block<'s>> {
         // consume the expression token.

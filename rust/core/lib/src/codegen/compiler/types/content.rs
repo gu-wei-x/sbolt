@@ -99,7 +99,7 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn content_blocks_to_token_stream<'b>(
         blocks: impl IntoIterator<Item = &'b Block<'a>>,
         from: Option<&Block<'a>>,
-        context: &CodeGenContext,
+        context: &CodeGenContext<'_>,
     ) -> result::Result<Vec<TokenStream>>
     where
         'a: 'b,
@@ -131,7 +131,7 @@ impl<'a> Block<'a> {
     fn static_write(
         content: &str,
         writes: usize,
-        context: &CodeGenContext,
+        context: &CodeGenContext<'_>,
     ) -> result::Result<TokenStream> {
         Ok(match context.static_content(content, writes)? {
             Some(content) => quote! { writer.write(#content); },
@@ -141,7 +141,7 @@ impl<'a> Block<'a> {
 
     pub(in crate::codegen::compiler::types) fn to_content_token_stream(
         &self,
-        context: &CodeGenContext,
+        context: &CodeGenContext<'_>,
     ) -> result::Result<TokenStream> {
         if !matches!(self, Block::KCONTENT(_)) {
             return Err(error::CompileError::from_codegen(
@@ -164,7 +164,7 @@ impl<'a> Block<'a> {
 
     pub(in crate::codegen::compiler::types) fn to_inline_content_token_stream(
         &self,
-        context: &CodeGenContext,
+        context: &CodeGenContext<'_>,
     ) -> result::Result<TokenStream> {
         // check whether block is pure content or compitation block.
         if !matches!(self, Block::KINLINEDCONTENT(_)) {

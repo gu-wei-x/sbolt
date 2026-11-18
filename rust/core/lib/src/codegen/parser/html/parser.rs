@@ -80,7 +80,7 @@ impl<'s> StateMachine<'s> {
 }
 
 impl<'s> StateMachine<'s> {
-    fn process_with_init(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
+    fn process_with_init(&mut self, token_stream: &mut TokenStream<'_>, dom: &mut HtmlDocument) {
         // we know there is valid token;
         let token = token_stream.peek_token().unwrap();
         match token.kind() {
@@ -95,7 +95,11 @@ impl<'s> StateMachine<'s> {
         }
     }
 
-    fn process_with_tag_open(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
+    fn process_with_tag_open(
+        &mut self,
+        token_stream: &mut TokenStream<'_>,
+        dom: &mut HtmlDocument,
+    ) {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 tokenizer::Kind::EXCLAMATION => {
@@ -122,7 +126,7 @@ impl<'s> StateMachine<'s> {
 
     fn process_with_tag_name(
         &mut self,
-        token_stream: &mut TokenStream,
+        token_stream: &mut TokenStream<'_>,
         dom: &mut HtmlDocument,
     ) -> result::Result<()> {
         // here we know there is valid token.
@@ -165,7 +169,11 @@ impl<'s> StateMachine<'s> {
         Ok(())
     }
 
-    fn process_with_attributes(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
+    fn process_with_attributes(
+        &mut self,
+        token_stream: &mut TokenStream<'_>,
+        dom: &mut HtmlDocument,
+    ) {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 tokenizer::Kind::GREATTHAN => {
@@ -182,7 +190,11 @@ impl<'s> StateMachine<'s> {
         }
     }
 
-    fn process_with_attr_name(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
+    fn process_with_attr_name(
+        &mut self,
+        token_stream: &mut TokenStream<'_>,
+        dom: &mut HtmlDocument,
+    ) {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 tokenizer::Kind::EQUALS => {
@@ -245,7 +257,11 @@ impl<'s> StateMachine<'s> {
         }
     }
 
-    fn process_with_attr_value(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
+    fn process_with_attr_value(
+        &mut self,
+        token_stream: &mut TokenStream<'_>,
+        dom: &mut HtmlDocument,
+    ) {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 tokenizer::Kind::DQMARK => {
@@ -288,7 +304,7 @@ impl<'s> StateMachine<'s> {
         }
     }
 
-    fn process_with_text(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
+    fn process_with_text(&mut self, token_stream: &mut TokenStream<'_>, dom: &mut HtmlDocument) {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 tokenizer::Kind::LESSTHAN => {
@@ -311,7 +327,11 @@ impl<'s> StateMachine<'s> {
         }
     }
 
-    fn process_with_tag_close(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
+    fn process_with_tag_close(
+        &mut self,
+        token_stream: &mut TokenStream<'_>,
+        dom: &mut HtmlDocument,
+    ) {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 tokenizer::Kind::GREATTHAN => {
@@ -337,7 +357,7 @@ impl<'s> StateMachine<'s> {
 
     fn process_with_instruction_start(
         &mut self,
-        token_stream: &mut TokenStream,
+        token_stream: &mut TokenStream<'_>,
         dom: &mut HtmlDocument,
     ) -> result::Result<()> {
         if let Some(token) = token_stream.peek_token() {
@@ -371,7 +391,7 @@ impl<'s> StateMachine<'s> {
         Ok(())
     }
 
-    fn process_with_comment(&mut self, token_stream: &mut TokenStream, dom: &mut HtmlDocument) {
+    fn process_with_comment(&mut self, token_stream: &mut TokenStream<'_>, dom: &mut HtmlDocument) {
         if let Some(token) = token_stream.peek_token() {
             match token.kind() {
                 tokenizer::Kind::GREATTHAN => {
@@ -503,7 +523,7 @@ impl<'s> StateMachine<'s> {
 // consume token_stream to get quotated string.
 fn get_possible_quotated_string_from_stream(
     source: &str,
-    token_stream: &mut TokenStream,
+    token_stream: &mut TokenStream<'_>,
     mark_kind: Kind,
 ) -> String {
     let mut content = String::new();

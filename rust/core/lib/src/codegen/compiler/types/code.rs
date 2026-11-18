@@ -8,7 +8,7 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_code_token_stream(
         &self,
         from: Option<&Block<'a>>,
-        context: &CodeGenContext,
+        context: &CodeGenContext<'_>,
     ) -> result::Result<TokenStream> {
         // validate parent block.
         from.ok_or(error::CompileError::from_codegen(

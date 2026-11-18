@@ -31,7 +31,7 @@ impl<T: std::fmt::Display> From<T> for DisplayOption<T> {
 }
 
 impl<T: std::fmt::Display> std::fmt::Display for DisplayOption<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.0 {
             Some(value) => write!(f, "{}", value),
             None => write!(f, ""),
@@ -46,7 +46,7 @@ impl<'a, T: std::fmt::Display> From<&'a T> for DisplayOptionRef<'a, T> {
     }
 }
 impl<'a, T: std::fmt::Display> std::fmt::Display for DisplayOptionRef<'a, T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.0 {
             Some(value) => write!(f, "{}", value),
             None => write!(f, ""),

@@ -5,7 +5,7 @@ use winnow::stream::Stream as _;
 use winnow::stream::TokenSlice;
 
 pub(in crate::codegen::parser::types) fn get_token_if<'a, F: Fn(Kind) -> bool>(
-    stream: &'a mut TokenSlice<Token>,
+    stream: &'a mut TokenSlice<'_, Token>,
     kind_fn: F,
 ) -> Option<&'a Token> {
     let token = stream.peek_token();
@@ -20,7 +20,7 @@ pub(in crate::codegen::parser::types) fn get_token_if<'a, F: Fn(Kind) -> bool>(
 
 /// check if the token is @@escaped in the source string
 pub(in crate::codegen::parser::types) fn is_token_escaped<'a>(
-    stream: &'a TokenSlice<Token>,
+    stream: &'a TokenSlice<'_, Token>,
 ) -> bool {
     let first = get_nth_token(stream, 0);
     let send = get_nth_token(stream, 1);
