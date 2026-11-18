@@ -110,7 +110,8 @@ impl<'a> Template<'a> {
         let view_name = name::create_view_type_name(&name);
         let namespace = self.namespace().cloned();
         let namespace = name::create_name_space(&namespace, &name);
-        let full_view_name = name::create_normalized_name(&Some(namespace), &view_name);
+        let full_view_name = crate::types::normalize_path_to_view_key(&namespace)
+            .ok_or("Failed to create a template lookup key")?;
         let view_type = name::create_view_type_name(&full_view_name);
         result.add_view_mapping(full_view_name.to_string(), view_name.clone());
         syn::parse_str::<Ident>(&view_name).map_err(|_| {

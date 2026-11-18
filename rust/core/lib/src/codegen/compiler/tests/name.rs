@@ -25,9 +25,39 @@ fn create_view_type_name() {
 }
 
 #[test]
+fn create_view_type_name_converts_underscored_path_segments() {
+    for (source, expected) in [
+        ("html_regressions", "HtmlRegressionsView"),
+        ("json_static", "JsonStaticView"),
+        ("_partial__view", "PartialViewView"),
+        (
+            "views::json_static::Json_staticView",
+            "ViewsJsonStaticJsonStaticViewView",
+        ),
+        ("views::sub_folder::myJSON", "ViewsSubFolderMyJSONView"),
+    ] {
+        assert_eq!(name::create_view_type_name(source), expected);
+    }
+}
+
+#[test]
 fn create_type_full_name() {
     assert_eq!(
         name::create_type_full_name("index", "test"),
         "crate::test::index"
+    );
+}
+
+#[test]
+fn create_view_type_full_name_preserves_module_paths_and_lookup_keys() {
+    let key = crate::types::normalize_path_to_view_key("views/json_static").unwrap();
+    assert_eq!(key, "views::json_static::Json_staticView");
+    assert_eq!(
+        name::create_view_type_full_name(&key, "JsonStaticView", "generated_views"),
+        "crate::generated_views::views::json_static::JsonStaticView"
+    );
+    assert_eq!(
+        name::create_view_type_full_name("views::index::IndexView", "IndexView", "generated_views"),
+        "crate::generated_views::views::index::IndexView"
     );
 }

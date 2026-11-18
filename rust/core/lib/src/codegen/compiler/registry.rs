@@ -14,11 +14,11 @@ pub(crate) fn generate_registry(
     let mod_name = compiler_option.mod_name();
     let view_types_content = view_name_mapping
         .iter()
-        .map(|(name, _view_name)| {
+        .map(|(name, view_name)| {
             format!(
                 "K{}({}),",
                 name::create_view_type_name(&name),
-                name::create_type_full_name(name, mod_name)
+                name::create_view_type_full_name(name, view_name, mod_name)
             )
         })
         .collect::<Vec<String>>()
@@ -73,8 +73,8 @@ fn generate_registry_method(
 ) -> Result<TokenStream, String> {
     let view_reg_content = view_name_mapping
         .iter()
-        .map(|(name, _)| {
-            let full_type_name = name::create_type_full_name(name, mode_name);
+        .map(|(name, view_name)| {
+            let full_type_name = name::create_view_type_full_name(name, view_name, mode_name);
             format!(
                 r#"view_reg_creator.insert({}::name(), {}::create);"#,
                 full_type_name, full_type_name

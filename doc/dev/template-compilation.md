@@ -16,6 +16,9 @@ flowchart TD
 ```
 
 - All template types share the parser for `@` expressions and directives.
+- Generated types and enum variants use CamelCase, so `json_static` produces
+  `JsonStaticView`. Template module paths and render lookup names retain their
+  original spelling.
 - `CompilerOptions::with_optimization(true)` enables static-write merging and
   whitespace compaction. HTML compaction assumes normal whitespace/default
   display rules and preserves protected or unknown contexts.
