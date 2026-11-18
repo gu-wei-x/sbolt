@@ -1,46 +1,43 @@
-use indexmap::map;
-
-#[derive(Debug)]
-pub(in crate::codegen) struct Array {
-    items: Vec<JObject>,
-    is_closed: bool,
-}
-
-#[derive(Debug)]
-pub(in crate::codegen) struct Map {
-    items: map::IndexMap<String, JObject>,
-    is_closed: bool,
-}
-
 #[derive(Debug)]
 pub(in crate::codegen) enum JObject {
-    KARRAY(Array),
-    KMap(Map),
+    KARRAY(Vec<JObject>),
+    KMap(Vec<(String, JObject)>),
     KValue(String),
 }
 
-impl Default for JObject {
-    fn default() -> Self {
-        JObject::new_map()
-    }
-}
-
 impl JObject {
-    pub(in crate::codegen::parser::json) fn new_array() -> Self {
-        JObject::KARRAY(Array {
-            items: vec![],
-            is_closed: false,
-        })
+    pub(in crate::codegen) fn to_compact_string(&self) -> String {
+        let mut output = String::new();
+        self.write_compact(&mut output);
+        output
     }
 
-    pub(in crate::codegen::parser::json) fn new_map() -> Self {
-        JObject::KMap(Map {
-            items: map::IndexMap::new(),
-            is_closed: false,
-        })
-    }
-
-    pub(in crate::codegen::parser::json) fn new_value(value: &str) -> Self {
-        JObject::KValue(value.into())
+    fn write_compact(&self, output: &mut String) {
+        match self {
+            Self::KARRAY(items) => {
+                output.push('[');
+                for (index, item) in items.iter().enumerate() {
+                    if index > 0 {
+                        output.push(',');
+                    }
+                    item.write_compact(output);
+                }
+                output.push(']');
+            }
+            Self::KMap(items) => {
+                output.push('{');
+                for (index, (name, value)) in items.iter().enumerate() {
+                    if index > 0 {
+                        output.push(',');
+                    }
+                    // Names retain their original quotes and escapes, including duplicate keys.
+                    output.push_str(name);
+                    output.push(':');
+                    value.write_compact(output);
+                }
+                output.push('}');
+            }
+            Self::KValue(value) => output.push_str(value),
+        }
     }
 }

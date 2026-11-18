@@ -22,7 +22,7 @@ impl<'a> Block<'a> {
                 "Wrong method call: couldn't generate code",
             ));
         }
-        context.invalidate_html_context();
+        context.invalidate_static_context();
         let code_span = self.span();
         let mut code_content = String::new();
         if code_span.is_simple() {

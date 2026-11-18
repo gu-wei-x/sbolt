@@ -143,12 +143,109 @@ fn raw_output_and_rust_code_are_html_context_barriers() -> result::Result<()> {
 }
 
 #[test]
-fn optimization_leaves_json_and_text_generation_unchanged() -> result::Result<()> {
+fn optimization_leaves_text_generation_unchanged() -> result::Result<()> {
     let source = "<div   class = 'x'>a@* comment *@b</div>";
-    for kind in [Kind::KJSON, Kind::KTEXT] {
-        let (before, _) = generate_content(source, kind, false)?;
-        let (after, _) = generate_content(source, kind, true)?;
-        assert_eq!(before.to_string(), after.to_string());
+    let (before, _) = generate_content(source, Kind::KTEXT, false)?;
+    let (after, _) = generate_content(source, Kind::KTEXT, true)?;
+    assert_eq!(before.to_string(), after.to_string());
+    Ok(())
+}
+
+#[test]
+fn json_compaction_merges_static_fragments_and_measures_savings() -> result::Result<()> {
+    let source = r#"{ "a" : "one @* join *@ two", "a" : [ 1.2300e+999, true, null ] }"#;
+    let expected = r#"{"a":"one  two","a":[1.2300e+999,true,null]}"#;
+    let (tokens, stats) = generate_content(source, Kind::KJSON, true)?;
+    assert_eq!(
+        tokens.to_string(),
+        quote! { writer.write(#expected); }.to_string()
+    );
+    assert_eq!(stats.input_writes(), 2);
+    assert_eq!(stats.output_writes(), 1);
+    assert_eq!(stats.input_bytes(), source.len() - "@* join *@".len());
+    assert_eq!(stats.output_bytes(), expected.len());
+    assert_eq!(stats.unknown_context_writes(), 0);
+    assert!(stats.output_bytes() < stats.input_bytes());
+
+    let (_, stats) = generate_content(source, Kind::KJSON, false)?;
+    assert_eq!(stats.input_bytes(), stats.output_bytes());
+    assert_eq!(stats.output_writes(), 2);
+    Ok(())
+}
+
+#[test]
+fn json_compaction_preserves_string_escapes_and_utf8() -> result::Result<()> {
+    let source = "{ \"\\u0061\" : \"\u{e9}  \u{1f600} \\n \\\\\" }";
+    let expected = "{\"\\u0061\":\"\u{e9}  \u{1f600} \\n \\\\\"}";
+    let (tokens, stats) = generate_content(source, Kind::KJSON, true)?;
+    assert_eq!(
+        tokens.to_string(),
+        quote! { writer.write(#expected); }.to_string()
+    );
+    assert_eq!(stats.output_bytes(), expected.len());
+    Ok(())
+}
+
+#[test]
+fn dynamic_json_preserves_whitespace_before_and_after_context_barriers() -> result::Result<()> {
+    for source in [
+        r#"{ "text" : "hello  @value  world" }"#,
+        r#"{ "value" : @value, "next" : [ 1, 2 ] }"#,
+        r#"{ "text" : "@(value)\"  still text" }"#,
+        r#"{ "value" : @{writer.write("1");} }"#,
+        r#"@section value { " section   text " }{ "value" : @render(value) }"#,
+        "@layout layout;\n{ \"text\" : \" keep  spaces \" }",
+    ] {
+        let (before, _) = generate_content(source, Kind::KJSON, false)?;
+        let (after, stats) = generate_content(source, Kind::KJSON, true)?;
+        assert_eq!(before.to_string(), after.to_string(), "{source}");
+        assert_eq!(stats.input_bytes(), stats.output_bytes(), "{source}");
+        assert!(stats.unknown_context_writes() > 0, "{source}");
+    }
+    Ok(())
+}
+
+#[test]
+fn json_errors_use_original_template_locations() {
+    for (source, line, column, detail) in [
+        (
+            "@* first comment line\nsecond comment line\nthird comment line *@\n{\n  \"x\": [1,]\n}",
+            4,
+            10,
+            "]",
+        ),
+        (r#"{"x": [1,@* comment *@]}"#, 0, 22, "]"),
+        ("{\"x\":\"\u{e9}@@\",\"y\":[1,]}", 0, 19, "]"),
+        ("\n\n  {\n \"x\":[1,]\n}", 3, 8, "]"),
+        ("{\"x\": [1,@* trailing\ncomment *@", 1, 10, ""),
+        ("@*first\r\nsecond*@\r\n{\r\n  \"x\": [1,]\r\n}", 3, 10, "]"),
+        ("@*first\rsecond*@\r{\r  \"x\": [1,]\r}", 3, 10, "]"),
+    ] {
+        let error = generate_content(source, Kind::KJSON, true).unwrap_err();
+        match error {
+            crate::types::error::CompileError::Parser(Some(location), _, actual_detail) => {
+                assert_eq!(location.line, line, "{source}");
+                assert_eq!(location.column, column, "{source}");
+                if detail.is_empty() {
+                    assert!(actual_detail.is_empty(), "{source}");
+                } else {
+                    assert!(actual_detail.starts_with(detail), "{source}");
+                }
+            }
+            error => panic!("Expected a located parser error for {source:?}, got {error:?}"),
+        }
+    }
+}
+
+#[test]
+fn invalid_static_json_reports_error_only_when_optimization_is_enabled() -> result::Result<()> {
+    for source in [r#"{ "x": [1,] }"#, r#"{ "x": "\q" }"#, r#"{"x":true} {}"#] {
+        generate_content(source, Kind::KJSON, false)?;
+        let error = generate_content(source, Kind::KJSON, true).unwrap_err();
+        assert!(matches!(
+            error,
+            crate::types::error::CompileError::Parser(..)
+        ));
     }
     Ok(())
 }

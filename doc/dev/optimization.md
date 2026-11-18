@@ -6,7 +6,7 @@ cost. Improving one can worsen another.
 ## 1. Code generation: reduce embedded static strings
 
 The [content generator](../../rust/core/lib/src/codegen/compiler/types/content.rs)
-merges adjacent static HTML output before embedding it in generated Rust code.
+merges adjacent static HTML/JSON output before embedding it in generated Rust code.
 
 ### Implemented first pass
 
@@ -37,7 +37,25 @@ Enable the pass with `CompilerOptions::with_optimization(true)`. It:
   adjacent static writes can still be merged.
 - Starts section buffers and templates with a layout in an unknown insertion
   context.
-- Leaves optimization-disabled generation and JSON/text output unchanged.
+- Compacts fully static standalone JSON templates by removing only the four JSON
+  whitespace characters (space, tab, CR, and LF) outside strings. It validates
+  the complete JSON value, including object/array structure, numbers, literals,
+  and string escapes. Invalid static JSON produces a compile error when this
+  optimization is enabled. Diagnostics refer to the original template locations,
+  including after removed template comments and escaped `@@` characters.
+- Preserves JSON string contents and escape spelling, number spelling/precision,
+  object-member order, and duplicate keys. It accepts any JSON root value and
+  supports up to 128 nested containers, reporting an error beyond that limit.
+- Leaves all dynamic JSON templates unminified, including static output before
+  the first dynamic operation. Sections and layout-backed JSON fragments also
+  remain unminified: compaction must not guess whether a fragment is inside a
+  string or next to a partial token. Static writes can still be merged.
+- Leaves optimization-disabled generation and plain-text output unchanged.
+
+For example, static JSON `{ "text" : " a  b ", "items" : [ 1, true ] }`
+becomes `{"text":" a  b ","items":[1,true]}`. This does not add JSON escaping
+to dynamic interpolation or validate the JSON produced by runtime Rust code;
+those behaviors are unchanged.
 
 The scanner assumes a standalone HTML template starts in normal HTML text
 context. If rendered HTML is embedded into another language or a raw-text

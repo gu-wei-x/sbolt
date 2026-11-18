@@ -3,6 +3,13 @@ use sbolt::types::result;
 sbolt::include_views!();
 
 #[test]
+fn static_json_preserves_original_formatting() -> result::RenderResult<()> {
+    let output = lib_it_no_op_views::render("views/json_static", &mut sbolt::context!())?;
+    assert_eq!(output, include_str!("../../views/json_static.rsjson"));
+    Ok(())
+}
+
+#[test]
 fn optional_and_repeated_sections() -> result::RenderResult<()> {
     use sbolt::types::Context;
 

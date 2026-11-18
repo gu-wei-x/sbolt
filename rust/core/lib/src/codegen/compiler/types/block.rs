@@ -28,7 +28,7 @@ impl<'a> Block<'a> {
             }
             Block::KFUNCTIONS(_) => todo!(),
             Block::KINLINEDCODE(_) => {
-                context.invalidate_html_context();
+                context.invalidate_static_context();
                 let ts = self.to_inline_code_token_stream()?;
                 result.push(ts);
             }
@@ -37,6 +37,8 @@ impl<'a> Block<'a> {
                 result.push(ts);
             }
             Block::KROOT(span) => {
+                let fully_static = span.blocks().iter().all(Self::is_static_output);
+                context.prepare_root(fully_static);
                 // filter out layout and use was called before this.
                 if span.blocks().is_empty() {
                     // todo: write the pure content
@@ -49,21 +51,29 @@ impl<'a> Block<'a> {
                         .blocks()
                         .iter()
                         .filter(|b| !matches!(b, Block::KLAYOUT(_) | Block::KUSE(_)));
-                    result.extend(Self::content_blocks_to_token_stream(blocks, from, context)?);
+                    let tokens = Self::content_blocks_to_token_stream(blocks, from, context)
+                        .map_err(|error| {
+                            if fully_static {
+                                self.remap_static_error(error)
+                            } else {
+                                error
+                            }
+                        })?;
+                    result.extend(tokens);
                 }
             }
             Block::KRENDER(_) => {
-                context.invalidate_html_context();
+                context.invalidate_static_context();
                 let ts = self.to_render_token_stream()?;
                 result.push(ts);
             }
             Block::KSECTION(_, _) => {
-                context.invalidate_html_context();
+                context.invalidate_static_context();
                 let ts = self.to_section_token_stream(context)?;
                 result.push(ts);
             }
             Block::KUSE(_) => {
-                context.invalidate_html_context();
+                context.invalidate_static_context();
                 let use_ts = self.to_use_token_stream()?;
                 result.push(use_ts);
             }
@@ -95,7 +105,7 @@ impl<'a> Block<'a> {
             .iter()
             .any(|b| matches!(b, Block::KLAYOUT(_)));
         if has_layout {
-            context.invalidate_html_context();
+            context.invalidate_static_context();
         }
         let ts = self.to_token_stream(Some(self), context)?;
         match has_layout {
