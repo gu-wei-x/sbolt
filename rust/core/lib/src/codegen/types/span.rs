@@ -28,6 +28,14 @@ impl<'a> Span<'a> {
         &self.blocks
     }
 
+    pub(in crate::codegen) fn tokens(&self) -> &[Token] {
+        &self.tokens
+    }
+
+    pub(in crate::codegen) fn source(&self) -> &'a str {
+        self.source
+    }
+
     pub(in crate::codegen) fn is_simple(&self) -> bool {
         self.blocks.is_empty()
     }

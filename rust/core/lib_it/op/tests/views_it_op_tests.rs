@@ -3,6 +3,32 @@ use sbolt::types::result;
 sbolt::include_views!();
 
 #[test]
+fn static_json_preserves_values_and_removes_only_structural_whitespace() -> result::RenderResult<()>
+{
+    let output = lib_it_op_views::render("views/json_static", &mut sbolt::context!())?;
+    assert_eq!(
+        output,
+        r#"{"z":[true,false,null,{},[],-0,1.2300e+999],"text":" a  b \n \t \" \\ \/ \u0041 ","z":9007199254740993123456789}"#
+    );
+    Ok(())
+}
+
+#[test]
+fn dynamic_json_keeps_existing_formatting() -> result::RenderResult<()> {
+    let mut context = sbolt::context! {
+        name: "sbolt".to_string(),
+        age: 1,
+        msg: "Welcome!".to_string()
+    };
+    let output = lib_it_op_views::render("views/sub/jindex", &mut context)?;
+    assert_eq!(
+        output.trim(),
+        "{\n  \"name\": \"sbolt\",\n  \"age\": 1,\n  \"msg\": \"Welcome!\"\n}"
+    );
+    Ok(())
+}
+
+#[test]
 fn optimized_html_preserves_structure_and_attribute_values() -> result::RenderResult<()> {
     let result = lib_it_op_views::render("views/html_regressions", &mut sbolt::context!())?;
     assert_eq!(
