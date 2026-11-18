@@ -20,6 +20,8 @@ winnow = "0.7"
 
 #optional
 prettyplease = { version = "0.2", optional = true }
+
+[dev-dependencies]
 indexmap = "2"
 
 [features]

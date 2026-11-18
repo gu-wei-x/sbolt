@@ -7,6 +7,20 @@ use crate::{
     },
     types::{result, template::Kind},
 };
+use quote::quote;
+
+#[test]
+fn layout_content_preserves_unknown_insertion_context() -> result::Result<()> {
+    let source = "@layout layout;\n<div   id='x'>text</div>";
+    let options = CompilerOptions::default().with_optimization(true);
+    let template = Template::from(source, None, Kind::KHTML, &options)?;
+    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let tokens = template.block().generate_render_token_stream(&context)?;
+    let write = quote! { writer.write("<div   id='x'>text</div>"); };
+    assert!(tokens.to_string().contains(&write.to_string()));
+    assert_eq!(context.static_output_stats().unknown_context_writes(), 1);
+    Ok(())
+}
 
 #[test]
 #[should_panic]

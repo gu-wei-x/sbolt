@@ -17,7 +17,7 @@ this is @name}
 <html><div>Test</div></html>"#;
     let options = CompilerOptions::default();
     let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
-    let ts = template.to_token_stream(
+    let (ts, _) = template.to_token_stream(
         "TestView",
         "TestnsTestViewView",
         "testns::TestView",
@@ -104,7 +104,7 @@ fn to_token_stream_html_without_layout() -> result::Result<()> {
 <html><div>Test</div></html>"#;
     let options = CompilerOptions::default();
     let template = Template::from(&raw_content, None, Kind::KHTML, &options)?;
-    let ts = template.to_token_stream(
+    let (ts, _) = template.to_token_stream(
         "TestView",
         "TestnsTestViewView",
         "testns::TestView",

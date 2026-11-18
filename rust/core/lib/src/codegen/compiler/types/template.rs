@@ -1,5 +1,6 @@
 use crate::codegen::CompileResult;
 use crate::codegen::CompilerOptions;
+use crate::codegen::StaticOutputStats;
 use crate::codegen::compiler::context::CodeGenContext;
 use crate::codegen::compiler::fsutil;
 use crate::codegen::compiler::name;
@@ -19,7 +20,7 @@ impl<'a> Template<'a> {
         view_type: &str,
         full_view_name: &str,
         compiler_options: &CompilerOptions,
-    ) -> result::Result<TokenStream> {
+    ) -> result::Result<(TokenStream, StaticOutputStats)> {
         let view_name = format_ident!("{}", view_name);
         let view_type = format_ident!("K{}", view_type);
         let template_type = format_ident!("{}", consts::TEMPLATES_TYPE_NAME);
@@ -46,9 +47,8 @@ impl<'a> Template<'a> {
             }
         };
         // a view must have render method.
-        let render_content = self
-            .block()
-            .generate_render_token_stream(&CodeGenContext::new(self.kind(), compiler_options))?;
+        let context = CodeGenContext::new(self.kind(), compiler_options);
+        let render_content = self.block().generate_render_token_stream(&context)?;
         let code = quote! {
             use #template_type_ts;
             use sbolt::types::Template as _;
@@ -94,7 +94,7 @@ impl<'a> Template<'a> {
                 #render_content
             }
         };
-        Ok(code)
+        Ok((code, context.static_output_stats()))
     }
 
     pub(in crate::codegen::compiler) fn compile(
@@ -125,9 +125,10 @@ impl<'a> Template<'a> {
                 compiler_options.mod_name()
             )
         })?;
-        let code =
+        let (code, stats) =
             self.to_token_stream(&view_name, &view_type, &full_view_name, compiler_options)?;
         fsutil::write_code_to_file(&target, &code)?;
+        result.add_static_output_stats(stats);
         Ok(result)
     }
 }
