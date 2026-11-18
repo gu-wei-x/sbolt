@@ -23,17 +23,6 @@ pub(in crate::codegen::compiler) fn create_type_full_name(
     format!("crate::{}::{}", mod_name, type_name)
 }
 
-pub(in crate::codegen::compiler) fn create_view_type_full_name(
-    view_key: &str,
-    view_name: &str,
-    mod_name: &str,
-) -> String {
-    let namespace = view_key
-        .rsplit_once("::")
-        .map(|(prefix, _)| prefix.to_string());
-    create_type_full_name(&create_name_space(&namespace, view_name), mod_name)
-}
-
 pub(in crate::codegen::compiler) fn create_view_type_name(name: &str) -> String {
     let prefix = name
         .split("::")

@@ -47,17 +47,3 @@ fn create_type_full_name() {
         "crate::test::index"
     );
 }
-
-#[test]
-fn create_view_type_full_name_preserves_module_paths_and_lookup_keys() {
-    let key = crate::types::normalize_path_to_view_key("views/json_static").unwrap();
-    assert_eq!(key, "views::json_static::Json_staticView");
-    assert_eq!(
-        name::create_view_type_full_name(&key, "JsonStaticView", "generated_views"),
-        "crate::generated_views::views::json_static::JsonStaticView"
-    );
-    assert_eq!(
-        name::create_view_type_full_name("views::index::IndexView", "IndexView", "generated_views"),
-        "crate::generated_views::views::index::IndexView"
-    );
-}

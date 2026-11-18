@@ -1,0 +1,2 @@
+@layout json_only_layout;
+<p>must not use a JSON layout</p>

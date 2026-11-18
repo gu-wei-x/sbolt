@@ -1,4 +1,4 @@
-use crate::types::error;
+use crate::types::{error, result, template::Kind};
 use std::collections::{HashMap, HashSet};
 
 /// Measurements of generated static output, excluding dynamic expressions.
@@ -70,7 +70,7 @@ impl StaticOutputStats {
 pub struct CompileResult {
     // errors which won't stop build.
     warnings: Vec<error::CompileError>,
-    view_name_mapping: HashMap<String, String>,
+    view_name_mapping: HashMap<(String, Kind), String>,
     mods: Vec<String>,
     static_output_stats: StaticOutputStats,
 }
@@ -112,12 +112,22 @@ impl CompileResult {
 }
 
 impl CompileResult {
-    pub(crate) fn view_name_mapping(&self) -> &HashMap<String, String> {
+    pub(crate) fn view_name_mapping(&self) -> &HashMap<(String, Kind), String> {
         &self.view_name_mapping
     }
 
-    pub(crate) fn add_view_mapping(&mut self, view_name: String, file_path: String) {
-        self.view_name_mapping.insert(view_name, file_path);
+    pub(crate) fn add_view_mapping(
+        &mut self,
+        view_name: String,
+        kind: Kind,
+        type_path: String,
+    ) -> result::Result<()> {
+        let key = (view_name, kind);
+        if self.view_name_mapping.contains_key(&key) {
+            return Err(format!("Duplicate template '{}' for kind {kind:?}", key.0).into());
+        }
+        self.view_name_mapping.insert(key, type_path);
+        Ok(())
     }
 
     pub(crate) fn add_mod(&mut self, mod_name: &str) {
@@ -131,14 +141,16 @@ impl CompileResult {
         &self.mods
     }
 
-    pub(crate) fn merge_without_mods(&mut self, other: CompileResult) {
+    pub(crate) fn merge_without_mods(&mut self, other: CompileResult) -> result::Result<()> {
+        for ((key, kind), type_path) in other.view_name_mapping {
+            self.add_view_mapping(key, kind, type_path)?;
+        }
         self.static_output_stats.merge(other.static_output_stats);
         self.warnings.extend(other.warnings);
-        self.view_name_mapping
-            .extend(other.view_name_mapping.into_iter());
+        Ok(())
     }
 
-    pub(crate) fn merge_into(self, other: &mut CompileResult) {
-        other.merge_without_mods(self);
+    pub(crate) fn merge_into(self, other: &mut CompileResult) -> result::Result<()> {
+        other.merge_without_mods(self)
     }
 }

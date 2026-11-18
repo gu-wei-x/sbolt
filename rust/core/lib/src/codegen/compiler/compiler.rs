@@ -63,7 +63,7 @@ impl Compiler {
         for dir in self.options.source_dirs() {
             Module::new(PathBuf::from(dir), PathBuf::from(target_dir), None)
                 .process(&self.options)?
-                .merge_into(&mut compiler_result);
+                .merge_into(&mut compiler_result)?;
             compiler_result.add_mod(
                 &fsutil::get_dir_name(dir)
                     .ok_or(format!("Unable to generate mod name for dir: {dir}"))?,

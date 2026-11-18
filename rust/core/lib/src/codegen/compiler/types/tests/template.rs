@@ -80,7 +80,7 @@ this is @name}
              match Self::layout() {
                  Some(layout) => {
                      for key in sbolt::types::resolve_layout_to_view_keys(&layout, &Self::name()) {
-                         if let Some(creator) = crate::test_view_mod::resolve_view_creator(&key) {
+                         if let Some(creator) = crate::test_view_mod::resolve_view_creator(&key, Self::kind()) {
                              context.set_default_section(writer.into_string());
                              let view = creator();
                              return view.render(context);
@@ -212,7 +212,7 @@ fn compile_without_invalid_file_name() {
 
     let option = codegen::CompilerOptions::default();
     template
-        .compile("te-st.rshtml".into(), &option)
+        .compile("te-st", "te-st.rshtml".into(), &option)
         .expect("Expect valid ident from file name");
 }
 
@@ -227,6 +227,6 @@ fn compile_without_invalid_mod_name() {
 
     let option = codegen::CompilerOptions::default().with_mod_name("test-mod_name");
     template
-        .compile("test.rshtml".into(), &option)
+        .compile("test", "test.rshtml".into(), &option)
         .expect("Expect valid ident from mod name");
 }

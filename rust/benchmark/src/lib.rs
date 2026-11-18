@@ -1,11 +1,11 @@
 sbolt::include_views!();
 
 pub fn render_template_with_large_size_of_content() {
-    _ = bench_views::render("views/large", &mut sbolt::context!());
+    _ = bench_views::render("views/large", None, &mut sbolt::context!());
 }
 
 pub fn render_template_with_layout() {
-    _ = bench_views::render("views/testlayout", &mut sbolt::context!());
+    _ = bench_views::render("views/testlayout", None, &mut sbolt::context!());
 }
 
 pub fn render_template_without_layout() {
@@ -14,5 +14,5 @@ pub fn render_template_without_layout() {
         age: 1,
         msg: "Hello world!".to_string()
     };
-    _ = bench_views::render("views/test", &mut context);
+    _ = bench_views::render("views/test", None, &mut context);
 }

@@ -4,7 +4,7 @@ use crate::{
         compiler::{fsutil, name},
         consts,
     },
-    types::result,
+    types::{result, template::Kind},
 };
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
@@ -52,23 +52,22 @@ impl Module {
                     if meta.is_dir() {
                         Module::new(entry.path(), target_dir.clone(), Some(name_space.clone()))
                             .process(compiler_options)?
-                            .merge_into(&mut result);
+                            .merge_into(&mut result)?;
                         result.add_mod(entry.file_name().to_str().unwrap_or_default());
                     } else if meta.is_file() {
-                        let template_kind = fsutil::get_template_kind_from_ext(
+                        let Some(template_kind) = fsutil::get_template_kind_from_ext(
                             &entry.path(),
                             compiler_options.extensions(),
-                        );
-                        if template_kind.is_none() {
+                        ) else {
                             // skip non-template files.
                             continue;
-                        }
+                        };
 
                         let content = fs::read_to_string(entry.path()).unwrap_or_default();
                         let template = match crate::codegen::types::Template::from(
                             &content,
                             Some(name_space.clone()),
-                            template_kind.unwrap(),
+                            template_kind,
                             compiler_options,
                         ) {
                             Ok(t) => t,
@@ -77,25 +76,34 @@ impl Module {
                             }
                         };
 
-                        let file_name = fsutil::get_file_name(&entry.path()).unwrap_or_default();
-                        let file_name = format!("{}{}", file_name, consts::RS_FILE_EXTENSION);
+                        let source_name = fsutil::get_file_name(&entry.path()).unwrap_or_default();
+                        let suffix = match template_kind {
+                            Kind::KHTML => "html",
+                            Kind::KJSON => "json",
+                            Kind::KTEXT => "text",
+                        };
+                        let mut module_name = format!("{source_name}_{suffix}");
+                        while self.source.join(&module_name).is_dir() {
+                            module_name.push('_');
+                        }
+                        let file_name = format!("{}{}", module_name, consts::RS_FILE_EXTENSION);
                         let target_file = target_dir.join(&file_name);
-                        match template.compile(target_file, compiler_options) {
+                        match template.compile(&source_name, target_file, compiler_options) {
                             Ok(c_result) => {
-                                c_result.merge_into(&mut result);
+                                c_result.merge_into(&mut result)?;
                             }
                             Err(e) => {
                                 return Err(e.with_file(&entry.path()));
                             }
                         }
 
-                        result.add_mod(&fsutil::get_file_name(&entry.path()).unwrap_or_default());
+                        result.add_mod(&module_name);
                     }
                 }
             }
 
             // generate the mod.rs file.
-            let ts = Self::generate_sub_mod_ts(result.mods())?;
+            let ts = self.generate_sub_mod_ts(result.mods())?;
             let mod_file = target_dir.join(consts::TEMPLATES_MOD_FILE_NAME);
             fsutil::write_code_to_file(&mod_file, &ts)?;
         }
@@ -104,15 +112,22 @@ impl Module {
 }
 
 impl Module {
-    fn generate_sub_mod_ts(mods: &[String]) -> result::Result<TokenStream> {
-        let imported_content: String = mods
-            .iter()
-            .map(|m| format!("pub(crate) mod {};\n", m))
-            .collect::<String>();
-        let ts = imported_content
-            .parse::<TokenStream>()
-            .map_err(|err| format!("Failed to generate sub mod:{err}"))?;
-        Ok(ts)
+    fn generate_sub_mod_ts(&self, mods: &[String]) -> result::Result<TokenStream> {
+        let mut declarations = Vec::new();
+        for module in mods {
+            let ident = syn::parse_str::<syn::Ident>(module)?;
+            let path = if self.source.join(module).is_dir() {
+                PathBuf::from(module).join(consts::TEMPLATES_MOD_FILE_NAME)
+            } else {
+                PathBuf::from(format!("{module}{}", consts::RS_FILE_EXTENSION))
+            };
+            let path = path.to_str().ok_or("Failed to create a module file path")?;
+            declarations.push(quote! {
+                #[path = #path]
+                pub(crate) mod #ident;
+            });
+        }
+        Ok(quote! { #(#declarations)* })
     }
 
     pub(crate) fn generate_root_mod_ts(
@@ -138,7 +153,7 @@ impl Module {
 
                 // TemplateResolver.
                 struct TemplateResolver {
-                    view_creators: std::collections::HashMap<String, fn() -> #viewtypes_ident_ts>,
+                    view_creators: std::collections::HashMap<String, std::collections::HashMap<sbolt::types::template::Kind, fn() -> #viewtypes_ident_ts>>,
                 }
 
                 impl TemplateResolver {
@@ -148,11 +163,9 @@ impl Module {
                         }
                     }
 
-                    fn resolve(&self, name: &str) -> Option<fn() -> #viewtypes_ident_ts> {
-                        match sbolt::types::normalize_path_to_view_key(name) {
-                            Some(key) => self.view_creators.get(&key).map(|f| *f),
-                            None => None,
-                        }
+                    fn resolve_as(&self, name: &str, kind: sbolt::types::template::Kind) -> Option<fn() -> #viewtypes_ident_ts> {
+                        let key = sbolt::types::normalize_path_to_view_key(name)?;
+                        self.view_creators.get(&key)?.get(&kind).copied()
                     }
                 }
 
@@ -160,18 +173,21 @@ impl Module {
                     TemplateResolver::new()
                 });
 
-                pub(crate) fn render(name: &str, context:&mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
-                    if let Some(creator) = TEMPLATE_RESOLVER.resolve(name) {
-                        let view = creator();
-                        view.render(context)
-                    } else {
-                        Err(sbolt::types::error::RuntimeError::view_not_found(name))
-                    }
+                #[allow(dead_code)]
+                pub(crate) fn render(
+                    name: &str,
+                    kind: Option<sbolt::types::template::Kind>,
+                    context: &mut impl sbolt::types::Context,
+                ) -> sbolt::types::result::RenderResult<(String, sbolt::types::template::Kind)> {
+                    let kind = kind.unwrap_or(sbolt::types::template::Kind::KHTML);
+                    let creator = TEMPLATE_RESOLVER.resolve_as(name, kind)
+                        .ok_or_else(|| sbolt::types::error::RuntimeError::view_kind_not_found(name, kind))?;
+                    creator().render(context).map(|output| (output, kind))
                 }
 
                 #[allow(dead_code)]
-                pub(crate) fn resolve_view_creator(name: &str) -> Option<fn() -> #viewtypes_ident_ts> {
-                    TEMPLATE_RESOLVER.resolve(name)
+                pub(crate) fn resolve_view_creator(name: &str, kind: sbolt::types::template::Kind) -> Option<fn() -> #viewtypes_ident_ts> {
+                    TEMPLATE_RESOLVER.resolve_as(name, kind)
                 }
             }
         }

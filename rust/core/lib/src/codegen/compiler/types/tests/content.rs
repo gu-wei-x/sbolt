@@ -109,7 +109,7 @@ fn aggregate_metrics_deduplicate_literals_across_templates() -> result::Result<(
         let (_, stats) = generate_content(source, Kind::KHTML, true)?;
         let mut result = crate::codegen::CompileResult::new();
         result.add_static_output_stats(stats);
-        result.merge_into(&mut total);
+        result.merge_into(&mut total)?;
     }
     let stats = total.static_output_stats();
     let literal = "<div class='x'>text</div>";

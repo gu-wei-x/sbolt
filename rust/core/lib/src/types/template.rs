@@ -1,7 +1,8 @@
 use crate::types::Context;
 use crate::types::result;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The template representation to render.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Kind {
     KJSON,
     KHTML,
