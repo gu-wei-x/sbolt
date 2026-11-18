@@ -3,6 +3,13 @@ use std::fmt;
 
 // visiblity pub for crate use.
 impl RuntimeError {
+    pub fn view_kind_not_found(name: &str, kind: crate::types::template::Kind) -> Self {
+        RuntimeError::NotFound(
+            name.to_string(),
+            format!("View '{name}' not found for kind {kind:?}"),
+        )
+    }
+
     pub fn view_not_found(name: &str) -> Self {
         RuntimeError::NotFound(name.to_string(), format!("View '{}' not found", name))
     }
@@ -21,6 +28,17 @@ impl fmt::Display for RuntimeError {
             RuntimeError::NotFound(name, message) => {
                 write!(f, "View:{}, NotFound: {}", name, message)
             }
+            RuntimeError::AmbiguousView(name) => {
+                write!(
+                    f,
+                    "View '{name}' has multiple formats; pass a Kind to render to select a representation"
+                )
+            }
+            RuntimeError::InvalidInput(summary, detail) => {
+                write!(f, "Invalid input: {summary}, {detail}")
+            }
         }
     }
 }
+
+impl std::error::Error for RuntimeError {}

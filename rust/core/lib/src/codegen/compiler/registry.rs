@@ -1,6 +1,6 @@
 use crate::codegen::compiler::{fsutil, name};
 use crate::codegen::{CompilerOptions, consts};
-use crate::types::error::CompileError;
+use crate::types::{error::CompileError, template::Kind};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use std::collections::HashMap;
@@ -8,94 +8,44 @@ use std::path::PathBuf;
 
 pub(crate) fn generate_registry(
     file_path: &PathBuf,
-    view_name_mapping: &HashMap<String, String>,
+    view_name_mapping: &HashMap<(String, Kind), String>,
     compiler_option: &CompilerOptions,
 ) -> Result<(), CompileError> {
-    let mod_name = compiler_option.mod_name();
-    let view_types_content = view_name_mapping
-        .iter()
-        .map(|(name, view_name)| {
-            format!(
-                "K{}({}),",
-                name::create_view_type_name(&name),
-                name::create_view_type_full_name(name, view_name, mod_name)
-            )
-        })
-        .collect::<Vec<String>>()
-        .join("\n        ");
-
-    let view_unpack_content = view_name_mapping
-        .iter()
-        .map(|(name, view_name)| {
-            format!(
-                "{}::K{}({}) => {}.render(context),",
-                consts::TEMPLATES_TYPE_NAME,
-                name::create_view_type_name(&name),
-                view_name.to_lowercase(),
-                view_name.to_lowercase()
-            )
-        })
-        .collect::<Vec<String>>()
-        .join("\n        ");
-
-    let view_types_ts = view_types_content
-        .parse::<proc_macro2::TokenStream>()
-        .unwrap();
-    let view_unpack_content_ts = view_unpack_content
-        .parse::<proc_macro2::TokenStream>()
-        .unwrap();
-
-    let reg_ts = generate_registry_method(mod_name, view_name_mapping)?;
     let type_ident = format_ident!("{}", consts::TEMPLATES_TYPE_NAME);
+    let mut variants = Vec::new();
+    let mut arms = Vec::new();
+    let mut registrations = Vec::new();
+    for ((key, kind), type_path) in view_name_mapping {
+        let variant = format_ident!("K{}", name::create_view_type_name(type_path));
+        let full_type = name::create_type_full_name(type_path, compiler_option.mod_name());
+        let full_type = syn::parse_str::<TokenStream>(&full_type)?;
+        let kind_ident = format_ident!("{kind:?}");
+        variants.push(quote! { #variant(#full_type), });
+        arms.push(quote! { Self::#variant(view) => view.render(context), });
+        registrations.push(quote! {
+            view_reg_creator.entry(#key.to_string()).or_default()
+                .insert(sbolt::types::template::Kind::#kind_ident, #full_type::create);
+        });
+    }
     let content = quote! {
         use sbolt::types::Template as _;
         pub(crate) enum #type_ident {
-            #view_types_ts
+            #(#variants)*
         }
 
         impl #type_ident {
-            pub(crate) fn render(&self, context:&mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
+            pub(crate) fn render(&self, context: &mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
                 match self {
-                   #view_unpack_content_ts
+                    #(#arms)*
                 }
             }
 
-            #reg_ts
+            pub(crate) fn create_view_registrar() -> std::collections::HashMap<String, std::collections::HashMap<sbolt::types::template::Kind, fn() -> #type_ident>> {
+                let mut view_reg_creator: std::collections::HashMap<String, std::collections::HashMap<sbolt::types::template::Kind, fn() -> #type_ident>> = std::collections::HashMap::new();
+                #(#registrations)*
+                view_reg_creator
+            }
         }
     };
-
     fsutil::write_code_to_file(file_path, &content)
-}
-
-fn generate_registry_method(
-    mode_name: &str,
-    view_name_mapping: &HashMap<String, String>,
-) -> Result<TokenStream, String> {
-    let view_reg_content = view_name_mapping
-        .iter()
-        .map(|(name, view_name)| {
-            let full_type_name = name::create_view_type_full_name(name, view_name, mode_name);
-            format!(
-                r#"view_reg_creator.insert({}::name(), {}::create);"#,
-                full_type_name, full_type_name
-            )
-        })
-        .collect::<Vec<String>>()
-        .join("\n");
-
-    let view_reg_content_ts = view_reg_content
-        .parse::<proc_macro2::TokenStream>()
-        .unwrap();
-
-    let type_ident = format_ident!("{}", consts::TEMPLATES_TYPE_NAME);
-    let content = quote! {
-        pub(crate) fn create_view_registrar() -> std::collections::HashMap::<String, fn() -> #type_ident> {
-            let mut view_reg_creator = std::collections::HashMap::<String, fn() -> #type_ident>::new();
-            // Register views
-            #view_reg_content_ts
-            view_reg_creator
-        }
-    };
-
-    Ok(content)
 }

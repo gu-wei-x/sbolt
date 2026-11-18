@@ -118,7 +118,7 @@ impl<'a> Block<'a> {
                         match Self::layout() {
                             Some(layout) => {
                                 for key in sbolt::types::resolve_layout_to_view_keys(&layout, &Self::name()) {
-                                    if let Some(creator) = crate::#view_root_mod_name::resolve_view_creator(&key) {
+                                    if let Some(creator) = crate::#view_root_mod_name::resolve_view_creator(&key, Self::kind()) {
                                         context.set_default_section(writer.into_string());
                                         let view = creator();
                                         return view.render(context);

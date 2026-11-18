@@ -37,8 +37,9 @@ pub mod error {
 
     #[derive(Debug)]
     pub enum RuntimeError {
-        // could not find view
         NotFound(/*summary*/ String, /*detail*/ String),
+        AmbiguousView(String),
+        InvalidInput(/*summary*/ String, /*detail*/ String),
         // todo: add other types
     }
 }

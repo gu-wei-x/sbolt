@@ -73,10 +73,11 @@ fn main() {
         age: 1,
         msg: "Hello world!".to_string()
     };
-    let output = cli_views::render("views/sub/index", &mut context).unwrap_or_else(|e| {
-        eprintln!("Error: {e:?}");
-        std::process::exit(1);
-    });
+    let (output, _) = cli_views::render("views/sub/index", None, &mut context)
+        .unwrap_or_else(|e| {
+            eprintln!("Error: {e:?}");
+            std::process::exit(1);
+        });
     println!("{output}");
 }
 ```
@@ -103,6 +104,71 @@ It's very simple to use sbolt in your web applications with popular `rust web fr
 * [Use with Actix-web](../../rust/examples/web/actix)
 * [Use with Axum](../../rust/examples/web/axum)
 * [Use with Rocket](../../rust/examples/web/rocket)
+
+Templates in the same folder can share a name when their kinds differ:
+`welcome.rshtml`, `welcome.rsjson`, and `welcome.rstxt`. Select the representation
+with `render(path, kind, context)`, which accepts `Option<Kind>` and returns
+`RenderResult<(String, Kind)>`. `None` defaults to HTML inside the generated
+renderer; the returned kind is always the resolved representation:
+
+```rust
+let (output, kind) = example_views::render(
+    "views/welcome",
+    Some(sbolt::types::template::Kind::KJSON),
+    &mut context,
+)?;
+```
+
+The framework-independent preference resolver is always available without
+enabling a feature:
+
+```toml
+[dependencies]
+sbolt = "0.0.2"
+
+[build-dependencies]
+sbolt = "0.0.2"
+```
+
+Each web example owns a local `ResponseFormat` wrapper around `Option<Kind>` and implements its
+framework's request guard/extractor traits for it. Handlers receive
+`format: ResponseFormat` and pass `format.into()` to `render`;
+the renderer handles the HTML default. The wrapper satisfies Rust's orphan
+rules without adding web-framework dependencies to sbolt.
+
+The extractors support quality weights and wildcards and default to HTML when
+`Accept` is absent. Malformed or unsupported preferences produce a
+`ResponseFormat` containing `None`, so these examples also fall back to HTML in
+those cases. Unexpected extraction errors still return HTTP 500. For strict
+validation, call `resolve_kind` directly and map its invalid-input/not-found
+errors to HTTP 400/406. The responders use the selected `Kind`
+to set `Content-Type` and `Vary: Accept`. Missing templates and layouts remain
+rendering failures (HTTP 500), without a cross-kind fallback.
+
+The responders accept the render result through `.into()` and infer the content
+type from its returned kind. The example responders add `Vary: Accept` by default,
+including on rendering errors, so welcome handlers simply use `result.into()`.
+This remains a web-layer policy, not a property of the renderer.
+
+The example extractors share
+`sbolt::resolve_kind(preferences)`. Request extraction,
+response headers, and framework dependencies remain entirely in the examples.
+
+The Actix-web, Axum, and Rocket examples negotiate HTML, JSON, or plain text at `/` using the request's
+`Accept` header, including quality weights and wildcards. With no header it
+defaults to HTML; invalid or unsupported formats also fall back to HTML. Responses set
+the matching `Content-Type` and `Vary: Accept`. For example:
+
+```shell
+curl -H "Accept: application/json" http://localhost:8000/
+curl -H "Accept: text/plain" http://localhost:8000/
+```
+
+The single `GET /` handler receives the selected template kind and renders it using
+`render`. JSON and text requests render
+[welcome.rsjson](../../rust/examples/views/welcome.rsjson) and
+[welcome.rstxt](../../rust/examples/views/welcome.rstxt). Setting the response
+content type does not validate JSON or escape dynamic values.
 
 ---
 ### [Next: syntax](./syntax.md)

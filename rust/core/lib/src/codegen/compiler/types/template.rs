@@ -99,6 +99,7 @@ impl<'a> Template<'a> {
 
     pub(in crate::codegen::compiler) fn compile(
         &self,
+        source_name: &str,
         target: PathBuf,
         compiler_options: &CompilerOptions,
     ) -> result::Result<CompileResult> {
@@ -107,13 +108,15 @@ impl<'a> Template<'a> {
             target.display()
         ))?;
         let mut result = CompileResult::default();
-        let view_name = name::create_view_type_name(&name);
+        let view_name = name::create_view_type_name(source_name);
         let namespace = self.namespace().cloned();
-        let namespace = name::create_name_space(&namespace, &name);
-        let full_view_name = crate::types::normalize_path_to_view_key(&namespace)
+        let logical_namespace = name::create_name_space(&namespace, source_name);
+        let full_view_name = crate::types::normalize_path_to_view_key(&logical_namespace)
             .ok_or("Failed to create a template lookup key")?;
-        let view_type = name::create_view_type_name(&full_view_name);
-        result.add_view_mapping(full_view_name.to_string(), view_name.clone());
+        let module_namespace = name::create_name_space(&namespace, &name);
+        let type_path = name::create_name_space(&Some(module_namespace), &view_name);
+        let view_type = name::create_view_type_name(&type_path);
+        result.add_view_mapping(full_view_name.to_string(), self.kind(), type_path)?;
         syn::parse_str::<Ident>(&view_name).map_err(|_| {
             format!(
                 "'{}' is not a valid ident name, please change the file name",

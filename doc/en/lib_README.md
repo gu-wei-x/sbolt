@@ -51,10 +51,11 @@ fn main() {
     let mut context = sbolt::context! {
         name: "sbolt".to_string()
     };
-    let output = example_views::render("views/welcome", &mut context).unwrap_or_else(|e| {
-        eprintln!("Error: {e:?}");
-        std::process::exit(1);
-    });
+    let (output, _) = example_views::render("views/welcome", None, &mut context)
+        .unwrap_or_else(|e| {
+            eprintln!("Error: {e:?}");
+            std::process::exit(1);
+        });
     println!("{output}");
 }
 ```
