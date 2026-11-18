@@ -7,7 +7,7 @@ use quote::quote;
 impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_section_token_stream(
         &self,
-        context: &CodeGenContext,
+        context: &CodeGenContext<'_>,
     ) -> result::Result<TokenStream> {
         let (name, span) = match self {
             Block::KSECTION(name, span) => (name, span),

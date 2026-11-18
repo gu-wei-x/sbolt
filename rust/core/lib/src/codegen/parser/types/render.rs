@@ -10,7 +10,7 @@ use winnow::stream::Stream as _;
 
 impl<'a> Block<'a> {
     pub(in crate::codegen::parser::types) fn parse_render<'s>(
-        token_stream: &mut TokenStream,
+        token_stream: &mut TokenStream<'_>,
         context: &mut ParseContext<'_, 's>,
     ) -> result::Result<Block<'s>> {
         let source = context.source();

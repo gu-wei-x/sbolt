@@ -120,7 +120,7 @@ impl<'a, 's> ParseContext<'a, 's> {
 impl<'a, 's> ParseContext<'a, 's> {
     pub(in crate::codegen) fn switch_if_possible(
         &self,
-        token_stream: &mut TokenStream,
+        token_stream: &mut TokenStream<'_>,
     ) -> result::Result<(bool, Self)> {
         let source = self.source;
         // first token must be '@'

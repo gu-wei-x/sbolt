@@ -7,15 +7,15 @@ use winnow::stream::TokenSlice;
 pub(crate) type StrStream<'a> = LocatingSlice<&'a str>;
 pub(crate) type TokenStream<'i> = TokenSlice<'i, Token>;
 
-pub(crate) fn skip_newline(stream: &mut TokenStream) -> bool {
+pub(crate) fn skip_newline(stream: &mut TokenStream<'_>) -> bool {
     skip_next_token_if(stream, |k| k == Kind::NEWLINE)
 }
 
-pub(crate) fn skip_whitespace(stream: &mut TokenStream) -> bool {
+pub(crate) fn skip_whitespace(stream: &mut TokenStream<'_>) -> bool {
     skip_next_token_if(stream, |k| k == Kind::WHITESPACE)
 }
 
-pub(crate) fn skip_whitespace_and_newline(stream: &mut TokenStream) -> bool {
+pub(crate) fn skip_whitespace_and_newline(stream: &mut TokenStream<'_>) -> bool {
     skip_next_token_if(stream, |k| {
         vec![Kind::WHITESPACE, Kind::NEWLINE].contains(&k)
     })
@@ -45,7 +45,10 @@ pub(crate) fn get_next_token_util<'a, F: Fn(Kind) -> bool>(
     get_next_token_if(stream, |k| !pred(k))
 }
 
-pub(crate) fn skip_next_token_if<F: Fn(Kind) -> bool>(stream: &mut TokenStream, pred: F) -> bool {
+pub(crate) fn skip_next_token_if<F: Fn(Kind) -> bool>(
+    stream: &mut TokenStream<'_>,
+    pred: F,
+) -> bool {
     let mut skipped = false;
     while let Some(current_token) = stream.peek_token() {
         if pred(current_token.kind()) {

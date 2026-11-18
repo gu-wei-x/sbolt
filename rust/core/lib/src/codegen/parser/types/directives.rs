@@ -9,7 +9,7 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::parser::types) fn parse_directive<'s>(
         source: &'s str,
         directive: &str,
-        token_stream: &mut TokenStream,
+        token_stream: &mut TokenStream<'_>,
     ) -> result::Result<Block<'s>> {
         // token_stream starts with the directive.
         let start_token = match token_stream.peek_token() {
