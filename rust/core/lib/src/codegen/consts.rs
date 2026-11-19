@@ -6,6 +6,7 @@ pub(crate) const DIRECTIVE_KEYWORD_LAYOUT: &'static str = "layout";
 pub(crate) const DIRECTIVE_KEYWORD_USE: &'static str = "use";
 pub(crate) const KEYWORD_RENDER: &'static str = "render";
 pub(crate) const KEYWORD_SECTION: &'static str = "section";
+pub(crate) const KEYWORD_VIEW: &'static str = "view";
 
 pub(crate) const OUT_DIR_ENV_NAME: &'static str = "OUT_DIR";
 pub(crate) const RS_FILE_EXTENSION: &'static str = ".rs";

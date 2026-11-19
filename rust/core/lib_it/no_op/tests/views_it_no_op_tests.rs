@@ -3,6 +3,10 @@ use sbolt::types::result;
 use sbolt::types::template::Kind;
 sbolt::include_views!();
 
+use lib_it_no_op_views::render as render_custom_view;
+#[path = "../../view_tests.rs"]
+mod view_tests;
+
 #[test]
 fn render_selects_shared_names_without_optimization() -> result::RenderResult<()> {
     for (kind, expected) in [

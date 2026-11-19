@@ -45,6 +45,19 @@ resolution uses the same kind. No negotiation
 feature is required to generate or call this API. Missing kinds return a
 not-found rendering error without a cross-kind fallback.
 
+`@view(name, context)` generates a nested call to this renderer with the caller's
+kind and the supplied context. `@view(name, context, kind)` overrides the child
+kind with a Rust `Kind` expression. Both forms pass `Some(selected_kind)` to the
+renderer; omitting the override inherits the caller's kind rather than using the
+renderer's `None` default of HTML. The child's layout uses the selected kind,
+its output is
+written directly, and rendering errors propagate. Custom-view output is a dynamic
+boundary for static-write optimization. See [custom views](../en/syntax.md#custom-views)
+for lookup and context semantics.
+Argument boundaries are scanned in a single pass, respecting Rust identifiers,
+literal suffixes, and nested comments before expression validation. Line comments
+end at LF; a bare carriage return remains part of the comment.
+
 Each web example owns a local `ResponseFormat` wrapper around `Option<Kind>` and implements its
 framework's request guard/extractor traits for that wrapper. This satisfies the
 orphan rules while keeping framework dependencies out of sbolt.

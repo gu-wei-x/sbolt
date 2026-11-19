@@ -1,0 +1,1 @@
+<section>@view("views/formats/page", sbolt::context!(), sbolt::types::template::Kind::KJSON)|@view(context.get_data::<String>("target").unwrap().as_str(), sbolt::context!(), *context.get_data::<sbolt::types::template::Kind>("kind").unwrap(),)</section>

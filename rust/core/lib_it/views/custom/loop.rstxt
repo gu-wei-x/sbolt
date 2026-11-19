@@ -1,0 +1,1 @@
+@section single{@view("views/custom/value", sbolt::context!(count: 9i32))}@section cards{@{for count in 0..2 {@view("views/custom/value", sbolt::context!(count: count))}}}@render(single)@render(cards)

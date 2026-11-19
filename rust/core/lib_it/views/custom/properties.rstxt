@@ -1,0 +1,6 @@
+@{
+    let name = context.get_data::<String>("target").unwrap().clone();
+}
+@section parent{parent}
+@view(name.as_str(), sbolt::context!(title: "a), @b".to_string()))
+|@render(parent)|@render(child, false)

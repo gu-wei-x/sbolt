@@ -18,7 +18,8 @@ workspace = true
 mime = "0.3"
 proc-macro2 = "1"
 quote = "1"
-syn = "2"
+syn = { version = "2", features = ["full"] }
+unicode-ident = "1"
 winnow = "0.7"
 
 #optional

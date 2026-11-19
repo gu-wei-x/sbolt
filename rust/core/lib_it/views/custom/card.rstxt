@@ -1,0 +1,6 @@
+@{
+    let title = context.get_data::<String>("title").unwrap().clone();
+    let isolated = context.get_data::<String>("secret").is_none();
+}
+@section child{child}
+[<@(title)>|@(isolated)|@render(parent, false)]
