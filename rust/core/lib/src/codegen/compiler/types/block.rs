@@ -67,6 +67,39 @@ impl<'a> Block<'a> {
                 let ts = self.to_render_token_stream()?;
                 result.push(ts);
             }
+            Block::KVIEW(_) => {
+                context.invalidate_static_context();
+                let arguments = self
+                    .content()
+                    .parse::<TokenStream>()
+                    .map_err(|err| error::CompileError::from_lex(self, err))?;
+                let call = syn::parse2::<syn::ExprCall>(quote! { view #arguments })
+                    .map_err(|err| error::CompileError::from_codegen(self, &err.to_string()))?;
+                let mut arguments = call.args.iter();
+                let name = arguments
+                    .next()
+                    .ok_or_else(|| error::CompileError::from_codegen(self, "Expected view name"))?;
+                let child_context = arguments.next().ok_or_else(|| {
+                    error::CompileError::from_codegen(self, "Expected view context")
+                })?;
+                let kind = arguments
+                    .next()
+                    .map_or_else(|| quote! { Self::kind() }, |kind| quote! { #kind });
+                let view_root_mod_name = format_ident!("{}", context.options().mod_name());
+                result.push(quote! {
+                    {
+                        #[allow(unused_imports)]
+                        use sbolt::types::Context as _;
+                        // Keep temporary arguments alive while evaluating them in source order.
+                        let (output, _) = match (#name, (#child_context).as_mut_context(), #kind) {
+                            (name, child_context, kind) => {
+                                crate::#view_root_mod_name::render(name, Some(kind), child_context)
+                            }
+                        }?;
+                        writer.write(&output);
+                    }
+                });
+            }
             Block::KSECTION(_, _) => {
                 context.invalidate_static_context();
                 let ts = self.to_section_token_stream(context)?;

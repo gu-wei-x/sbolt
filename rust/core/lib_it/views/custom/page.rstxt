@@ -1,0 +1,1 @@
+before:@view("views/formats/page", sbolt::context!()):after

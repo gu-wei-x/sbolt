@@ -14,6 +14,7 @@ pub(in crate::codegen) enum Block<'a> {
     KRENDER(Span<'a>),
     KSECTION(String, Span<'a>),
     KUSE(Span<'a>),
+    KVIEW(Span<'a>),
 }
 
 impl<'a> Block<'a> {
@@ -30,6 +31,7 @@ impl<'a> Block<'a> {
             Block::KROOT(span) => span.location(),
             Block::KSECTION(_, span) => span.location(),
             Block::KUSE(span) => span.location(),
+            Block::KVIEW(span) => span.location(),
         }
     }
 
@@ -77,6 +79,10 @@ impl<'a> Block<'a> {
         Block::KUSE(span)
     }
 
+    pub(in crate::codegen) fn new_view(span: Span<'a>) -> Self {
+        Block::KVIEW(span)
+    }
+
     pub(in crate::codegen) fn to_content(&self) -> Self {
         match self {
             Block::KSECTION(_, span) => Block::KCONTENT(span.clone()),
@@ -99,6 +105,7 @@ impl<'a> Block<'a> {
             Block::KROOT(span) => span,
             Block::KSECTION(_, span) => span,
             Block::KUSE(span) => span,
+            Block::KVIEW(span) => span,
         }
     }
 
@@ -115,6 +122,7 @@ impl<'a> Block<'a> {
             Block::KROOT(span) => span.content(),
             Block::KSECTION(_, span) => span.content(),
             Block::KUSE(span) => span.content(),
+            Block::KVIEW(span) => span.content(),
         }
     }
 }

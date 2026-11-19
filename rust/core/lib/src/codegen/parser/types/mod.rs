@@ -7,6 +7,7 @@ mod section;
 mod template;
 mod transition;
 mod util;
+mod view;
 
 #[cfg(test)]
 mod tests;

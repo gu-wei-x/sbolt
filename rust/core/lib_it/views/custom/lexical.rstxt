@@ -1,0 +1,13 @@
+@{
+    macro_rules! ctx {
+        ($($tokens:tt)*) => { sbolt::context!(count: 9i32) };
+    }
+}
+@view("views/custom/value", ctx!(r#identifier"a\"), (b"))
+@view("views/custom/value", ctx!(r#r"a\"), (b"))
+@view("views/custom/value", ctx!(br#"a"), (b"#))
+@view("views/custom/value", ctx!(cr#"a"), (b"#))
+@view("views/custom/value", ctx!(1r"a\"), (b"))
+@view("views/custom/value", ctx!("first"r"a\"), (b"))
+@view("views/custom/value", ctx!('x'r"a\"), (b"))
+@view("views/custom/value", ctx!(r#"first"#r"a\"), (b"))

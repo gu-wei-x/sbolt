@@ -92,6 +92,7 @@ impl<'a> Block<'a> {
                                 token_stream,
                                 &mut context.clone_for(Kind::KSECTION),
                             )?,
+                            consts::KEYWORD_VIEW => Self::parse_view(token_stream, context)?,
                             _ => Self::create_inlined_code_block(token, token_stream, context)?,
                         }
                     }

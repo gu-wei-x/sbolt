@@ -1,0 +1,3 @@
+@{let mut order = String::new();}
+@view({ order.push('n'); format!("views/custom/{}", "value") }.as_str(), { order.push('c'); sbolt::context!(count: 9i32) }, { order.push('k'); sbolt::types::template::Kind::KTEXT })
+@(order)

@@ -1,0 +1,1 @@
+@view(context.get_data::<String>("target").unwrap().as_str(), sbolt::context!())

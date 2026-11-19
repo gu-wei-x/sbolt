@@ -2,6 +2,11 @@ use crate::types::DataStore;
 use std::collections::HashMap;
 
 pub trait Context {
+    /// Reborrow an owned or already-borrowed context for nested rendering.
+    fn as_mut_context(&mut self) -> &mut Self {
+        self
+    }
+
     fn set_data<T, F>(&mut self, key: &str, f: F)
     where
         F: FnOnce() -> T,
