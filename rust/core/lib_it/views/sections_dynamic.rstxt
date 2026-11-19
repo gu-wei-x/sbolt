@@ -1,0 +1,5 @@
+@{let value = 7;}
+@section expression{@(value)}
+@section code{@{for item in 0..2 {@{@(item)}}}}
+@section copied{@render(expression)}
+@(value)|@render(expression)|@render(code)|@render(copied)

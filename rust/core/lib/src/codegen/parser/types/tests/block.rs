@@ -91,6 +91,24 @@ fn block_parse_inline_code() -> result::Result<()> {
 
 // @{}
 #[test]
+fn block_parse_single_content_child_preserves_code_wrapper() -> result::Result<()> {
+    let source = "@{@{text}}";
+    let tokens = Tokenizer::new(source).into_vec();
+    let mut token_stream = TokenSlice::new(&tokens);
+    let options = CompilerOptions::default();
+    let mut context = ParseContext::new(Kind::KROOT, template::Kind::KHTML, &options, source);
+    let root = Block::parse(&mut token_stream, &mut context)?;
+    let [Block::KCODE(span)] = root.span().blocks().as_slice() else {
+        panic!("Expected a code wrapper around the content block");
+    };
+    let [Block::KCONTENT(content)] = span.blocks().as_slice() else {
+        panic!("Expected the content block to remain a child");
+    };
+    assert_eq!(content.content(), "text");
+    Ok(())
+}
+
+#[test]
 fn block_parse_code_block() -> result::Result<()> {
     // Empty.
     let source = "@{}";

@@ -16,6 +16,9 @@ flowchart TD
 ```
 
 - All template types share the parser for `@` expressions and directives.
+- Delimited blocks collapse a single child only when it has the same block
+  variant as the enclosing block. Otherwise the wrapper is retained, preserving
+  the code, content, or section context of that child.
 - Generated types and enum variants use CamelCase, so `json_static` produces
   `JsonStaticView`. Generated modules have kind suffixes (`_html`, `_json`,
   `_text`) so same-name templates cannot overwrite one another. Trailing
