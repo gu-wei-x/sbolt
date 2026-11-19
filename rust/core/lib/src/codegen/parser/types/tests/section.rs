@@ -63,6 +63,22 @@ fn to_content() -> result::Result<()> {
 }
 
 #[test]
+fn section_preserves_single_expression_child() -> result::Result<()> {
+    let source = "@section test{@(value)}";
+    let options = CompilerOptions::default();
+    let template = Template::from(source, None, Kind::KHTML, &options)?;
+    let [Block::KSECTION(name, span)] = template.block().span().blocks().as_slice() else {
+        panic!("Expected a named section");
+    };
+    assert_eq!(name, "test");
+    let [Block::KINLINEDCODE(expression)] = span.blocks().as_slice() else {
+        panic!("Expected the expression to remain a child of the section");
+    };
+    assert_eq!(expression.content(), "value");
+    Ok(())
+}
+
+#[test]
 #[should_panic]
 fn parse_transition_block_section_invalid_format() {
     let source = r#"@section{}"#;

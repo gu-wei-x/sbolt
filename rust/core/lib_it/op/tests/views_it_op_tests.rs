@@ -19,6 +19,17 @@ fn render_selects_kind_and_matching_layout() -> result::RenderResult<()> {
 }
 
 #[test]
+fn single_dynamic_sections_preserve_execution() -> result::RenderResult<()> {
+    let (output, _) = lib_it_op_views::render(
+        "views/sections_dynamic",
+        Some(Kind::KTEXT),
+        &mut sbolt::context!(),
+    )?;
+    assert_eq!(output, "7|7|01|7");
+    Ok(())
+}
+
+#[test]
 fn template_modules_do_not_collide_with_sibling_directories() -> result::RenderResult<()> {
     for (path, expected) in [
         ("views/formats/page", "<main><p>html</p>\n</main>"),

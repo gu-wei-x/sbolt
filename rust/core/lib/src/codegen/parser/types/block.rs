@@ -206,13 +206,13 @@ impl<'a> Block<'a> {
             span.push_block(block);
         }
 
-        // if only one block, return the block directly.
-        match span.blocks().len() {
-            1 => {
-                let only_block = span.blocks().into_iter().next().unwrap();
-                Ok(only_block.clone())
+        let parent = ParseContext::create_block(context, None, span)?;
+        // [child] matches exactly one child; only collapse it if the block kind is preserved.
+        match parent.span().blocks().as_slice() {
+            [child] if std::mem::discriminant(child) == std::mem::discriminant(&parent) => {
+                Ok(child.clone())
             }
-            _ => Ok(ParseContext::create_block(context, None, span)?),
+            _ => Ok(parent),
         }
     }
 }

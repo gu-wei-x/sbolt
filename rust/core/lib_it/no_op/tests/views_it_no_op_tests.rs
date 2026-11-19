@@ -19,6 +19,17 @@ fn render_selects_shared_names_without_optimization() -> result::RenderResult<()
 }
 
 #[test]
+fn single_dynamic_sections_preserve_execution() -> result::RenderResult<()> {
+    let (output, _) = lib_it_no_op_views::render(
+        "views/sections_dynamic",
+        Some(Kind::KTEXT),
+        &mut sbolt::context!(),
+    )?;
+    assert_eq!(output, "7|7|01|7");
+    Ok(())
+}
+
+#[test]
 fn static_json_preserves_original_formatting() -> result::RenderResult<()> {
     let (output, _) = lib_it_no_op_views::render(
         "views/json_static",
