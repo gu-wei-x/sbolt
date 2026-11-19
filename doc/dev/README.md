@@ -66,5 +66,6 @@ cargo clean
 * show test output: `cargo test [test_name|*] -- --nocapture`
 
 ## 5. links
+* [Development plan](./plan.md)
 * [Template compilation](./template-compilation.md)
 * [Rust Documentation](https://doc.rust-lang.org/stable)
