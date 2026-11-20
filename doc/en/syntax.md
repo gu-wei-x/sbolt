@@ -116,6 +116,52 @@ this is content, render @Username here.
 this is content, render @(Username) here.
 ```
 
+## Typed models
+
+Declare the template's model type at the top level:
+
+```text
+@model crate::TeamsModel;
+
+@{
+    for team in &model.teams {
+        @{<p>@(team.name)</p>}
+    }
+}
+```
+
+The short form above looks up `Arc<TeamsModel>` under context key `"model"`.
+Use an unquoted identifier and a colon to select a different key:
+
+```text
+@model layout: crate::LayoutModel;
+<title>@(model.title)</title>
+@render
+```
+
+This looks up `Arc<LayoutModel>` under key `"layout"`; the template variable
+is still named `model`. With no declaration, the template has no typed model
+and performs no automatic model lookup.
+
+The declaration emits no output and applies to this template's file and kind.
+Types can use `@use` imports. Only one declaration is allowed, and `@model`
+cannot appear inside code, sections, or nested content blocks. A declaration
+ends at a semicolon, a newline after a complete Rust type, or the end of the file.
+Use `@(model)` to interpolate the model itself rather than declare its type.
+
+Both the named API and a generated view's `render(context)` method retrieve
+`Arc<Model>` under the declared key and render it within the same method.
+The template variable `model` holds that cloned `Arc<Model>`; field access
+automatically dereferences it.
+Models must be `Send + Sync + 'static`.
+Missing keys or incorrectly typed values produce explicit rendering errors.
+
+Layouts independently retrieve their models from their own declared keys;
+they never inherit the caller's model or fall back to another key.
+Custom views likewise use their own declarations and the context passed to
+`@view`. See
+[typed rendering APIs](../dev/template-compilation.md#optional-typed-models).
+
 ## Custom views
 
 Use `@view(name, context)` to render another template at the current position.

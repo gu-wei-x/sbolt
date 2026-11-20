@@ -3,6 +3,7 @@ pub(crate) const DEFAULT_JSON_TEMPLATE_FILE_EXTENSION: &'static str = "rsjson";
 pub(crate) const DEFAULT_TEXT_TEMPLATE_FILE_EXTENSION: &'static str = "rstxt";
 
 pub(crate) const DIRECTIVE_KEYWORD_LAYOUT: &'static str = "layout";
+pub(crate) const DIRECTIVE_KEYWORD_MODEL: &'static str = "model";
 pub(crate) const DIRECTIVE_KEYWORD_USE: &'static str = "use";
 pub(crate) const KEYWORD_RENDER: &'static str = "render";
 pub(crate) const KEYWORD_SECTION: &'static str = "section";

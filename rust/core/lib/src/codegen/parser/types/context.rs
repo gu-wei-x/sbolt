@@ -17,6 +17,7 @@ pub(in crate::codegen) enum Kind {
     KINLINEDCODE,
     KINLINEDCONTENT,
     KLAYOUT,
+    KMODEL,
     KRENDER,
     KROOT,
     KSECTION,
@@ -184,6 +185,17 @@ impl<'a, 's> ParseContext<'a, 's> {
                             ))
                         }
                     }
+                    consts::DIRECTIVE_KEYWORD_MODEL => {
+                        if self.block_kind() == Kind::KROOT {
+                            Ok((true, self.clone_for(Kind::KMODEL)))
+                        } else {
+                            Err(error::CompileError::from_parser(
+                                source,
+                                Some(*next_token),
+                                "The 'model' directive is only allowed in the root context.",
+                            ))
+                        }
+                    }
                     consts::KEYWORD_SECTION => {
                         if self.is_block() && self.block_kind() != Kind::KSECTION {
                             // todo: how to detect nested section in side section?
@@ -259,6 +271,7 @@ impl<'a, 's> ParseContext<'a, 's> {
                     Kind::KINLINEDCODE => Ok(Block::new_inline_code(span)),
                     Kind::KINLINEDCONTENT => Ok(Block::new_inline_content(span)),
                     Kind::KLAYOUT => Ok(Block::new_layout(span)),
+                    Kind::KMODEL => Ok(Block::new_model(span)),
                     Kind::KRENDER => Ok(Block::new_render(span)),
                     Kind::KROOT => Ok(Block::new_root(span)),
                     Kind::KSECTION => Ok(Block::new_section("", span)),

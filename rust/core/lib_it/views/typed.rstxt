@@ -1,0 +1,2 @@
+@model page: crate::view_tests::TypedModel;
+@(model.name)|@(model.count)|@(model.name)

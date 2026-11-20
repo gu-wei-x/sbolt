@@ -15,16 +15,15 @@ pub(crate) fn generate_registry(
     let mut variants = Vec::new();
     let mut arms = Vec::new();
     let mut registrations = Vec::new();
-    for ((key, kind), type_path) in view_name_mapping {
+    for type_path in view_name_mapping.values() {
         let variant = format_ident!("K{}", name::create_view_type_name(type_path));
         let full_type = name::create_type_full_name(type_path, compiler_option.mod_name());
         let full_type = syn::parse_str::<TokenStream>(&full_type)?;
-        let kind_ident = format_ident!("{kind:?}");
         variants.push(quote! { #variant(#full_type), });
         arms.push(quote! { Self::#variant(view) => view.render(context), });
         registrations.push(quote! {
-            view_reg_creator.entry(#key.to_string()).or_default()
-                .insert(sbolt::types::template::Kind::#kind_ident, #full_type::create);
+            view_reg_creator.entry(#full_type::name()).or_default()
+                .insert(#full_type::kind(), #full_type::create);
         });
     }
     let content = quote! {

@@ -1,0 +1,3 @@
+@use crate::view_tests::LayoutModel as ImportedModel;
+@model layout: ImportedModel;
+<main>@(model.title)|@render</main>

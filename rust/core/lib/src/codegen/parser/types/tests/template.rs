@@ -1,9 +1,81 @@
 #![cfg(test)]
 use crate::codegen::CompilerOptions;
 use crate::codegen::types::Block;
+use crate::codegen::types::ModelDeclaration;
 use crate::codegen::types::Template;
 use crate::types::result;
 use crate::types::template::Kind;
+
+#[test]
+fn model_declarations_parse_rust_types_for_every_template_kind() -> result::Result<()> {
+    let options = CompilerOptions::default();
+    for kind in [Kind::KHTML, Kind::KJSON, Kind::KTEXT] {
+        for (source, expected_key, expected) in [
+            ("@model crate::Page;\nbody", "model", "crate::Page"),
+            (
+                "@model std::collections::BTreeMap<String, Vec<[u8; 4]>>;\nbody",
+                "model",
+                "std::collections::BTreeMap<String, Vec<[u8; 4]>>",
+            ),
+            ("@model (String, i32)\nbody", "model", "(String, i32)"),
+            ("@model String", "model", "String"),
+            (
+                "@model layout: crate::Layout;\nbody",
+                "layout",
+                "crate::Layout",
+            ),
+            ("@model layout:[u8; 32];\nbody", "layout", "[u8; 32]"),
+            ("@model layout: (String, i32)", "layout", "(String, i32)"),
+            ("@model layout::Page;\nbody", "model", "layout::Page"),
+        ] {
+            let template = Template::from(source, None, kind, &options)?;
+            let block = template.block().span().blocks().first().unwrap();
+            assert!(matches!(block, Block::KMODEL(_)));
+            let declaration = syn::parse_str::<ModelDeclaration>(block.content().trim())?;
+            let actual = &declaration.model_type;
+            assert_eq!(declaration.key, expected_key);
+            let expected = syn::parse_str::<syn::Type>(expected)?;
+            assert_eq!(
+                quote::quote!(#actual).to_string(),
+                quote::quote!(#expected).to_string()
+            );
+            if source.ends_with("body") {
+                assert_eq!(
+                    template.block().span().blocks().last().unwrap().content(),
+                    "body"
+                );
+            }
+        }
+    }
+    for source in ["body", "@model.name", "@(model)"] {
+        let template = Template::from(source, None, Kind::KHTML, &options)?;
+        assert!(
+            template
+                .block()
+                .span()
+                .blocks()
+                .iter()
+                .all(|block| !matches!(block, Block::KMODEL(_)))
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn empty_and_nested_model_declarations_report_errors() {
+    let options = CompilerOptions::default();
+    for (source, expected) in [
+        ("@model ;\nbody", "Expected model content"),
+        ("@{ @model String; }", "root context"),
+        ("@section title{@model String;}", "root context"),
+        ("@{@{ @model String; }}", "root context"),
+    ] {
+        let Err(error) = Template::from(source, None, Kind::KHTML, &options) else {
+            panic!("Expected invalid model declaration to fail: {source}");
+        };
+        assert!(error.to_string().contains(expected), "{source}: {error}");
+    }
+}
 
 #[test]
 #[should_panic]

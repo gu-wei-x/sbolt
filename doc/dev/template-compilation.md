@@ -36,6 +36,70 @@ flowchart TD
 
 See [optimization details](./optimization.md) for behavior and limitations.
 
+## Optional typed models
+
+Declare a concrete Rust model type in the template:
+
+```text
+@model crate::Teams;
+<h1>@(model.title)</h1>
+```
+
+`@model` is a top-level declaration, emits no output, and applies to this
+template's kind. Duplicate declarations and malformed types are compile errors.
+It is not allowed inside code, sections, or nested content blocks. Type names
+resolve in the template's module, including its `@use` imports.
+
+Like `@layout`, `@model` is retained as a directive block and read during code
+generation, without a separate field on the parsed template. Duplicate and
+malformed model declarations are rejected during generation.
+
+Select an explicit context key with an identifier before a colon:
+
+```text
+@model layout: crate::LayoutModel;
+<title>@(model.title)</title>
+@render
+```
+
+The full form uses key `"layout"`; the short form defaults to key `"model"`.
+The generated variable is always named `model`, regardless of the key.
+Omitting the declaration means no typed model and no automatic model lookup.
+
+The model must be `Send + Sync + 'static` because the template remains available
+to the named API. Store an `Arc<Model>` under the declared context key to render
+by name. Missing or incorrectly typed models return `RuntimeError::InvalidInput`
+identifying that key; there is no fallback to another key.
+This bridge performs one model lookup and one `Arc` clone per render.
+
+Rendering a concrete generated view skips name resolution, but still retrieves
+its model from context. Import the `Template` trait to call `render`:
+
+```rust
+use example_views::views::teams_html::TeamsView as TeamsHtmlView;
+use sbolt::types::Template as _;
+
+let output = TeamsHtmlView.render(&mut context)?;
+```
+
+Import generated view types directly and choose aliases at the call site when
+needed. The framework does not generate a separate typed-alias module.
+Model lookup and rendering are generated directly inside `render`; callers do
+not pass models separately.
+
+Each layout resolves its own declaration independently from the shared context,
+including layouts reached through untyped intermediate layouts. The caller's
+model is never forwarded. Pages and layouts can therefore declare
+different model types under different keys, for example `"model"` and `"layout"`.
+A layout without `@model` needs no model. The same rules apply to both named
+rendering and rendering a concrete view type.
+Custom views use their own declarations and the context explicitly passed to
+`@view`, not the caller's model.
+
+The model is shared immutably during a render. Each render still requires an
+exclusive mutable context for sections/layouts. The context store and its
+synchronization are unchanged; concurrent renders use separate contexts.
+
 ## Kind-aware rendering
 
 The generated registry indexes each logical path by template kind.

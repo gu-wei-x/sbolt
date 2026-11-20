@@ -1,0 +1,4 @@
+@model crate::view_tests::TypedModel;
+@layout typed_middle;
+@section caption{@(model.name)}
+<p>@(model.name):@(model.count)</p>
