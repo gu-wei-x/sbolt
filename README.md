@@ -4,73 +4,76 @@
 [<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-sbolt-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" height="20">](https://docs.rs/sbolt)
 [<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/gu-wei-x/sbolt/ci.yml?branch=main&style=for-the-badge" height="20">](https://github.com/gu-wei-x/sbolt/actions?query=branch%3Amain)
 
-sbolt is a view template engine in rust. sbolt pre-processes templates from directories and compiles them into crate bits. 
+sbolt is a Rust template engine that compiles templates during your Cargo build.
+Its Razor-inspired `@` syntax combines literal content with Rust expressions,
+typed models, layouts, and reusable views.
 
-## sbolt has benefits compared to other templates:
-1. Catch syntactical and logical errors in templates ahead of time.
-2. High scalability as templates go with crate bits.
-3. Better performance for runtime and startup as templates are compiled into bits, see [benchmark](./rust/benchmark).
+## Why sbolt?
 
-The template syntax is inspired by [aspnet Razor](https://dotnet.microsoft.com/en-us/apps/aspnet) syntax which uses `@` symbol to transition between `CONTENT` and `rust` code. A sample template looks llike bellow: `views/welcome.rshtml`
-```
-@{
-    let name = match context.get_data::<String>("name") {
-        Some(str) => str,
-        None => "",
-    };
-}
-<html>
-    <head>
-        <title>Welcome</title>
-    </head>
-    <body>
-        <div>Welcome @name!</div>
-    </body>
-</html>
-```
+- **Build-time checks:** template syntax and generated Rust are checked before deployment.
+- **Compiled rendering:** no template-source parsing at runtime.
+- **Flexible output:** HTML, JSON, and plain text, with matching-kind layouts.
+- **Efficient formatting:** stream values into output buffers and reuse resolved templates.
 
-### Getting started
-The goal of sbolt is to have your templates and static files accessible to your rust code as a module. And the module will be generated into code living outside of src directory. There are 3 steps to use the crate:
+See the [benchmarks](./rust/benchmark) for measured comparisons. Interpolation
+writes raw values without automatic HTML or JSON escaping; escape or serialize
+untrusted values for their output context.
 
-1. use sbolt to preprocess templates at build stage.
->> * add the crate to deps: `Cargo.toml`
+## Quick start
+
+Add sbolt for both runtime use and build-time compilation:
+
 ```shell
 cargo add sbolt
 cargo add sbolt --build
 ```
->> * create a build script to process templates: `build.rs`
+
+Create `src/views/welcome.rshtml`:
+
+```text
+@model crate::WelcomeModel;
+<p>Welcome, @(model.name)!</p>
+```
+
+Compile the templates in `build.rs`:
+
 ```rust
 fn main() {
     let option = sbolt::codegen::CompilerOptions::default()
         .with_source_dir("src/views")
-        .with_mod_name("example_views");
-    let compiler = sbolt::codegen::Compiler::new(option);
-    compiler.compile();
+        .with_mod_name("compiled_views");
+    sbolt::codegen::Compiler::new(option).compile();
 }
 ```
-2. include the generated module from build stage and use the logic from generated module.
+
+Define the model and render from `src/main.rs`:
+
 ```rust
 sbolt::include_views!();
-fn main() {
-    let mut context = sbolt::context! {
-        name: "sbolt".to_string()
-    };
-    let (output, _) = example_views::render("views/welcome", None, &mut context)
-        .unwrap_or_else(|e| {
-            eprintln!("Error: {e:?}");
-            std::process::exit(1);
-        });
+
+pub struct WelcomeModel {
+    pub name: String,
+}
+
+fn main() -> sbolt::types::result::RenderResult<()> {
+    let mut context = sbolt::context!(WelcomeModel {
+        name: "sbolt".into(),
+    });
+    let (output, _) = compiled_views::render("views/welcome", None, &mut context)?;
     println!("{output}");
+    Ok(())
 }
 ```
-3. build and run your crate.
+
+Run with `cargo run`.
 
 
 ## Documentation
-  * [Dev](./doc/dev/README.md)
-  * [User](./doc/en/get_started.md)
+
+- [Get started](./doc/user/get_started.md): Setup and usage.
+- [Development](./doc/dev/README.md): Architecture and roadmap.
 
 ## License
 
-this crate is licensed under [LICENSE](./LICENSE)
+This crate is licensed under [LICENSE](./LICENSE)
 
