@@ -67,7 +67,9 @@ impl<'a> Block<'a> {
                         let exp = &source[token.range()];
                         // todo: create a map for directive keywords.
                         match exp {
-                            consts::DIRECTIVE_KEYWORD_LAYOUT | consts::DIRECTIVE_KEYWORD_USE => {
+                            consts::DIRECTIVE_KEYWORD_LAYOUT
+                            | consts::DIRECTIVE_KEYWORD_MODEL
+                            | consts::DIRECTIVE_KEYWORD_USE => {
                                 Self::parse_directive(source, exp, token_stream)?
                             }
                             consts::KEYWORD_RENDER => {

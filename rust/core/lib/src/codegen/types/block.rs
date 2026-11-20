@@ -1,6 +1,11 @@
 use crate::codegen::types::Span;
 use crate::types::Location;
 
+pub(in crate::codegen) struct ModelDeclaration {
+    pub key: String,
+    pub model_type: syn::Type,
+}
+
 #[derive(Clone, Debug)]
 pub(in crate::codegen) enum Block<'a> {
     KCODE(Span<'a>),
@@ -10,6 +15,7 @@ pub(in crate::codegen) enum Block<'a> {
     KINLINEDCODE(Span<'a>),
     KINLINEDCONTENT(Span<'a>),
     KLAYOUT(Span<'a>),
+    KMODEL(Span<'a>),
     KROOT(Span<'a>),
     KRENDER(Span<'a>),
     KSECTION(String, Span<'a>),
@@ -27,6 +33,7 @@ impl<'a> Block<'a> {
             Block::KINLINEDCODE(span) => span.location(),
             Block::KINLINEDCONTENT(span) => span.location(),
             Block::KLAYOUT(span) => span.location(),
+            Block::KMODEL(span) => span.location(),
             Block::KRENDER(span) => span.location(),
             Block::KROOT(span) => span.location(),
             Block::KSECTION(_, span) => span.location(),
@@ -61,6 +68,10 @@ impl<'a> Block<'a> {
 
     pub(in crate::codegen) fn new_layout(span: Span<'a>) -> Self {
         Block::KLAYOUT(span)
+    }
+
+    pub(in crate::codegen) fn new_model(span: Span<'a>) -> Self {
+        Block::KMODEL(span)
     }
 
     pub(in crate::codegen) fn new_render(span: Span<'a>) -> Self {
@@ -101,6 +112,7 @@ impl<'a> Block<'a> {
             Block::KINLINEDCODE(span) => span,
             Block::KINLINEDCONTENT(span) => span,
             Block::KLAYOUT(span) => span,
+            Block::KMODEL(span) => span,
             Block::KRENDER(span) => span,
             Block::KROOT(span) => span,
             Block::KSECTION(_, span) => span,
@@ -118,6 +130,7 @@ impl<'a> Block<'a> {
             Block::KINLINEDCODE(span) => span.content(),
             Block::KINLINEDCONTENT(span) => span.content(),
             Block::KLAYOUT(span) => span.content(),
+            Block::KMODEL(span) => span.content(),
             Block::KRENDER(span) => span.content(),
             Block::KROOT(span) => span.content(),
             Block::KSECTION(_, span) => span.content(),

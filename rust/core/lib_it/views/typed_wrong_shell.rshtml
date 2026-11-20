@@ -1,0 +1,2 @@
+@model layout_text: String;
+<main>@(model)|@render</main>

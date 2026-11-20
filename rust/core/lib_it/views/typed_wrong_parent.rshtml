@@ -1,0 +1,3 @@
+@model crate::view_tests::TypedModel;
+@layout typed_wrong_shell;
+<p>@(model.name)</p>

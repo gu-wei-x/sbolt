@@ -8,7 +8,7 @@ use quote::quote;
 impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn is_static_output(&self) -> bool {
         match self {
-            Block::KCOMMENT(_) => true,
+            Block::KCOMMENT(_) | Block::KMODEL(_) => true,
             Block::KCONTENT(span) | Block::KINLINEDCONTENT(span) if span.is_simple() => true,
             Block::KCONTENT(span) => span.blocks().iter().all(Self::is_static_output),
             _ => false,

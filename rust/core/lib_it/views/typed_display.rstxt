@@ -1,0 +1,2 @@
+@model dyn std::fmt::Display + Send + Sync;
+@(model)

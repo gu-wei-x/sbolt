@@ -6,6 +6,86 @@ use crate::types::template::Kind;
 use quote::quote;
 
 #[test]
+fn malformed_model_blocks_report_errors_during_generation() -> result::Result<()> {
+    let options = CompilerOptions::default();
+    for source in [
+        "@model Vec<;\nbody",
+        "@model layout:;\nbody",
+        "@model 123: String;",
+        "@model \"layout\": String;",
+        "@model : String;",
+    ] {
+        let template = Template::from(source, None, Kind::KHTML, &options)?;
+        let error = template
+            .to_token_stream("PageView", "ViewsPageView", "views/page", &options)
+            .unwrap_err();
+        assert!(
+            error.to_string().contains("Invalid model declaration"),
+            "{source}: {error}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn duplicate_model_blocks_report_errors_during_generation() -> result::Result<()> {
+    let options = CompilerOptions::default();
+    for source in [
+        "@model String;\n@model usize;\nbody",
+        "@model page: String;\n@model layout: usize;",
+    ] {
+        let template = Template::from(source, None, Kind::KHTML, &options)?;
+        let error = template
+            .to_token_stream("PageView", "ViewsPageView", "views/page", &options)
+            .unwrap_err();
+        assert!(
+            error.to_string().contains("Multiple model directives"),
+            "{error}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn model_rendering_does_not_generate_a_helper() -> result::Result<()> {
+    let options = CompilerOptions::default();
+    let template = Template::from("@model String;\n@(model)", None, Kind::KTEXT, &options)?;
+    let (tokens, _) =
+        template.to_token_stream("PageView", "ViewsPageView", "views/page", &options)?;
+    let file = syn::parse2::<syn::File>(tokens)?;
+    let has_model_helper = file
+        .items
+        .iter()
+        .filter_map(|item| match item {
+            syn::Item::Impl(item) if item.trait_.is_none() => Some(item),
+            _ => None,
+        })
+        .flat_map(|item| &item.items)
+        .any(
+            |item| matches!(item, syn::ImplItem::Fn(method) if method.sig.ident == "render_model"),
+        );
+    assert!(!has_model_helper);
+    Ok(())
+}
+
+#[test]
+fn model_directives_do_not_render_or_disable_static_json_optimization() -> result::Result<()> {
+    let options = CompilerOptions::default().with_optimization(true);
+    for source in [
+        "@model String;\n{ \"count\": 1 }",
+        "@model layout: String;\n{ \"count\": 1 }",
+    ] {
+        let template = Template::from(source, None, Kind::KJSON, &options)?;
+        let (tokens, stats) =
+            template.to_token_stream("PageView", "ViewsPageView", "views/page", &options)?;
+        let write = quote! { writer.write("{\"count\":1}"); };
+        assert!(tokens.to_string().contains(&write.to_string()));
+        assert_eq!(stats.output_bytes(), "{\"count\":1}".len());
+    }
+    Ok(())
+}
+
+#[test]
 fn to_token_stream_html() -> result::Result<()> {
     let raw_content = r#"
 @use test::test1;
@@ -65,7 +145,7 @@ this is @name}
              Some("test::test2".to_string())
          }
 
-         fn render(&self, context: &mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
+         fn render(&self, #[allow(unused_variables)]context: &mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
              let mut writer = self.create_writer(None);
              let section_name = "test1";
              let section_writer = {
