@@ -47,14 +47,17 @@ impl<'a> Template<'a> {
             }
         };
         // a view must have render method.
-        let context = CodeGenContext::new(self.kind(), compiler_options);
-        let render_content = self.block().generate_render_token_stream(&context)?;
+        let mut context = CodeGenContext::new(self.kind(), compiler_options);
+        let render_content = self.block().generate_render_token_stream(&mut context)?;
         let code = quote! {
             use #template_type_ts;
             use sbolt::types::Template as _;
             use sbolt::types::Writer;
+            #[allow(unused_imports)]
+            use sbolt::types::{DisplayWriteTo as _, ToStringWriteTo as _};
             #(#imports_content)*
 
+            #[derive(Clone, Copy)]
             pub struct #view_name;
             impl #view_name {
                 pub(crate) fn new() -> Self {
@@ -65,18 +68,23 @@ impl<'a> Template<'a> {
                    #template_type::#view_type(#view_name::new())
                 }
 
-                fn create_writer(&self, kind: Option<sbolt::types::template::Kind>) -> sbolt::types::KWriter {
+                fn create_writer(
+                    &self,
+                    kind: Option<sbolt::types::template::Kind>,
+                    capacity_hint: Option<usize>,
+                ) -> sbolt::types::KWriter {
                     let kind = match kind {
                         Some(k) => k,
                         _ => #view_name::kind(),
                     };
                     match kind {
                         sbolt::types::template::Kind::KHTML => {
-                            sbolt::types::KWriter::KHtml(sbolt::types::HtmlWriter::new())
+                            sbolt::types::KWriter::KHtml(sbolt::types::HtmlWriter::new(capacity_hint))
                         },
-                        _ => sbolt::types::KWriter::KText(String::new()),
+                        _ => sbolt::types::KWriter::KText(String::with_capacity(capacity_hint.unwrap_or_default())),
                     }
                 }
+
             }
 
             impl sbolt::types::Template for #view_name

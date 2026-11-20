@@ -15,6 +15,7 @@ repository = "https://github.com/gu-wei-x/sbolt"
 workspace = true
 
 [dependencies]
+itoa = "1"
 mime = "0.3"
 proc-macro2 = "1"
 quote = "1"

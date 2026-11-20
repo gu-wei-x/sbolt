@@ -16,6 +16,25 @@ flowchart TD
 ```
 
 - All template types share the parser for `@` expressions and directives.
+- Inline expressions automatically select `WriteTo` when implemented:
+  strings and booleans append directly and integer primitives use an `itoa`
+  stack buffer. Values are borrowed, and output is unchanged (no escaping is
+  added). No compiler option is required.
+- Other `Display` values automatically fall back to
+  `Writer::write_formatted(format_args!("{}", value))` without an intermediate
+  `String`. Generated code selects between a conditional inherent method and a
+  fallback traits at each concrete expression, without overlapping trait
+  implementations or expression-type guessing. The optional
+  `sbolt::types::display(value)` adapter forces `Display` formatting.
+  A final `ToString` fallback preserves legacy types, including references and
+  smart pointers, at the cost of their original temporary allocation. Generated
+  dispatch uses an internal `__sbolt_write_to` method to avoid selecting unrelated
+  `write_to` methods on legacy values or affecting template-authored method calls.
+  Existing custom writers inherit a streaming formatting adapter over
+  `write`; built-in writers format directly into their string buffers.
+  A formatting error panics, as it did with `to_string()`.
+  The helper deliberately differs from `std::fmt::Write::write_fmt`, so templates
+  can import that trait and use standard `write!` calls on local strings.
 - Delimited blocks collapse a single child only when it has the same block
   variant as the enclosing block. Otherwise the wrapper is retained, preserving
   the code, content, or section context of that child.
@@ -35,6 +54,59 @@ flowchart TD
   it does not parse templates or run the optimizer again.
 
 See [optimization details](./optimization.md) for behavior and limitations.
+
+## Repeated rendering and output buffers
+
+The generated module keeps `render(name, kind, context)` and also exposes
+`resolve(name, kind) -> RenderResult<KTemplate>`. Resolution returns the existing
+generated template enum, not an additional wrapper. It can be copied and reused
+with different contexts; it owns neither a context nor a borrowed path.
+Its `render(context)` returns `String`, while named rendering continues to return
+`(String, Kind)`:
+
+```rust
+let template = example_views::resolve("views/welcome", None)?;
+let output = template.render(&mut context)?;
+```
+
+Only the entry template is cached. Layouts and `@view` calls keep their existing
+kind-aware lookup and error behavior; resolution does not validate those
+dependencies early.
+
+Generated static-literal byte counts seed each output buffer's capacity. Section
+buffers have their own hints; their literals do not inflate the main body or
+other sections. Code generation updates an explicitly mutable context; section
+contexts keep separate hints while sharing compilation statistics.
+This is a heuristic: literals in branches are counted once and
+loop trip counts are unknown.
+It is not a bound on output length, allocation size, or memory usage. Supply an
+estimated total byte count for dynamic content and loops:
+
+```rust
+context.set_capacity_hint(140_000);
+let output = template.render(&mut context)?;
+```
+
+The hint is stored directly on `DefaultViewContext`, not in its data store.
+Generated rendering reserves the larger of the static estimate and
+`context.capacity_hint()`, not their sum. The setting persists across renders;
+`context.set_capacity_hint(0)` restores static-only estimates.
+Custom contexts inherit a zero hint from the `Context` trait unless they
+override `capacity_hint()`. Existing `render` signatures are unchanged.
+
+Rendering executes directly inside the generated `render` method, which obtains
+its writer through `create_writer(kind, capacity_hint)`. The helper retains
+kind-aware writer selection and forwards an `Option<usize>` to
+`HtmlWriter::new`: `None` starts without reserved capacity and `Some(bytes)`
+reserves at least that many bytes. Text and JSON use the same estimate for their
+string buffers. Section writers receive only their own compile-time estimates.
+Each render returns a fresh `String`; caller-provided output buffers are not
+supported. `return Ok(text)` replaces that template's output,
+and `return Err(error)` propagates the error. Layouts and sections retain the
+intermediate buffers needed for composition.
+The context hint applies to layouts and `@view` calls sharing that context.
+An independent child context uses its own hint, which defaults to zero.
+Section buffers retain their separate compile-time hints.
 
 ## Optional typed models
 
@@ -84,8 +156,7 @@ let output = TeamsHtmlView.render(&mut context)?;
 
 Import generated view types directly and choose aliases at the call site when
 needed. The framework does not generate a separate typed-alias module.
-Model lookup and rendering are generated directly inside `render`; callers do
-not pass models separately.
+Model lookup remains part of `render`; callers do not pass models separately.
 
 Each layout resolves its own declaration independently from the shared context,
 including layouts reached through untyped intermediate layouts. The caller's

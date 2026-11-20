@@ -1,0 +1,10 @@
+@model crate::TableModel;
+<table>@{
+    for row in &model.rows {
+        @{<tr>}
+        for value in row {
+            @{<td>@value</td>}
+        }
+        @{</tr>}
+    }
+}</table>

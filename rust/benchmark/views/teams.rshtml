@@ -1,0 +1,6 @@
+@model crate::TeamsModel;
+<ul>@{
+    for team in &model.teams {
+        @{<li>@(team.name): @(team.score)</li>}
+    }
+}</ul>

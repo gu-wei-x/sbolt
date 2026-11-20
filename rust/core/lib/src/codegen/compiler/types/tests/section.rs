@@ -17,9 +17,9 @@ fn to_section_token_stream_from_wrong_block() {
     let template = template.unwrap();
     let block = template.block();
     assert!(matches!(block, Block::KROOT(_)));
-    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
     block
-        .to_section_token_stream(&context)
+        .to_section_token_stream(&mut context)
         .expect("Expect section block here");
 }
 
@@ -34,12 +34,13 @@ fn to_section_token_stream_simple() -> result::Result<()> {
     assert_eq!(root_span.blocks().len(), 1);
 
     let block = &root_span.blocks()[0];
-    let context = CodeGenContext::new(Kind::KHTML, &options);
-    let ts = block.to_section_token_stream(&context)?;
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = block.to_section_token_stream(&mut context)?;
+    let capacity_hint = "test".len();
     let expected = quote! {
         let section_name = "test";
         let inner_writer = {
-            let mut writer = self.create_writer(None);
+            let mut writer = self.create_writer(None, Some(#capacity_hint));
             writer.write("test");
             writer
         };
@@ -63,13 +64,14 @@ fn to_section_token_stream_composite() -> result::Result<()> {
     assert_eq!(root_span.blocks().len(), 1);
 
     let block = &root_span.blocks()[0];
-    let context = CodeGenContext::new(Kind::KHTML, &options);
-    let ts = block.to_section_token_stream(&context)?;
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = block.to_section_token_stream(&mut context)?;
+    let capacity_hint = " helloworld".len();
     let expected = quote! {
         let section_name = "test";
         let section_writer = {
-            let mut writer = self.create_writer(None);
-            writer.write(&test.to_string());
+            let mut writer = self.create_writer(None, Some(#capacity_hint));
+            sbolt::types::WriteToRef(&(test)).__sbolt_write_to(&mut writer);
             writer.write(" helloworld");
             writer
         };

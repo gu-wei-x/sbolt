@@ -1,0 +1,56 @@
+@use std::fmt::Write;
+@{
+    let mode = context.get_data::<u8>("mode").copied().unwrap_or(0);
+    let mut local = String::new();
+    write!(&mut local, "value: {}", 42).unwrap();
+    writer.write("before|");
+    if mode == 1 {
+        return Ok(String::from("early"));
+    }
+    if mode == 2 {
+        return Ok(writer.into_string());
+    }
+    if mode == 3 {
+        return Err(sbolt::types::error::RuntimeError::InvalidInput("early error".into(), "".into()));
+    }
+    if mode == 4 {
+        @{@(format_args!("<em>{}</em>", 42))|@(1.25)|@(true)|@(-42)}
+        return Ok(writer.into_string());
+    }
+    if mode == 5 {
+        struct LegacyValue;
+        impl ToString for LegacyValue {
+            fn to_string(&self) -> String {
+                "<legacy>".to_owned()
+            }
+        }
+        let value = LegacyValue;
+        let borrowed = &value;
+        let shared = std::sync::Arc::new(LegacyValue);
+        @{@(value)|@(borrowed)|@(shared)}
+        return Ok(writer.into_string());
+    }
+    if mode == 6 {
+        use sbolt::types::WriteTo as _;
+        struct Specialized;
+        impl sbolt::types::WriteTo for Specialized {
+            fn write_to(&self, writer: &mut impl sbolt::types::Writer) {
+                writer.write("specialized");
+            }
+        }
+        impl std::fmt::Display for Specialized {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str("display")
+            }
+        }
+        let borrowed = &Specialized;
+        fn specialized_output(borrowed: &Specialized) -> String {
+            let mut output = String::new();
+            borrowed.write_to(&mut output);
+            output
+        }
+        @{@(specialized_output(borrowed))}
+        return Ok(writer.into_string());
+    }
+}
+@local

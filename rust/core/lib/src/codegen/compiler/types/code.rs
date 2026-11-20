@@ -8,7 +8,7 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_code_token_stream(
         &self,
         from: Option<&Block<'a>>,
-        context: &CodeGenContext<'_>,
+        context: &mut CodeGenContext<'_>,
     ) -> result::Result<TokenStream> {
         // validate parent block.
         from.ok_or(error::CompileError::from_codegen(
@@ -61,7 +61,7 @@ impl<'a> Block<'a> {
             let raw_content = code_span.content();
             match raw_content.parse::<TokenStream>() {
                 Ok(ts) => Ok(quote! {
-                    writer.write(&#ts.to_string());
+                    sbolt::types::WriteToRef(&(#ts)).__sbolt_write_to(&mut writer);
                 }),
                 Err(err) => Err(error::CompileError::from_lex(&self, err)),
             }

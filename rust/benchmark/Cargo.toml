@@ -15,7 +15,12 @@ sbolt = { path = "../core/lib", features = ["pretty"] }
 
 [dev-dependencies]
 criterion = {version = "0.7.0", features = ["html_reports"]}
+stats_alloc = "0.1"
 
 [[bench]]
 name = "template_benches"
+harness = false
+
+[[bench]]
+name = "render_allocations"
 harness = false

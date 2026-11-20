@@ -23,8 +23,10 @@ fn to_code_token_on_non_code_block() {
     assert_eq!(root_span.blocks().len(), 1);
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KCONTENT(_)));
-    let context = CodeGenContext::new(Kind::KHTML, &options);
-    block.to_code_token_stream(Some(block), &context).unwrap();
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
+    block
+        .to_code_token_stream(Some(block), &mut context)
+        .unwrap();
 }
 
 #[test]
@@ -44,9 +46,9 @@ fn to_code_token_stream_with_no_from_block() {
     assert_eq!(root_span.blocks().len(), 1);
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KCODE(_)));
-    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
     block
-        .to_code_token_stream(None, &context)
+        .to_code_token_stream(None, &mut context)
         .expect("Expected from block here");
 }
 
@@ -68,9 +70,9 @@ fn to_code_token_stream_with_invalid_content() {
     assert_eq!(root_span.blocks().len(), 1);
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KCODE(_)));
-    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
     block
-        .to_code_token_stream(Some(block), &context)
+        .to_code_token_stream(Some(block), &mut context)
         .expect("Expected valid code block here");
 }
 
@@ -88,8 +90,8 @@ fn to_code_token_stream_simple() -> result::Result<()> {
     assert_eq!(root_span.blocks().len(), 1);
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KCODE(_)));
-    let context = CodeGenContext::new(Kind::KHTML, &options);
-    let ts = &block.to_code_token_stream(Some(block), &context)?;
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = &block.to_code_token_stream(Some(block), &mut context)?;
     let expected = quote! {
         let test=1;
         let test2=2;
@@ -113,8 +115,8 @@ fn to_code_token_stream_with_block() -> result::Result<()> {
     assert_eq!(root_span.blocks().len(), 1);
     let code_block = &root_span.blocks()[0];
     assert!(matches!(code_block, Block::KCODE(_)));
-    let context = CodeGenContext::new(Kind::KHTML, &options);
-    let ts = block.to_token_stream(Some(block), &context)?;
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = block.to_token_stream(Some(block), &mut context)?;
     let ts = quote! { #(#ts)* };
     let expected = quote! {
         for i in 0..5 {
@@ -144,15 +146,15 @@ fn to_code_token_stream_with_complex_nested_block() -> result::Result<()> {
     assert_eq!(root_span.blocks().len(), 1);
     let code_block = &root_span.blocks()[0];
     assert!(matches!(code_block, Block::KCODE(_)));
-    let context = CodeGenContext::new(Kind::KHTML, &options);
-    let ts = block.to_token_stream(Some(block), &context)?;
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = block.to_token_stream(Some(block), &mut context)?;
     let ts = quote! { #(#ts)* };
     let expected = quote! {
         for i in 0..5 {
             writer.write("<tr>");
             for j in 0 .. 5 {
                 writer.write("<td>");
-                writer.write(&j.to_string());
+                sbolt::types::WriteToRef(&(j)).__sbolt_write_to(&mut writer);
                 writer.write("</td>");
             }
             writer.write("</tr>");
@@ -192,11 +194,11 @@ fn to_inline_code_token_stream_from_content_block() -> result::Result<()> {
     let code_block = &root_span.blocks()[0];
     assert!(matches!(code_block, Block::KCODE(_)));
 
-    let context = CodeGenContext::new(Kind::KHTML, &options);
-    let ts = code_block.to_token_stream(Some(&block), &context)?;
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = code_block.to_token_stream(Some(&block), &mut context)?;
     let expected = quote! {
        testcode;
-       writer.write(&name.to_string());
+       sbolt::types::WriteToRef(&(name)).__sbolt_write_to(&mut writer);
     };
     assert_eq!(ts[0].to_string(), expected.to_string());
     Ok(())

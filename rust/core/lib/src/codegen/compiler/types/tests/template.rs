@@ -47,7 +47,7 @@ fn duplicate_model_blocks_report_errors_during_generation() -> result::Result<()
 }
 
 #[test]
-fn model_rendering_does_not_generate_a_helper() -> result::Result<()> {
+fn model_rendering_keeps_logic_inside_render() -> result::Result<()> {
     let options = CompilerOptions::default();
     let template = Template::from("@model String;\n@(model)", None, Kind::KTEXT, &options)?;
     let (tokens, _) =
@@ -57,13 +57,16 @@ fn model_rendering_does_not_generate_a_helper() -> result::Result<()> {
         .items
         .iter()
         .filter_map(|item| match item {
-            syn::Item::Impl(item) if item.trait_.is_none() => Some(item),
+            syn::Item::Impl(item) => Some(item),
             _ => None,
         })
         .flat_map(|item| &item.items)
-        .any(
-            |item| matches!(item, syn::ImplItem::Fn(method) if method.sig.ident == "render_model"),
-        );
+        .any(|item| {
+            matches!(item, syn::ImplItem::Fn(method)
+            if method.sig.ident == "render_model"
+                || method.sig.ident == "render_into"
+                || method.sig.ident == "create_writer_with_capacity")
+        });
     assert!(!has_model_helper);
     Ok(())
 }
@@ -103,11 +106,16 @@ this is @name}
         "testns::TestView",
         &CompilerOptions::default().with_mod_name("test_view_mod"),
     )?;
+    let capacity_hint = "<html><div>Test</div></html>".len();
+    let section_capacity_hint = "this is ".len();
     let expected = quote! {
      use crate::test_view_mod::ktemplate::KTemplate;
      use sbolt::types::Template as _;
      use sbolt::types::Writer;
+     #[allow(unused_imports)]
+     use sbolt::types::{DisplayWriteTo as _, ToStringWriteTo as _};
      use test::test1;
+     #[derive(Clone, Copy)]
      pub struct TestView;
 
      impl TestView {
@@ -119,18 +127,23 @@ this is @name}
              KTemplate::KTestnsTestViewView(TestView::new())
          }
 
-         fn create_writer(&self, kind: Option<sbolt::types::template::Kind>) -> sbolt::types::KWriter {
+         fn create_writer(
+             &self,
+             kind: Option<sbolt::types::template::Kind>,
+             capacity_hint: Option<usize>,
+         ) -> sbolt::types::KWriter {
              let kind = match kind {
                  Some(k) => k,
                  _ => TestView::kind(),
              };
              match kind {
                  sbolt::types::template::Kind::KHTML => {
-                     sbolt::types::KWriter::KHtml(sbolt::types::HtmlWriter::new())
+                     sbolt::types::KWriter::KHtml(sbolt::types::HtmlWriter::new(capacity_hint))
                  },
-                 _ => sbolt::types::KWriter::KText(String::new()),
+                 _ => sbolt::types::KWriter::KText(String::with_capacity(capacity_hint.unwrap_or_default())),
              }
          }
+
      }
      impl sbolt::types::Template for TestView {
          fn name() -> String {
@@ -145,14 +158,19 @@ this is @name}
              Some("test::test2".to_string())
          }
 
-         fn render(&self, #[allow(unused_variables)]context: &mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
-             let mut writer = self.create_writer(None);
+         fn static_capacity_hint() -> usize {
+             #capacity_hint
+         }
+
+         fn render(&self, context: &mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
+             #[allow(unused_mut)]
+             let mut writer = self.create_writer(None, Some(Self::static_capacity_hint().max(context.capacity_hint())));
              let section_name = "test1";
              let section_writer = {
-                 let mut writer = self.create_writer(None);
+                 let mut writer = self.create_writer(None, Some(#section_capacity_hint));
                  let name = "test1";
                  writer.write("this is ");
-                 writer.write(&name.to_string());
+                 sbolt::types::WriteToRef(&(name)).__sbolt_write_to(&mut writer);
                  writer
              };
              context.add_section(section_name, section_writer.into_string());
@@ -190,11 +208,15 @@ fn to_token_stream_html_without_layout() -> result::Result<()> {
         "testns::TestView",
         &CompilerOptions::default().with_mod_name("test_view_mod"),
     )?;
+    let capacity_hint = "<html><div>Test</div></html>".len();
     let expected = quote! {
      use crate::test_view_mod::ktemplate::KTemplate;
      use sbolt::types::Template as _;
      use sbolt::types::Writer;
+     #[allow(unused_imports)]
+     use sbolt::types::{DisplayWriteTo as _, ToStringWriteTo as _};
      use test::test1;
+     #[derive(Clone, Copy)]
      pub struct TestView;
 
      impl TestView {
@@ -206,18 +228,23 @@ fn to_token_stream_html_without_layout() -> result::Result<()> {
              KTemplate::KTestnsTestViewView(TestView::new())
          }
 
-         fn create_writer(&self, kind: Option<sbolt::types::template::Kind>) -> sbolt::types::KWriter {
+         fn create_writer(
+             &self,
+             kind: Option<sbolt::types::template::Kind>,
+             capacity_hint: Option<usize>,
+         ) -> sbolt::types::KWriter {
              let kind = match kind {
                  Some(k) => k,
                  _ => TestView::kind(),
              };
              match kind {
                  sbolt::types::template::Kind::KHTML => {
-                     sbolt::types::KWriter::KHtml(sbolt::types::HtmlWriter::new())
+                     sbolt::types::KWriter::KHtml(sbolt::types::HtmlWriter::new(capacity_hint))
                  },
-                 _ => sbolt::types::KWriter::KText(String::new()),
+                 _ => sbolt::types::KWriter::KText(String::with_capacity(capacity_hint.unwrap_or_default())),
              }
          }
+
      }
      impl sbolt::types::Template for TestView {
          fn name() -> String {
@@ -228,10 +255,15 @@ fn to_token_stream_html_without_layout() -> result::Result<()> {
              sbolt::types::template::Kind::KHTML
          }
 
-         fn render(&self, #[allow(unused_variables)]context: &mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
-             let mut writer = self.create_writer(None);
+         fn static_capacity_hint() -> usize {
+             #capacity_hint
+         }
+
+         fn render(&self, context: &mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
+             #[allow(unused_mut)]
+             let mut writer = self.create_writer(None, Some(Self::static_capacity_hint().max(context.capacity_hint())));
              writer.write("<html><div>Test</div></html>");
-             Ok (writer.into_string())
+             Ok(writer.into_string())
          }
      }
     };

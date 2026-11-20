@@ -2,6 +2,11 @@ use crate::types::DataStore;
 use std::collections::HashMap;
 
 pub trait Context {
+    /// Estimated total output bytes, including dynamic content and loops.
+    fn capacity_hint(&self) -> usize {
+        0
+    }
+
     /// Reborrow an owned or already-borrowed context for nested rendering.
     fn as_mut_context(&mut self) -> &mut Self {
         self
@@ -26,6 +31,7 @@ pub trait Context {
 pub struct DefaultViewContext {
     pub(crate) state: DataStore<Box<dyn Send + Sync>>,
     sections: HashMap<String, Vec<String>>,
+    capacity_hint: usize,
 }
 
 impl DefaultViewContext {
@@ -33,11 +39,23 @@ impl DefaultViewContext {
         Self {
             state: DataStore::<Box<dyn Send + Sync>>::new(),
             sections: HashMap::<String, Vec<String>>::new(),
+            capacity_hint: 0,
         }
+    }
+
+    /// Sets the output estimate for renders and layouts sharing this context.
+    /// Section buffers keep their own compile-time estimates.
+    pub fn set_capacity_hint(&mut self, capacity_hint: usize) -> &mut Self {
+        self.capacity_hint = capacity_hint;
+        self
     }
 }
 
 impl Context for DefaultViewContext {
+    fn capacity_hint(&self) -> usize {
+        self.capacity_hint
+    }
+
     fn set_data<T, F>(&mut self, key: &str, f: F)
     where
         F: FnOnce() -> T,

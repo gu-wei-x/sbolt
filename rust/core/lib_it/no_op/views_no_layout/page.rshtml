@@ -1,0 +1,3 @@
+@use crate::Model as LocalModel;
+@model LocalModel;
+<p>@(model.name)</p>

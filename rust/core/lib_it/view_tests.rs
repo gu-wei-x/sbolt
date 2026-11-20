@@ -1,4 +1,5 @@
 use super::render_custom_view as render;
+use super::resolve_custom_view as resolve;
 use sbolt::types::Context;
 use sbolt::types::{error::RuntimeError, result::RenderResult, template::Kind};
 use std::sync::Arc;
@@ -32,6 +33,7 @@ fn model_directives_render_through_the_named_api() -> RenderResult<()> {
         ("views/typed_layout", Kind::KHTML),
     ] {
         let (output, selected_kind) = render(path, Some(kind), &mut context)?;
+        assert_eq!(resolve(path, Some(kind))?.render(&mut context)?, output);
         assert_eq!(selected_kind, kind);
         assert!(output.contains("<b>&team</b>"));
         assert!(output.contains("-42"));
@@ -116,6 +118,11 @@ fn named_typed_rendering_reports_missing_or_incorrect_models() {
                 render("views/typed", Some(kind), &mut context),
                 Err(RuntimeError::InvalidInput(ref message, _)) if message.contains(key)
             ));
+            let handle = resolve("views/typed", Some(kind)).unwrap();
+            assert!(matches!(
+                handle.render(&mut context),
+                Err(RuntimeError::InvalidInput(ref message, _)) if message.contains(key)
+            ));
         }
     }
 }
@@ -129,6 +136,160 @@ fn custom_views_resolve_their_own_model_keys() -> RenderResult<()> {
     let output = render("views/custom/typed", Some(Kind::KTEXT), &mut context)?.0;
     assert_eq!(output.trim(), "parent|child|7|child");
     Ok(())
+}
+
+#[test]
+fn standard_formatting_and_early_returns_preserve_rendering_contracts() -> RenderResult<()> {
+    let handle = resolve("views/render_regressions", None)?;
+    for (mode, expected) in [
+        (0u8, "before|value: 42"),
+        (1, "early"),
+        (2, "before|"),
+        (4, "before|<em>42</em>|1.25|true|-42"),
+        (5, "before|<legacy>|<legacy>|<legacy>"),
+        (6, "before|specialized"),
+    ] {
+        let actual = handle.render(&mut sbolt::context!(mode: mode))?;
+        assert_eq!(actual.trim(), expected);
+        let mut context = sbolt::context!(mode: mode);
+        context.set_capacity_hint(4096);
+        let hinted = handle.render(&mut context)?;
+        assert_eq!(hinted, actual);
+        if mode != 1 {
+            assert!(hinted.capacity() >= 4096);
+        }
+    }
+    assert!(matches!(
+        handle.render(&mut sbolt::context!(mode: 3u8)),
+        Err(RuntimeError::InvalidInput(_, _))
+    ));
+    Ok(())
+}
+
+#[test]
+fn section_capacity_hints_exclude_other_output_streams() -> RenderResult<()> {
+    let mut context = sbolt::context!();
+    context.set_capacity_hint(4096);
+    let (output, _) = render("views/section_capacity", None, &mut context)?;
+    assert!(output.len() > 500);
+    assert!(output.capacity() >= 4096);
+    for (name, expected, count) in [("tiny", "x", 3), ("outer", "ab", 1), ("inner", "nested", 1)] {
+        let sections = context.get_section(name).unwrap();
+        assert_eq!(sections.len(), count);
+        for section in sections {
+            assert_eq!(section, expected);
+            assert!(
+                section.capacity() <= 16,
+                "{name}: capacity={}",
+                section.capacity()
+            );
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn typed_model_rendering_keeps_models_and_sections_independent() -> RenderResult<()> {
+    let model = Arc::new(TypedModel {
+        name: "local".into(),
+        count: 7,
+    });
+    let mut context = sbolt::context!(
+        model: Arc::clone(&model),
+        page: Arc::clone(&model),
+        layout: Arc::new(LayoutModel { title: "independent layout".into() })
+    );
+    context.set_capacity_hint(1024);
+    let handle = resolve("views/typed", Some(Kind::KTEXT))?;
+    let output = handle.render(&mut context)?;
+    assert_eq!(output, "local|7|local");
+    assert!(output.capacity() >= 1024);
+    let html = resolve("views/typed_layout", None)?.render(&mut context)?;
+    assert!(html.contains("<main>independent layout|"));
+    assert!(html.contains("<p>local:7</p>"));
+    assert_eq!(
+        context.get_section("caption").unwrap().last().unwrap(),
+        "local"
+    );
+    assert!(html.capacity() >= 1024);
+    assert_eq!(model.name, "local");
+    assert_eq!(Arc::strong_count(&model), 3);
+    Ok(())
+}
+
+#[test]
+fn context_capacity_hints_preserve_output_with_and_without_layouts() -> RenderResult<()> {
+    for (path, kind) in [
+        ("views/custom/value", Kind::KTEXT),
+        ("views/formats/page", Kind::KHTML),
+        ("views/formats/page", Kind::KJSON),
+        ("views/formats/page", Kind::KTEXT),
+    ] {
+        let handle = resolve(path, Some(kind))?;
+        let hinted_context = || {
+            let mut context = sbolt::context!(count: 3i32);
+            context.set_capacity_hint(4096);
+            context
+        };
+        let unhinted = render(path, Some(kind), &mut sbolt::context!(count: 3i32))?.0;
+        let (named, actual_kind) = render(path, Some(kind), &mut hinted_context())?;
+        assert_eq!(actual_kind, kind);
+        assert_eq!(named, unhinted);
+        assert!(named.capacity() >= 4096);
+        let expected = handle.render(&mut hinted_context())?;
+        assert_eq!(expected, named);
+        assert!(expected.capacity() >= 4096);
+        let mut context = hinted_context();
+        context.set_capacity_hint(0);
+        let reset = handle.render(&mut context)?;
+        assert_eq!(reset, expected);
+        assert!(reset.capacity() < 4096);
+    }
+    Ok(())
+}
+
+#[test]
+fn rendering_propagates_errors_without_claiming_success() -> RenderResult<()> {
+    let handle = resolve("views/sections", Some(Kind::KTEXT))?;
+    let error = handle.render(&mut sbolt::context!()).unwrap_err();
+    assert!(matches!(error, RuntimeError::NotFound(_, _)));
+    Ok(())
+}
+
+#[test]
+fn resolved_templates_preserve_kind_layouts_and_reborrow_contexts() -> RenderResult<()> {
+    for kind in [Kind::KHTML, Kind::KJSON, Kind::KTEXT] {
+        let handle = resolve("/views/formats/page/", Some(kind))?;
+        for _ in 0..2 {
+            let actual = handle.render(&mut sbolt::context!())?;
+            let (expected, selected_kind) =
+                render("views/formats/page", Some(kind), &mut sbolt::context!())?;
+            assert_eq!(selected_kind, kind);
+            assert_eq!(actual, expected);
+        }
+    }
+    let handle = resolve("views/custom/value", Some(Kind::KTEXT))?;
+    for count in [1i32, 99] {
+        assert_eq!(
+            handle.render(&mut sbolt::context!(count: count))?,
+            format!("[{count}]\n")
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn resolution_reports_missing_paths_and_kinds() {
+    for (path, kind) in [
+        ("", None),
+        ("views/nonexistent", None),
+        ("views/json_static", Some(Kind::KTEXT)),
+    ] {
+        assert!(matches!(
+            resolve(path, kind),
+            Err(RuntimeError::NotFound(_, _))
+        ));
+    }
 }
 
 #[test]

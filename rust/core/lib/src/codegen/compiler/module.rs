@@ -134,6 +134,7 @@ impl Module {
         mods: &[String],
         compiler_option: &CompilerOptions,
     ) -> TokenStream {
+        let type_ident = format_ident!("{}", consts::TEMPLATES_TYPE_NAME);
         let viewtypes_ident = format!(
             "{}::{}",
             consts::TEMPLATES_MAP_FILE_NAME,
@@ -150,6 +151,7 @@ impl Module {
             #import_content_ts
             pub(crate) mod #mod_name {
                 pub(crate) use super::*;
+                pub use super::#viewtypes_ident_ts;
 
                 // TemplateResolver.
                 struct TemplateResolver {
@@ -174,15 +176,26 @@ impl Module {
                 });
 
                 #[allow(dead_code)]
+                pub(crate) fn resolve(
+                    name: &str,
+                    kind: Option<sbolt::types::template::Kind>,
+                ) -> sbolt::types::result::RenderResult<#type_ident> {
+                    let kind = kind.unwrap_or(sbolt::types::template::Kind::KHTML);
+                    let creator = TEMPLATE_RESOLVER.resolve_as(name, kind)
+                        .ok_or_else(|| sbolt::types::error::RuntimeError::view_kind_not_found(name, kind))?;
+                    Ok(creator())
+                }
+
+                #[allow(dead_code)]
                 pub(crate) fn render(
                     name: &str,
                     kind: Option<sbolt::types::template::Kind>,
                     context: &mut impl sbolt::types::Context,
                 ) -> sbolt::types::result::RenderResult<(String, sbolt::types::template::Kind)> {
                     let kind = kind.unwrap_or(sbolt::types::template::Kind::KHTML);
-                    let creator = TEMPLATE_RESOLVER.resolve_as(name, kind)
-                        .ok_or_else(|| sbolt::types::error::RuntimeError::view_kind_not_found(name, kind))?;
-                    creator().render(context).map(|output| (output, kind))
+                    resolve(name, Some(kind))?
+                        .render(context)
+                        .map(|output| (output, kind))
                 }
 
                 #[allow(dead_code)]
