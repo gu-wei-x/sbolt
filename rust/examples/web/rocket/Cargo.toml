@@ -7,6 +7,4 @@ publish = false
 [dependencies]
 sbolt = { path = "../../../core/lib" }
 rocket = "0.5.1"
-
-[build-dependencies]
-sbolt = { path = "../../../core/lib", features = ["pretty"] }
+example_views = { path = "../../shared/example_views" }

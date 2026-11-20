@@ -6,7 +6,4 @@ publish = false
 
 [dependencies]
 sbolt = { path = "../../core/lib" }
-
-[build-dependencies]
-sbolt = { path = "../../core/lib", features = ["pretty"] }
-#sbolt = { path = "../../core/lib" }
+example_views = { path = "../shared/example_views" }

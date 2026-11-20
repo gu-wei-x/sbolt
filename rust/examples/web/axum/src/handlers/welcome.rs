@@ -1,12 +1,13 @@
 use crate::handlers::{ResponseFormat, TemplateResult};
+use example_views::models::WelcomeModel;
 
 pub(crate) async fn welcome(format: ResponseFormat) -> TemplateResult {
-    crate::axum_example_views::render(
+    example_views::render(
         "views/welcome",
         format.into(),
-        &mut sbolt::context! {
-            name: "Axum".to_string()
-        },
+        &mut sbolt::context!(WelcomeModel {
+            name: "Axum".into(),
+        }),
     )
     .into()
 }

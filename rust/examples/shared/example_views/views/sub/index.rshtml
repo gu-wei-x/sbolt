@@ -1,0 +1,9 @@
+@model example_views::models::IndexModel;
+<html>
+    <head>
+        <title>Welcome</title>
+    </head>
+    <body>
+        <div>@(model.msg) - from @(model.name)(@(model.age))</div>
+    </body>
+</html>

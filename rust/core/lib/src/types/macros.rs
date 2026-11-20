@@ -5,22 +5,23 @@ macro_rules! include_views {
     };
 }
 
-/// A macro to create a `DefaultViewContext` and set multiple data entries.
-/// expanded like below:
-/// let mut context = DefaultViewContext::new();
-/// context.set_data("strvalue", || "Hello, world!".to_string());
-/// context.set_data("intvalue", || 123);
+/// Creates a `DefaultViewContext` with named entries or a single model value.
 ///
+/// `context!(value)` is shorthand for `context!(model: std::sync::Arc::new(value))`.
+/// Explicit named entries store values as supplied.
 #[macro_export]
 macro_rules! context {
     () => {
-        sbolt::types::DefaultViewContext::new()
+        $crate::types::DefaultViewContext::new()
+    };
+    ($model:expr $(,)?) => {
+        $crate::context!(model: ::std::sync::Arc::new($model))
     };
     (
         $($key:ident $(: $value:expr)?),*
     ) => {{
-        use sbolt::types::Context;
-        let mut ctx = sbolt::types::DefaultViewContext::new();
+        use $crate::types::Context;
+        let mut ctx = $crate::types::DefaultViewContext::new();
         $(
             ctx.set_data(stringify!($key), {
                 $(

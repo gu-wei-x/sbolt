@@ -7,7 +7,4 @@ publish = false
 [dependencies]
 actix-web = "4.11.0"
 sbolt = { path = "../../../core/lib" }
-
-[build-dependencies]
-sbolt = { path = "../../../core/lib", features = ["pretty"] }
-
+example_views = { path = "../../shared/example_views" }

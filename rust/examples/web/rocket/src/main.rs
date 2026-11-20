@@ -1,4 +1,3 @@
-sbolt::include_views!();
 mod handlers;
 use rocket::Config;
 

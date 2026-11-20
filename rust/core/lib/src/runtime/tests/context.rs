@@ -1,5 +1,52 @@
 #![cfg(test)]
 use crate::types::{Context, DefaultViewContext};
+use std::sync::Arc;
+
+#[test]
+fn context_macro_wraps_a_single_identifier_in_arc_under_model() {
+    let value = String::from("model value");
+    let context = crate::context!(value);
+    assert_eq!(
+        context
+            .get_data::<Arc<String>>("model")
+            .map(|value| value.as_str()),
+        Some("model value")
+    );
+    assert!(context.get_data::<Arc<String>>("value").is_none());
+}
+
+#[test]
+fn context_macro_evaluates_a_model_expression_once_with_a_trailing_comma() {
+    use std::cell::Cell;
+
+    let calls = Cell::new(0);
+    let context = crate::context!({
+        calls.set(calls.get() + 1);
+        String::from("model value")
+    },);
+    assert_eq!(calls.get(), 1);
+    assert_eq!(
+        context.get_data::<Arc<String>>("model").unwrap().as_str(),
+        "model value"
+    );
+}
+
+#[test]
+fn context_macro_preserves_explicit_keys_and_empty_contexts() {
+    let context = crate::context!(title: "page", count: 3usize);
+    assert_eq!(context.get_data::<&str>("title"), Some(&"page"));
+    assert_eq!(context.get_data::<usize>("count"), Some(&3));
+    let context = crate::context!(page: 4usize);
+    assert_eq!(context.get_data::<usize>("page"), Some(&4));
+    assert!(context.get_data::<usize>("model").is_none());
+    let model = Arc::new(String::from("model value"));
+    let context = crate::context!(model: Arc::clone(&model));
+    assert!(Arc::ptr_eq(
+        context.get_data::<Arc<String>>("model").unwrap(),
+        &model
+    ));
+    assert!(crate::context!().get_data::<usize>("model").is_none());
+}
 
 #[test]
 fn default_context_state() {

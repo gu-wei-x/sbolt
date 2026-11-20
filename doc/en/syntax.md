@@ -156,6 +156,11 @@ automatically dereferences it.
 Models must be `Send + Sync + 'static`.
 Missing keys or incorrectly typed values produce explicit rendering errors.
 
+Use `sbolt::context!(model_value)` as shorthand for
+`sbolt::context!(model: std::sync::Arc::new(model_value))`.
+Explicit keys and multiple entries store values as supplied. For an existing
+`Arc<Model>`, use `sbolt::context!(model: model_arc)` to avoid wrapping it again.
+
 Layouts independently retrieve their models from their own declared keys;
 they never inherit the caller's model or fall back to another key.
 Custom views likewise use their own declarations and the context passed to
