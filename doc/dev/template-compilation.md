@@ -187,7 +187,7 @@ renderer; omitting the override inherits the caller's kind rather than using the
 renderer's `None` default of HTML. The child's layout uses the selected kind,
 its output is
 written directly, and rendering errors propagate. Custom-view output is a dynamic
-boundary for static-write optimization. See [custom views](../en/syntax.md#custom-views)
+boundary for static-write optimization. See [custom views](../user/syntax.md#custom-views)
 for lookup and context semantics.
 Argument boundaries are scanned in a single pass, respecting Rust identifiers,
 literal suffixes, and nested comments before expression validation. Line comments
