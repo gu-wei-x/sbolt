@@ -8,9 +8,7 @@ publish = false
 axum = "0.8.6"
 sbolt = { path = "../../../core/lib" }
 tokio = { version = "1", features = ["full"] }
-
-[build-dependencies]
-sbolt = { path = "../../../core/lib", features = ["pretty"] }
+example_views = { path = "../../shared/example_views" }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

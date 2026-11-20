@@ -1,0 +1,11 @@
+[package]
+name = "example_views"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+sbolt = { path = "../../../core/lib" }
+
+[build-dependencies]
+sbolt = { path = "../../../core/lib", features = ["pretty"] }

@@ -1,0 +1,9 @@
+@model example_views::models::WelcomeModel;
+<html>
+    <head>
+        <title>Welcome</title>
+    </head>
+    <body>
+        <div>Welcome: @(model.name)!</div>
+    </body>
+</html>

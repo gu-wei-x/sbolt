@@ -1,6 +1,6 @@
 # Get started
 
-## Following are the steps to use sbolt. See: [examples/cli](../../rust/examples/cli/)
+## Following are the steps to use sbolt. See: [direct-compilation CLI example](../../rust/examples/cli_standalone/)
 
 ### 1. add sbolt crate and add sbolt crate to `[build-dependencies]`
 
@@ -9,7 +9,9 @@ cargo add sbolt
 cargo add sbolt --build
 ```
 
-### 2. create views directory containing view templates(*.rshtml)
+### 2. create views and view models
+
+For a standalone application, keep templates and their models under `src`:
 
 ```
 $:.
@@ -19,6 +21,9 @@ $:.
 └───src
     │   main.rs
     │
+    ├───view_models
+    │       mod.rs
+    │
     └───views
         │   default.rshtml
         │
@@ -26,22 +31,25 @@ $:.
                 index.rshtml
 ```
 
-src/views/sub/index.rshtml
+`src/view_models/mod.rs`:
+
 ```rust
-@{
-    let name = match context.get_data::<String>("name") {
-        Some(str) => str,
-        None => "",
-    };
-    let age = sbolt::types::DisplayOptionRef(context.get_data::<i32>("age"));
-    let msg = sbolt::types::DisplayOptionRef(context.get_data::<String>("msg"));
+pub struct IndexModel {
+    pub name: String,
+    pub age: i32,
+    pub msg: String,
 }
+```
+
+`src/views/sub/index.rshtml`:
+```rust
+@model crate::view_models::IndexModel;
 <html>
     <head>
         <title>Welcome</title>
     </head>
     <body>
-        <div>@msg - from @name(@age)</div>
+        <div>@(model.msg) - from @(model.name)(@(model.age))</div>
     </body>
 </html>
 ```
@@ -66,13 +74,14 @@ fn main() {
 // Import the generated view modules.
 sbolt::include_views!();
 
+mod view_models;
+
 fn main() {
-    // create a context and set some data.
-    let mut context = sbolt::context! {
-        name: "sbolt".to_string(),
+    let mut context = sbolt::context!(view_models::IndexModel {
+        name: "sbolt".into(),
         age: 1,
-        msg: "Hello world!".to_string()
-    };
+        msg: "Welcome!".into(),
+    });
     let (output, _) = cli_views::render("views/sub/index", None, &mut context)
         .unwrap_or_else(|e| {
             eprintln!("Error: {e:?}");
@@ -81,6 +90,32 @@ fn main() {
     println!("{output}");
 }
 ```
+
+The [shared-crate CLI](../../rust/examples/cli/) and web examples keep their common templates in
+[shared/example_views/views](../../rust/examples/shared/example_views/views) and model definitions in
+[shared/example_views/src/models.rs](../../rust/examples/shared/example_views/src/models.rs).
+The shared models and templates form one library crate. Each example adds it as a Cargo path
+dependency, so no `#[path]` module declaration is needed.
+The [example_views crate](../../rust/examples/shared/example_views) compiles
+the common templates in its own build script and exposes `example_views::render`
+and `example_views::models`.
+These examples depend on this crate instead of maintaining their own template
+build script or calling `sbolt::include_views!()`. Framework-specific handlers
+and response adapters remain in the web examples.
+These shared templates
+refer to `example_views::models::IndexModel` or `example_views::models::WelcomeModel`; the standalone
+layout above uses a local `crate::view_models` module instead.
+Data-driven templates retrieve
+`Arc<Model>` from the `"model"` context key. Static templates need no model.
+`sbolt::context!(value)` wraps the value in `Arc` and stores it under `"model"`.
+Explicit entries such as `sbolt::context!(model: model_arc, layout: layout_arc)`
+store values as supplied; use these when models are already wrapped in `Arc`.
+
+For the original direct-compilation style, [cli_standalone](../../rust/examples/cli_standalone/)
+uses its own [build.rs](../../rust/examples/cli_standalone/build.rs) and calls
+`sbolt::include_views!()` in its application. It reuses the shared templates and
+imports model types from `example_views`, but renders through its own generated module.
+Its dependency on the merged crate also builds that crate's shared renderer.
 
 ### 5. run
 
@@ -96,6 +131,13 @@ $>cargo run
         <div>Welcome! - from sbolt(1)</div>
     </body>
 </html>
+```
+
+Run either checked-in CLI example from [rust/examples](../../rust/examples/):
+
+```shell
+cargo run -p cli
+cargo run -p cli-standalone
 ```
 
 ## Use in web applications
@@ -166,9 +208,13 @@ curl -H "Accept: text/plain" http://localhost:8000/
 
 The single `GET /` handler receives the selected template kind and renders it using
 `render`. JSON and text requests render
-[welcome.rsjson](../../rust/examples/views/welcome.rsjson) and
-[welcome.rstxt](../../rust/examples/views/welcome.rstxt). Setting the response
+[welcome.rsjson](../../rust/examples/shared/example_views/views/welcome.rsjson) and
+[welcome.rstxt](../../rust/examples/shared/example_views/views/welcome.rstxt). Setting the response
 content type does not validate JSON or escape dynamic values.
+
+All three welcome representations declare `example_views::models::WelcomeModel`.
+Each web handler stores an `Arc<WelcomeModel>` under `"model"`, so HTML, JSON, and
+text read the same model field without individual data-store lookups.
 
 ---
 ### [Next: syntax](./syntax.md)

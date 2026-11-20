@@ -1,4 +1,3 @@
-sbolt::include_views!();
 mod handlers;
 use actix_web::App;
 use actix_web::HttpServer;

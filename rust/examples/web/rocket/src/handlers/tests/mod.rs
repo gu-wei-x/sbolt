@@ -131,7 +131,7 @@ fn json_view_returns_json_content_type_and_body() {
 }
 
 #[test]
-fn json_and_text_views_render_context_data() {
+fn json_and_text_views_render_model_fields() {
     for name in ["Axum", "Actix"] {
         for (kind, expected) in [
             (
@@ -143,10 +143,10 @@ fn json_and_text_views_render_context_data() {
                 format!("Welcome to {name}!\nThis is a plain-text response."),
             ),
         ] {
-            let (output, selected_kind) = crate::rocket_example_views::render(
+            let (output, selected_kind) = example_views::render(
                 "views/welcome",
                 Some(kind),
-                &mut sbolt::context! { name: name.to_string() },
+                &mut sbolt::context!(example_views::models::WelcomeModel { name: name.into() }),
             )
             .unwrap();
             assert_eq!(selected_kind, kind);
@@ -166,8 +166,7 @@ fn welcome_view_still_returns_html() {
 
 #[rocket::get("/missing-json")]
 fn missing_json(format: ResponseFormat) -> TemplateResult {
-    let result =
-        crate::rocket_example_views::render("views/missing", format.into(), &mut sbolt::context!());
+    let result = example_views::render("views/missing", format.into(), &mut sbolt::context!());
     result.into()
 }
 

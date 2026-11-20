@@ -1,0 +1,5 @@
+@model example_views::models::WelcomeModel;
+{
+  "framework": "@(model.name)",
+  "message": "Welcome!"
+}

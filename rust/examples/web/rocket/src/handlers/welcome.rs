@@ -1,14 +1,15 @@
 use crate::handlers::{ResponseFormat, TemplateResult};
+use example_views::models::WelcomeModel;
 use rocket::get;
 
 #[get("/")]
 pub(crate) async fn welcome(format: ResponseFormat) -> TemplateResult {
-    crate::rocket_example_views::render(
+    example_views::render(
         "views/welcome",
         format.into(),
-        &mut sbolt::context! {
-            name: "Rocket".to_string()
-        },
+        &mut sbolt::context!(WelcomeModel {
+            name: "Rocket".into(),
+        }),
     )
     .into()
 }

@@ -1,0 +1,3 @@
+@model example_views::models::WelcomeModel;
+Welcome to @(model.name)!
+This is a plain-text response.

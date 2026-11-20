@@ -104,11 +104,7 @@ async fn failed_json_render_is_not_labeled_json() {
 }
 
 async fn missing_json(format: ResponseFormat) -> TemplateResult {
-    let result = crate::actix_web_example_views::render(
-        "views/missing",
-        format.into(),
-        &mut sbolt::context!(),
-    );
+    let result = example_views::render("views/missing", format.into(), &mut sbolt::context!());
     result.into()
 }
 
