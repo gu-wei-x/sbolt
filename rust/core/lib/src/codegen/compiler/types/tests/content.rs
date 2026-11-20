@@ -15,9 +15,9 @@ fn generate_content(
 ) -> result::Result<(proc_macro2::TokenStream, crate::codegen::StaticOutputStats)> {
     let options = CompilerOptions::default().with_optimization(optimize);
     let template = Template::from(source, None, kind, &options)?;
-    let context = CodeGenContext::new(kind, &options);
+    let mut context = CodeGenContext::new(kind, &options);
     let root = template.block();
-    let tokens = root.to_token_stream(Some(root), &context)?;
+    let tokens = root.to_token_stream(Some(root), &mut context)?;
     Ok((quote! { #(#tokens)* }, context.static_output_stats()))
 }
 
@@ -92,7 +92,7 @@ fn dynamic_boundaries_preserve_whitespace() -> result::Result<()> {
     let (tokens, _) = generate_content(source, Kind::KHTML, true)?;
     let expected = quote! {
         writer.write("<span>hello</span>\n ");
-        writer.write(&value.to_string());
+        sbolt::types::WriteToRef(&(value)).__sbolt_write_to(&mut writer);
         writer.write("<div>\n  </div>");
     };
     assert_eq!(tokens.to_string(), expected.to_string());
@@ -126,7 +126,7 @@ fn raw_output_and_rust_code_are_html_context_barriers() -> result::Result<()> {
     let (tokens, stats) = generate_content(source, Kind::KHTML, true)?;
     let expected = quote! {
         writer.write("<div title=\"");
-        writer.write(&value.to_string());
+        sbolt::types::WriteToRef(&(value)).__sbolt_write_to(&mut writer);
         writer.write("\"><span   class = 'x'> tail  </span>");
     };
     assert_eq!(tokens.to_string(), expected.to_string());
@@ -264,9 +264,9 @@ fn to_content_token_stream_from_wrong_block() {
     assert_eq!(root_span.blocks().len(), 1);
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KLAYOUT(_)));
-    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
     block
-        .to_content_token_stream(&context)
+        .to_content_token_stream(&mut context)
         .expect("wrong block type");
 }
 
@@ -281,8 +281,8 @@ fn to_content_token_stream_from_simple_content() -> result::Result<()> {
     assert_eq!(root_span.blocks().len(), 1);
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KCONTENT(_)));
-    let context = CodeGenContext::new(Kind::KHTML, &options);
-    let ts = &block.to_content_token_stream(&context)?;
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = &block.to_content_token_stream(&mut context)?;
     let expected = quote! {
         writer.write("test::test1");
     };
@@ -304,9 +304,9 @@ fn to_inline_content_token_stream_from_wrong_block() {
     assert_eq!(root_span.blocks().len(), 1);
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KLAYOUT(_)));
-    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
     block
-        .to_inline_content_token_stream(&context)
+        .to_inline_content_token_stream(&mut context)
         .expect("wrong block type");
 }
 
@@ -322,8 +322,8 @@ fn to_inline_content_token_stream_from_code_block() -> result::Result<()> {
     let code_block = &root_span.blocks()[0];
     assert!(matches!(code_block, Block::KCODE(_)));
 
-    let context = CodeGenContext::new(Kind::KHTML, &options);
-    let ts = code_block.to_token_stream(Some(&block), &context)?;
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
+    let ts = code_block.to_token_stream(Some(&block), &mut context)?;
     let expected = quote! {
         123;
         writer.write("test");
@@ -342,8 +342,8 @@ fn to_inline_content_token_stream_from_inline_content_with_wrong_content() {
     span.push_block(Block::new_content(Span::new(raw_content)));
     let render_block = Block::new_inline_content(span);
     let options = CompilerOptions::default();
-    let context = CodeGenContext::new(Kind::KHTML, &options);
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
     render_block
-        .to_inline_content_token_stream(&context)
+        .to_inline_content_token_stream(&mut context)
         .expect("wrong content");
 }

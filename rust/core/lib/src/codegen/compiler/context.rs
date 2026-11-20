@@ -2,14 +2,15 @@ use crate::{
     codegen::{CompilerOptions, StaticOutputStats, compiler::optimizer},
     types::{result, template},
 };
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::rc::Rc;
 
 pub(in crate::codegen::compiler) struct CodeGenContext<'a> {
     template_kind: template::Kind,
     options: &'a CompilerOptions,
-    static_context_known: Cell<bool>,
+    static_context_known: bool,
     stats: Rc<RefCell<StaticOutputStats>>,
+    capacity_hint: usize,
 }
 
 impl<'a> CodeGenContext<'a> {
@@ -20,8 +21,9 @@ impl<'a> CodeGenContext<'a> {
         Self {
             template_kind: template_kind,
             options: options,
-            static_context_known: Cell::new(true),
+            static_context_known: true,
             stats: Rc::default(),
+            capacity_hint: 0,
         }
     }
 
@@ -33,11 +35,11 @@ impl<'a> CodeGenContext<'a> {
         self.options.need_optimization() && self.template_kind != template::Kind::KTEXT
     }
 
-    pub(in crate::codegen::compiler) fn invalidate_static_context(&self) {
-        self.static_context_known.set(false);
+    pub(in crate::codegen::compiler) fn invalidate_static_context(&mut self) {
+        self.static_context_known = false;
     }
 
-    pub(in crate::codegen::compiler) fn prepare_root(&self, fully_static: bool) {
+    pub(in crate::codegen::compiler) fn prepare_root(&mut self, fully_static: bool) {
         if self.template_kind == template::Kind::KJSON && !fully_static {
             self.invalidate_static_context();
         }
@@ -47,18 +49,19 @@ impl<'a> CodeGenContext<'a> {
         Self {
             template_kind: self.template_kind,
             options: self.options,
-            static_context_known: Cell::new(false),
+            static_context_known: false,
             stats: Rc::clone(&self.stats),
+            capacity_hint: 0,
         }
     }
 
     pub(in crate::codegen::compiler) fn static_content(
-        &self,
+        &mut self,
         content: &str,
         input_writes: usize,
     ) -> result::Result<Option<String>> {
         let optimize = self.optimize_static_output();
-        let unknown_context = optimize && !self.static_context_known.get();
+        let unknown_context = optimize && !self.static_context_known;
         let output = if optimize && !unknown_context {
             optimizer::create_optimizer(self.template_kind, self.options).optimize(content)?
         } else {
@@ -68,7 +71,14 @@ impl<'a> CodeGenContext<'a> {
         self.stats
             .borrow_mut()
             .record(content, input_writes, &output, emitted, unknown_context);
+        if emitted {
+            self.capacity_hint += output.len();
+        }
         Ok(emitted.then_some(output))
+    }
+
+    pub(in crate::codegen::compiler) fn capacity_hint(&self) -> usize {
+        self.capacity_hint
     }
 
     pub(in crate::codegen::compiler) fn static_output_stats(&self) -> StaticOutputStats {

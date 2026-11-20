@@ -10,6 +10,15 @@ impl Writer for KWriter {
         }
     }
 
+    fn write_formatted(&mut self, args: std::fmt::Arguments<'_>) {
+        match self {
+            KWriter::KHtml(writer) => writer.write_formatted(args),
+            KWriter::KJson(content) | KWriter::KText(content) => {
+                Writer::write_formatted(content, args)
+            }
+        }
+    }
+
     fn into_string(self) -> String {
         match self {
             KWriter::KHtml(writer) => writer.into_string(),

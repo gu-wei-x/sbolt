@@ -3,6 +3,70 @@
 Optimize three separate metrics: binary size, rendered output size, and rendering
 cost. Improving one can worsen another.
 
+For runtime value specialization, resolved-template handles, capacity hints, and
+typed models, see [template compilation](./template-compilation.md).
+
+## Measuring runtime rendering costs
+
+Run these commands from the `rust` workspace:
+
+```shell
+cargo test -p lib_bench
+cargo bench -p lib_bench --bench render_allocations
+cargo bench -p lib_bench --bench template_benches -- "^(teams|big_table)/"
+```
+
+The allocation executable uses `stats_alloc` with the system allocator.
+Inputs, contexts, model `Arc`s, and resolver initialization
+are prepared before measurement; each workload is warmed once. It reports
+allocation calls, reallocation calls, and allocated bytes separately, and
+asserts one allocation and zero reallocations for estimated-capacity fresh output.
+Counts include output destruction but exclude fixture setup. They are not
+peak live memory.
+Estimated-capacity cases set `context.set_capacity_hint(...)` before measurement
+and use separate contexts so the estimate does not affect the baseline cases.
+
+Criterion timing runs separately without the allocation-counting allocator.
+The new Big table fixture has 100 rows and 100 integer cells per row. Teams has
+three owned team names and integer scores. The `named/fresh` and `resolved/fresh`
+comparisons keep setup outside timed iterations and consume results with `black_box`.
+Each render returns a fresh string.
+Tests compare all variants' output, including every cell.
+All data-driven benchmark templates use `@model` declarations with `Arc<Model>`
+stored under context key `"model"`. Static templates and layouts need no model.
+The page benchmarks use a [standalone page](../../rust/benchmark/views/page.rshtml)
+with `PageModel` and a
+[layout-backed page](../../rust/benchmark/views/page_with_layout.rshtml).
+The `*/named/fresh_with_setup` cases cover Big table and both pages, including
+context creation inside each timed iteration.
+
+Keep the named/fresh results separate from resolved/fresh, estimated-capacity,
+and concrete-model-view results. Model rendering is reported
+separately for named, resolved, and concrete entry points. All model entry points
+retrieve the model from its declared context key; none accepts a borrowed model.
+The Teams entry points all reuse the same
+[Teams template](../../rust/benchmark/views/teams.rshtml), including the concrete
+model-view benchmarks.
+`resolution_only` measures warmed path
+normalization and registry lookup, not rendering or lazy registry construction.
+`formatting_only` and `specialized_formatting_only` both write the integers
+0 through 9,999 into a fresh 40,000-byte buffer, without markup, context access,
+or resolution. The specialized case uses the exact `WriteToRef` dispatch
+emitted by the generator; the other uses `Writer::write_formatted`.
+These isolated timings help attribution but are not an additive profile of a
+complete render.
+
+In a short local Windows run before migrating the benchmark fixtures to `@model`
+(20 samples, 1 s warmup, 2 s measurement), changing
+only value specialization reduced Big table named/fresh from about 158 us to
+102 us. Both versions already avoided per-cell heap allocations. Before capacity
+changes, resolving once removed 3 allocation calls and 3 reallocation calls per
+render. Estimated-capacity fresh output measured one allocation and zero
+reallocations.
+Static hints alone reduced growth but did not eliminate it or guarantee lower
+allocated bytes. Machine load affects these timings; rerun on a quiet machine
+before drawing small-workload or typed-versus-dynamic timing conclusions.
+
 ## 1. Code generation: reduce embedded static strings
 
 The [content generator](../../rust/core/lib/src/codegen/compiler/types/content.rs)
@@ -396,8 +460,6 @@ substantially overallocate.
 ### Reduce intermediate buffers
 
 - Keep sections buffered where layouts require deferred placement.
-- Consider a `render_into` API for rendering directly into an existing
-  destination.
 - Avoid repeatedly constructing complete intermediate strings when composition
   permits direct writing.
 

@@ -17,4 +17,8 @@ pub trait Template {
         None
     }
     fn render(&self, context: &mut impl Context) -> result::RenderResult<String>;
+
+    fn static_capacity_hint() -> usize {
+        0
+    }
 }

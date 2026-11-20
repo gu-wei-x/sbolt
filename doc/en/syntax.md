@@ -149,8 +149,8 @@ cannot appear inside code, sections, or nested content blocks. A declaration
 ends at a semicolon, a newline after a complete Rust type, or the end of the file.
 Use `@(model)` to interpolate the model itself rather than declare its type.
 
-Both the named API and a generated view's `render(context)` method retrieve
-`Arc<Model>` under the declared key and render it within the same method.
+Both the named API and a generated view's rendering methods retrieve
+`Arc<Model>` under the declared key.
 The template variable `model` holds that cloned `Arc<Model>`; field access
 automatically dereferences it.
 Models must be `Send + Sync + 'static`.
@@ -161,6 +161,29 @@ they never inherit the caller's model or fall back to another key.
 Custom views likewise use their own declarations and the context passed to
 `@view`. See
 [typed rendering APIs](../dev/template-compilation.md#optional-typed-models).
+
+## Specialized interpolation
+
+Interpolation automatically selects a renderer without a compiler option.
+`str` and `String` append directly, booleans append `true` or
+`false`, integer primitives use an `itoa` stack buffer, and references forward
+to the underlying `WriteTo`.
+Other `Display` values, including floats and custom types, automatically use
+streaming formatting. The existing `DisplayOption` wrappers retain their
+empty-output behavior for `None`. Legacy types implementing only `ToString`
+remain supported, including references and smart pointers; only this fallback
+creates a temporary string. Use ordinary interpolation for all of them:
+
+```text
+@my_value
+@(1.25)
+```
+
+Custom types can implement `sbolt::types::WriteTo` to override `Display`
+formatting. The optional `sbolt::types::display(value)` adapter explicitly forces
+`Display` formatting when needed. Selection uses
+Rust's type system, not the spelling of an expression. Interpolation retains raw
+output: neither HTML escaping nor JSON string escaping is added.
 
 ## Custom views
 

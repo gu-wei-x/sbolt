@@ -3,12 +3,14 @@ mod data_store;
 mod functions;
 mod macros;
 pub mod template;
+mod value;
 mod writer;
 
 pub use context::*;
 pub use data_store::*;
 pub use functions::*;
 pub use template::Template;
+pub use value::*;
 pub use writer::*;
 
 pub mod error {

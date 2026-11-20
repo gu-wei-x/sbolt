@@ -10,7 +10,7 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_token_stream(
         &self,
         from: Option<&Block<'a>>,
-        context: &CodeGenContext<'_>,
+        context: &mut CodeGenContext<'_>,
     ) -> result::Result<Vec<TokenStream>> {
         let mut result = vec![];
         match self {
@@ -122,7 +122,7 @@ impl<'a> Block<'a> {
 
     pub(in crate::codegen::compiler::types) fn generate_render_token_stream(
         &self,
-        context: &CodeGenContext<'_>,
+        context: &mut CodeGenContext<'_>,
     ) -> result::Result<TokenStream> {
         if !matches!(self, Block::KROOT(_)) {
             return Err(error::CompileError::from_codegen(
@@ -161,6 +161,23 @@ impl<'a> Block<'a> {
             context.invalidate_static_context();
         }
         let ts = self.to_token_stream(Some(self), context)?;
+        let capacity_hint = context.capacity_hint();
+        let get_model = match model {
+            Some(declaration) => {
+                let model_type = declaration.model_type;
+                let model_key = declaration.key;
+                quote! {
+                    #[allow(unused_variables)]
+                    let model = context.get_data::<::std::sync::Arc<#model_type>>(#model_key)
+                        .cloned()
+                        .ok_or_else(|| sbolt::types::error::RuntimeError::InvalidInput(
+                            format!("Missing or incorrectly typed model at key '{}' for {}", #model_key, Self::name()),
+                            format!("Store Arc<Model> under context key '{}'", #model_key),
+                        ))?;
+                }
+            }
+            None => quote! {},
+        };
         let finish = match has_layout {
             true => {
                 let view_root_mod_name = format_ident!("{}", context.options().mod_name());
@@ -182,33 +199,18 @@ impl<'a> Block<'a> {
             }
             false => quote! { Ok(writer.into_string()) },
         };
-        let body = quote! {
-            let mut writer = self.create_writer(None);
-            #(#ts)*
-            #finish
-        };
-        match model {
-            Some(declaration) => {
-                let model_type = &declaration.model_type;
-                let model_key = &declaration.key;
-                Ok(quote! {
-                        fn render(&self, context: &mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
-                            #[allow(unused_variables)]
-                            let model = context.get_data::<::std::sync::Arc<#model_type>>(#model_key)
-                                .cloned()
-                                .ok_or_else(|| sbolt::types::error::RuntimeError::InvalidInput(
-                                    format!("Missing or incorrectly typed model at key '{}' for {}", #model_key, Self::name()),
-                                    format!("Store Arc<Model> under context key '{}'", #model_key),
-                                ))?;
-                            #body
-                        }
-                })
+        Ok(quote! {
+            fn static_capacity_hint() -> usize {
+                #capacity_hint
             }
-            None => Ok(quote! {
-                fn render(&self, #[allow(unused_variables)]context: &mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
-                    #body
-                }
-            }),
-        }
+
+            fn render(&self, context: &mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
+                #get_model
+                #[allow(unused_mut)]
+                let mut writer = self.create_writer(None, Some(Self::static_capacity_hint().max(context.capacity_hint())));
+                #(#ts)*
+                #finish
+            }
+        })
     }
 }

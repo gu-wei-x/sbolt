@@ -28,12 +28,13 @@ pub(crate) fn generate_registry(
     }
     let content = quote! {
         use sbolt::types::Template as _;
-        pub(crate) enum #type_ident {
+        #[derive(Clone, Copy)]
+        pub enum #type_ident {
             #(#variants)*
         }
 
         impl #type_ident {
-            pub(crate) fn render(&self, context: &mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
+            pub fn render(&self, context: &mut impl sbolt::types::Context) -> sbolt::types::result::RenderResult<String> {
                 match self {
                     #(#arms)*
                 }
