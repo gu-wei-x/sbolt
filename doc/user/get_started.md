@@ -291,6 +291,7 @@ match no supported kind return `RuntimeError::NotFound`.
 
 The examples intentionally map either error to `ResponseFormat(None)` and render
 HTML. Unexpected extraction errors and rendering failures return HTTP 500.
+Rendering failures log diagnostics to stderr and return a generic plain-text body.
 For stricter behavior, map invalid preferences to HTTP 400 and unsupported
 preferences to HTTP 406 in your own adapter.
 
@@ -313,8 +314,9 @@ curl -H "Accept: application/json" http://localhost:8000/
 curl -H "Accept: text/plain" http://localhost:8000/
 ```
 
-All three welcome templates use `example_views::models::WelcomeModel`. Selecting
-JSON or setting a content-type header does not validate dynamic output or escape
-its values. Apply appropriate escaping or serialization before rendering.
+All three welcome templates use `example_views::models::WelcomeModel`.
+HTML expressions are automatically escaped and JSON expressions are serialized.
+Selecting a representation or setting a content-type header is not a substitute
+for context-appropriate encoding or URL validation.
 
 [Overview](./lib_README.md) | [Syntax](./syntax.md) | [Keywords](./keywords.md) | [Layouts](./layout.md)

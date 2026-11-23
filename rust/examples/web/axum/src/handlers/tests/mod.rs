@@ -99,6 +99,8 @@ async fn failed_json_render_is_not_labeled_json() {
             .unwrap()
             .starts_with("text/plain")
     );
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    assert_eq!(&body[..], b"Internal server error");
 }
 
 async fn missing_json(format: ResponseFormat) -> TemplateResult {

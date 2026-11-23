@@ -36,7 +36,13 @@ impl<S: Send + Sync> FromRequestParts<S> for ResponseFormat {
         match resolve_kind(preferences.as_deref()) {
             Ok(kind) => Ok(Self(Some(kind))),
             Err(RuntimeError::InvalidInput(..) | RuntimeError::NotFound(..)) => Ok(Self(None)),
-            Err(error) => Err((StatusCode::INTERNAL_SERVER_ERROR, error.to_string())),
+            Err(error) => {
+                eprintln!("Response format resolution failed: {error}");
+                Err((
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Internal server error".into(),
+                ))
+            }
         }
     }
 }
@@ -70,7 +76,8 @@ impl IntoResponse for TemplateResult {
             )
                 .into_response(),
             RenderResult::Err(e) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+                eprintln!("Template render failed: {e}");
+                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error").into_response()
             }
         };
         response

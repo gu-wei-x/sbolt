@@ -180,8 +180,8 @@ fn failed_json_render_returns_internal_server_error() {
         .dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
     assert_eq!(response.headers().get_one("Vary"), Some("Accept"));
-    assert_ne!(response.content_type(), Some(ContentType::JSON));
-    assert!(response.into_string().unwrap().contains("views/missing"));
+    assert_eq!(response.content_type(), Some(ContentType::Plain));
+    assert_eq!(response.into_string().unwrap(), "Internal server error");
 }
 
 #[test]

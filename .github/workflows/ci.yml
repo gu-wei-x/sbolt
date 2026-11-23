@@ -14,6 +14,7 @@ jobs:
     runs-on: ${{ matrix.platforms.distro }}
     strategy: 
       matrix:
+        profile: [dev, release]
         platforms:
           - { name: macOS, distro: macOS-latest, toolchain: stable }
           - { name: Linux, distro: ubuntu-latest, toolchain: stable }
@@ -29,13 +30,22 @@ jobs:
         toolchain: ${{ matrix.platforms.toolchain }}
 
     - name: Build core
-      run: cargo build --verbose
+      run: cargo build --workspace --verbose --profile ${{ matrix.profile }}
       working-directory: ./rust
       
     - name: Run core tests
-      run: cargo test --verbose
+      run: cargo test --workspace --verbose --profile ${{ matrix.profile }}
       working-directory: ./rust
       
     - name: Build examples
-      run: cargo build --verbose
+      run: cargo build --workspace --verbose --profile ${{ matrix.profile }}
       working-directory: ./rust/examples
+
+    - name: Run example tests
+      run: cargo test --workspace --verbose --profile ${{ matrix.profile }}
+      working-directory: ./rust/examples
+
+    - name: Validate rendering allocations
+      if: matrix.profile == 'release' && matrix.platforms.name == 'Linux'
+      run: cargo bench -p lib_bench --bench render_allocations
+      working-directory: ./rust

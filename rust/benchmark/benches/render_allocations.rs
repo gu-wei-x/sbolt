@@ -68,4 +68,9 @@ fn main() {
         "big_table/specialized_formatting_only",
         lib_bench::format_table_values_specialized,
     );
+    measure("page/named/fresh_with_setup", lib_bench::render_page);
+    measure(
+        "page_with_layout/named/fresh_with_setup",
+        lib_bench::render_page_with_layout,
+    );
 }
