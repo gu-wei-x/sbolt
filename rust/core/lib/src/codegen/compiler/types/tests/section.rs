@@ -71,7 +71,8 @@ fn to_section_token_stream_composite() -> result::Result<()> {
         let section_name = "test";
         let section_writer = {
             let mut writer = self.create_writer(None, Some(#capacity_hint));
-            sbolt::types::WriteToRef(&(test)).__sbolt_write_to(&mut writer);
+            sbolt::types::WriteToRef(&(test))
+                .write_to(sbolt::types::HtmlEscapingWriter(&mut writer));
             writer.write(" helloworld");
             writer
         };

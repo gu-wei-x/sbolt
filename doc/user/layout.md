@@ -165,7 +165,9 @@ there is no fallback to the page's model.
 
 Missing layouts and required sections are rendering errors. They propagate
 through the page's render result rather than selecting a different template
-kind. Layouts and sections insert raw output without additional escaping;
-apply the same format-specific safety rules as ordinary interpolation.
+kind. Layouts and sections insert rendered output without additional escaping.
+HTML expressions inside them are escaped automatically; expressions inside JSON
+templates are automatically serialized. See [output safety](./syntax.md#output-safety)
+for limitations.
 
 [Get started](./get_started.md) | [Syntax](./syntax.md) | [Keywords](./keywords.md)

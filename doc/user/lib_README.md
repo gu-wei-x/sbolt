@@ -42,10 +42,14 @@ script and rendering call.
 
 ## Output safety
 
-Interpolation writes values **without automatic HTML or JSON escaping**. A
-template's extension selects its representation; it does not make interpolated
-values safe for that format. Escape or serialize untrusted values appropriately
-before rendering. Dynamic JSON output is not validated automatically.
+HTML expressions are escaped automatically for HTML text and quoted attributes.
+Use `sbolt::utils::raw(...)` only for trusted markup. HTML escaping does not make script,
+style, event-handler, or URL insertion safe. JSON-template expressions automatically
+serialize `serde::Serialize` values; use `sbolt::utils::json(...)` explicitly when
+embedding JSON in HTML. `sbolt::utils::raw_json(...)` validates pre-serialized JSON
+for insertion without double encoding. Text expressions retain ordinary formatting.
+Complete dynamic JSON documents are not validated automatically.
+See [output safety](./syntax.md#output-safety) for details.
 
 ## Documentation
 

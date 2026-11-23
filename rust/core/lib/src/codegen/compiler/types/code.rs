@@ -1,6 +1,6 @@
 use crate::codegen::compiler::context::CodeGenContext;
 use crate::codegen::types::Block;
-use crate::types::{error, result};
+use crate::types::{error, result, template::Kind};
 use proc_macro2::TokenStream;
 use quote::quote;
 
@@ -49,6 +49,7 @@ impl<'a> Block<'a> {
 
     pub(in crate::codegen::compiler::types) fn to_inline_code_token_stream(
         &self,
+        context: &mut CodeGenContext<'_>,
     ) -> result::Result<TokenStream> {
         if !matches!(self, Block::KINLINEDCODE(_)) {
             return Err(error::CompileError::from_codegen(
@@ -60,8 +61,17 @@ impl<'a> Block<'a> {
         if code_span.is_simple() {
             let raw_content = code_span.content();
             match raw_content.parse::<TokenStream>() {
-                Ok(ts) => Ok(quote! {
-                    sbolt::types::WriteToRef(&(#ts)).__sbolt_write_to(&mut writer);
+                Ok(ts) => Ok(match context.template_kind() {
+                    Kind::KHTML => quote! {
+                        sbolt::types::WriteToRef(&(#ts))
+                            .write_to(sbolt::types::HtmlEscapingWriter(&mut writer));
+                    },
+                    Kind::KJSON => quote! {
+                        sbolt::types::write_json(&(#ts), &mut writer)?;
+                    },
+                    Kind::KTEXT => quote! {
+                        sbolt::types::WriteToRef(&(#ts)).write_to(&mut writer);
+                    },
                 }),
                 Err(err) => Err(error::CompileError::from_lex(&self, err)),
             }

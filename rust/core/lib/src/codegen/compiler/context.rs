@@ -31,6 +31,10 @@ impl<'a> CodeGenContext<'a> {
         self.options
     }
 
+    pub(in crate::codegen::compiler) fn template_kind(&self) -> template::Kind {
+        self.template_kind
+    }
+
     pub(in crate::codegen::compiler) fn optimize_static_output(&self) -> bool {
         self.options.need_optimization() && self.template_kind != template::Kind::KTEXT
     }

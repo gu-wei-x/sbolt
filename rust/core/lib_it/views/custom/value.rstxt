@@ -1,1 +1,1 @@
-@{let count = *context.get_data::<i32>("count").unwrap();}[@(count)]
+@{let count = context.get_data::<i32>("count");}[@(count)]

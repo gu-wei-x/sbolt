@@ -109,7 +109,7 @@ pub fn format_table_values_specialized() -> String {
     use sbolt::types::WriteToRef;
     let mut output = String::with_capacity(40_000);
     for value in 0..10_000 {
-        WriteToRef(&(value)).__sbolt_write_to(&mut output);
+        output = WriteToRef(&(value)).write_to(output);
     }
     output
 }
@@ -162,8 +162,8 @@ mod tests {
     }
 
     #[test]
-    fn teams_rendering_paths_preserve_raw_output() {
-        let expected = "<ul><li>Red & Blue: 17</li><li>Green: -3</li><li>Gold: 42</li></ul>";
+    fn teams_rendering_paths_preserve_escaped_output() {
+        let expected = "<ul><li>Red &amp; Blue: 17</li><li>Green: -3</li><li>Gold: 42</li></ul>";
         let mut context = teams_context();
         let named = render_teams(&mut context);
         assert_eq!(named.trim(), expected);

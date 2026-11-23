@@ -139,7 +139,7 @@ fn sub_jindex_view() -> result::RenderResult<()> {
     };
     let (result, _) =
         lib_it_no_op_views::render("views/sub/jindex", Some(Kind::KJSON), &mut context)?;
-    let expected = "{\n  \"name\": \"sbolt\",\n  \"age\": 1,\n  \"msg\": \"Welcome!\"\n}";
+    let expected = "{\n  \"name\": \"sbolt\",\n  \"age\": 1,\n  \"msg\": \"Welcome!\"}";
     assert_eq!(result.trim(), expected);
 
     Ok(())

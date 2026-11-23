@@ -19,6 +19,8 @@ itoa = "1"
 mime = "0.3"
 proc-macro2 = "1"
 quote = "1"
+serde = { version = "1", features = ["rc"] }
+serde_json = { version = "1", features = ["raw_value"] }
 syn = { version = "2", features = ["full"] }
 unicode-ident = "1"
 winnow = "0.7"

@@ -154,7 +154,8 @@ fn to_code_token_stream_with_complex_nested_block() -> result::Result<()> {
             writer.write("<tr>");
             for j in 0 .. 5 {
                 writer.write("<td>");
-                sbolt::types::WriteToRef(&(j)).__sbolt_write_to(&mut writer);
+                sbolt::types::WriteToRef(&(j))
+                    .write_to(sbolt::types::HtmlEscapingWriter(&mut writer));
                 writer.write("</td>");
             }
             writer.write("</tr>");
@@ -177,8 +178,9 @@ fn to_inline_code_token_stream_from_wrong_block() {
     let root_span = block.span();
     assert_eq!(root_span.blocks().len(), 1);
     let block = &root_span.blocks()[0];
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
     block
-        .to_inline_code_token_stream()
+        .to_inline_code_token_stream(&mut context)
         .expect("wrong block type");
 }
 
@@ -198,7 +200,8 @@ fn to_inline_code_token_stream_from_content_block() -> result::Result<()> {
     let ts = code_block.to_token_stream(Some(&block), &mut context)?;
     let expected = quote! {
        testcode;
-       sbolt::types::WriteToRef(&(name)).__sbolt_write_to(&mut writer);
+       sbolt::types::WriteToRef(&(name))
+           .write_to(sbolt::types::HtmlEscapingWriter(&mut writer));
     };
     assert_eq!(ts[0].to_string(), expected.to_string());
     Ok(())
@@ -213,7 +216,9 @@ fn to_inline_code_token_stream_with_with_wrong_content() {
     span.push_block(Block::new_content(types::Span::new(raw_content)));
     span.push_block(Block::new_content(types::Span::new(raw_content)));
     let render_block = Block::new_inline_code(span);
+    let options = CompilerOptions::default();
+    let mut context = CodeGenContext::new(Kind::KHTML, &options);
     render_block
-        .to_inline_code_token_stream()
+        .to_inline_code_token_stream(&mut context)
         .expect("Expected valid inline code block here");
 }

@@ -1,12 +1,9 @@
 #![cfg(test)]
-use crate::types::{DisplayWriteTo as _, WriteToRef};
+use crate::types::{DisplayWriteTo as _, OptionDisplayWriteTo as _, WriteToRef};
 use crate::types::{HtmlWriter, KWriter, WriteTo, Writer, display};
 
 #[test]
 fn automatic_rendering_prefers_specialization_and_falls_back_to_display() {
-    #[allow(unused_imports)]
-    use crate::types::ToStringWriteTo as _;
-
     struct Specialized;
     impl WriteTo for Specialized {
         fn write_to(&self, writer: &mut impl Writer) {
@@ -27,52 +24,48 @@ fn automatic_rendering_prefers_specialization_and_falls_back_to_display() {
     }
 
     let mut output = String::new();
-    WriteToRef(&Specialized).__sbolt_write_to(&mut output);
-    WriteToRef(&RenderOnly).__sbolt_write_to(&mut output);
-    WriteToRef(&FragmentedDisplay).__sbolt_write_to(&mut output);
+    output = WriteToRef(&Specialized).write_to(output);
+    output = WriteToRef(&RenderOnly).write_to(output);
+    output = WriteToRef(&FragmentedDisplay).write_to(output);
     let dynamic: &dyn std::fmt::Display = &FragmentedDisplay;
-    WriteToRef(dynamic).__sbolt_write_to(&mut output);
-    WriteToRef(&1.25).__sbolt_write_to(&mut output);
-    WriteToRef(&'&').__sbolt_write_to(&mut output);
-    assert_eq!(output, "specializedrender-only<em>42</em><em>42</em>1.25&");
+    output = WriteToRef(dynamic).write_to(output);
+    output = WriteToRef(&1.25).write_to(output);
+    output = WriteToRef(&'&').write_to(output);
+    output.write("|");
+    output = WriteToRef(&Some(Specialized)).write_to(output);
+    output = WriteToRef(&Some(RenderOnly)).write_to(output);
+    output = WriteToRef(&None::<Specialized>).write_to(output);
+    output = WriteToRef(&Some(Some(7))).write_to(output);
+    assert_eq!(
+        output,
+        "specializedrender-only<em>42</em><em>42</em>1.25&|specializedrender-only7"
+    );
 }
 
 #[test]
-fn legacy_to_string_values_support_borrowing_and_dereferencing() {
-    use crate::types::ToStringWriteTo as _;
-
-    struct LegacyValue;
-    impl ToString for LegacyValue {
-        fn to_string(&self) -> String {
-            "<legacy>".to_owned()
-        }
-    }
-    impl LegacyValue {
-        fn write_to(&self, writer: &mut impl Writer) {
-            writer.write("inherent");
-        }
-    }
-
-    let value = LegacyValue;
+fn optional_display_values_support_borrowing_and_html_escaping() {
+    let mut value = Some(FragmentedDisplay);
     let borrowed = &value;
-    let shared = std::sync::Arc::new(LegacyValue);
-    let dynamic: &dyn ToString = &value;
+    let nested = &borrowed;
     let mut output = String::new();
-    WriteToRef(&value).__sbolt_write_to(&mut output);
-    WriteToRef(&borrowed).__sbolt_write_to(&mut output);
-    WriteToRef(&shared).__sbolt_write_to(&mut output);
-    WriteToRef(dynamic).__sbolt_write_to(&mut output);
-    assert_eq!(output, "<legacy>".repeat(4));
-    output.clear();
-    value.write_to(&mut output);
-    assert_eq!(output, "inherent");
+    output = WriteToRef(&value).write_to(output);
+    output = WriteToRef(&nested).write_to(output);
+    output = WriteToRef(&(&mut value)).write_to(output);
+    output = WriteToRef(&None::<FragmentedDisplay>).write_to(output);
+    assert_eq!(output, "<em>42</em>".repeat(3));
+
+    let mut missing = None::<FragmentedDisplay>;
+    output = WriteToRef(&(&mut missing)).write_to(output);
+    assert_eq!(output, "<em>42</em>".repeat(3));
+
+    let mut html = crate::types::HtmlEscapingWriter(String::new());
+    html = WriteToRef(&value).write_to(html);
+    html = WriteToRef(&Some(crate::utils::raw("<b>trusted</b>"))).write_to(html);
+    assert_eq!(html.into_string(), "&lt;em&gt;42&lt;/em&gt;<b>trusted</b>");
 }
 
 #[test]
-fn display_streaming_precedes_the_legacy_to_string_fallback() {
-    #[allow(unused_imports)]
-    use crate::types::ToStringWriteTo as _;
-
+fn display_fallback_uses_writer_formatting() {
     struct StreamingWriter {
         output: String,
         formatted: bool,
@@ -96,9 +89,88 @@ fn display_streaming_precedes_the_legacy_to_string_fallback() {
         output: String::new(),
         formatted: false,
     };
-    WriteToRef(&FragmentedDisplay).__sbolt_write_to(&mut writer);
+    writer = WriteToRef(&FragmentedDisplay).write_to(writer);
     assert!(writer.formatted);
     assert_eq!(writer.into_string(), "<em>42</em>");
+}
+
+#[test]
+fn json_helpers_stream_unicode_and_preserve_validated_fragments()
+-> crate::types::result::RenderResult<()> {
+    use crate::utils::{json, raw_json};
+
+    let value = "\"\\\n\r\t\0<>&'\u{2028}\u{2029}\u{e9}\u{1f642}";
+    assert_eq!(
+        json(&value)?,
+        concat!(
+            r#""\"\\\n\r\t\u0000\u003c\u003e\u0026\u0027\u2028\u2029"#,
+            "\u{e9}\u{1f642}",
+            "\""
+        )
+    );
+    let fragment = raw_json(r#"{"text":"</script>"}"#)?;
+    assert_eq!(json(fragment)?, r#"{"text":"\u003c/script\u003e"}"#);
+    for invalid in ["{", "true false"] {
+        assert!(matches!(
+            raw_json(invalid),
+            Err(crate::types::error::RuntimeError::InvalidInput(_, _))
+        ));
+    }
+    Ok(())
+}
+
+#[test]
+fn json_custom_serializers_preserve_structure_and_escape_keys_and_values()
+-> crate::types::result::RenderResult<()> {
+    struct CustomValue<'a> {
+        message: &'a str,
+        count: u8,
+    }
+
+    impl serde::Serialize for CustomValue<'_> {
+        fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            use serde::ser::SerializeStruct as _;
+
+            let mut state = serializer.serialize_struct("CustomValue", 2)?;
+            state.serialize_field("<message>", self.message)?;
+            state.serialize_field("count", &self.count)?;
+            state.end()
+        }
+    }
+
+    let value = CustomValue {
+        message: "</script>&'\"\\\n\u{2028}\u{2029}",
+        count: 42,
+    };
+    let expected =
+        r#"{"\u003cmessage\u003e":"\u003c/script\u003e\u0026\u0027\"\\\n\u2028\u2029","count":42}"#;
+    assert_eq!(crate::utils::json(&value)?, expected);
+    let mut output = String::from("prefix|");
+    crate::types::write_json(&value, &mut output)?;
+    assert_eq!(output, format!("prefix|{expected}"));
+    Ok(())
+}
+
+#[test]
+fn json_custom_serializer_errors_propagate() {
+    struct FailingValue;
+
+    impl serde::Serialize for FailingValue {
+        fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            use serde::ser::{Error as _, SerializeSeq as _};
+
+            let mut sequence = serializer.serialize_seq(Some(2))?;
+            sequence.serialize_element("written before failure")?;
+            Err(S::Error::custom("intentional serialization failure"))
+        }
+    }
+
+    assert!(matches!(
+        crate::utils::json(&FailingValue),
+        Err(crate::types::error::RuntimeError::InvalidInput(ref message, ref detail))
+            if message == "JSON serialization failed"
+                && detail.contains("intentional serialization failure")
+    ));
 }
 
 #[test]
@@ -171,6 +243,15 @@ fn formatted_output_preserves_values_for_all_builtin_writers() {
     assert_formatted_output(String::new());
     assert_formatted_output(KWriter::KJson(String::new()));
     assert_formatted_output(KWriter::KText(String::new()));
+    for mut writer in [
+        KWriter::KHtml(HtmlWriter::new(None)),
+        KWriter::KJson(String::new()),
+        KWriter::KText(String::new()),
+    ] {
+        assert_formatted_output(&mut writer);
+        writer.write("reused");
+        assert_eq!(writer.into_string(), "reused");
+    }
 }
 
 #[test]

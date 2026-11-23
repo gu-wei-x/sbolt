@@ -21,6 +21,10 @@ pub trait Writer {
 
         std::fmt::write(&mut Adapter(self), args).expect("formatting template value failed");
     }
+    /// Writes explicitly trusted formatted output without HTML escaping.
+    fn write_raw_formatted(&mut self, args: std::fmt::Arguments<'_>) {
+        self.write_formatted(args);
+    }
     fn writeln(&mut self, content: &str) {
         self.write(content);
         self.write("\n");
@@ -41,36 +45,4 @@ pub enum KWriter {
 
 pub struct HtmlWriter {
     pub(crate) content: String,
-}
-
-// Wrapper type for Option<&T> and Option<T> to implement Display trait.
-pub struct DisplayOption<T: std::fmt::Display>(pub Option<T>);
-impl<T: std::fmt::Display> From<T> for DisplayOption<T> {
-    fn from(value: T) -> Self {
-        DisplayOption(Some(value))
-    }
-}
-
-impl<T: std::fmt::Display> std::fmt::Display for DisplayOption<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.0 {
-            Some(value) => write!(f, "{}", value),
-            None => write!(f, ""),
-        }
-    }
-}
-
-pub struct DisplayOptionRef<'a, T: std::fmt::Display>(pub Option<&'a T>);
-impl<'a, T: std::fmt::Display> From<&'a T> for DisplayOptionRef<'a, T> {
-    fn from(value: &'a T) -> Self {
-        DisplayOptionRef(Some(value))
-    }
-}
-impl<'a, T: std::fmt::Display> std::fmt::Display for DisplayOptionRef<'a, T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.0 {
-            Some(value) => write!(f, "{}", value),
-            None => write!(f, ""),
-        }
-    }
 }

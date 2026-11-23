@@ -1,61 +1,67 @@
-use super::{DisplayOption, DisplayOptionRef, Writer};
+use super::Writer;
 use std::fmt::Display;
-use std::ops::Deref;
 
-/// A value that can be streamed into a template without changing its escaping.
+/// A value that can be streamed into a template's writer.
 pub trait WriteTo {
     fn write_to(&self, writer: &mut impl Writer);
 }
 
-// Generated dispatch prefers WriteTo, then Display, then dereferences for ToString.
-// Its internal method name avoids unrelated write_to methods on legacy values.
+// Generated dispatch prefers WriteTo over streaming Display.
 #[doc(hidden)]
 pub struct WriteToRef<'a, T: ?Sized>(pub &'a T);
 
-impl<T: ?Sized> Deref for WriteToRef<'_, T> {
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        self.0
-    }
-}
-
 impl<T: WriteTo + ?Sized> WriteToRef<'_, T> {
-    pub fn write_to(self, writer: &mut impl Writer) {
-        self.0.write_to(writer);
-    }
-
-    pub fn __sbolt_write_to(self, writer: &mut impl Writer) {
-        self.write_to(writer);
+    pub fn write_to<W: Writer>(self, mut writer: W) -> W {
+        self.0.write_to(&mut writer);
+        writer
     }
 }
 
 #[doc(hidden)]
 pub trait DisplayWriteTo {
-    fn write_to(self, writer: &mut impl Writer);
-
-    fn __sbolt_write_to(self, writer: &mut impl Writer)
-    where
-        Self: Sized,
-    {
-        self.write_to(writer);
-    }
+    fn write_to<W: Writer>(self, writer: W) -> W;
 }
 
 impl<T: Display + ?Sized> DisplayWriteTo for WriteToRef<'_, T> {
-    fn write_to(self, writer: &mut impl Writer) {
+    fn write_to<W: Writer>(self, mut writer: W) -> W {
         writer.write_formatted(format_args!("{}", self.0));
+        writer
     }
 }
 
 #[doc(hidden)]
-pub trait ToStringWriteTo {
-    fn __sbolt_write_to(self, writer: &mut impl Writer);
+pub trait OptionDisplayWriteTo {
+    fn write_to<W: Writer>(self, writer: W) -> W;
 }
 
-impl<T: ToString + ?Sized> ToStringWriteTo for &T {
-    fn __sbolt_write_to(self, writer: &mut impl Writer) {
-        writer.write(&self.to_string());
+impl<T: OptionalDisplay + ?Sized> OptionDisplayWriteTo for WriteToRef<'_, T> {
+    fn write_to<W: Writer>(self, mut writer: W) -> W {
+        self.0.write_optional(&mut writer);
+        writer
+    }
+}
+
+trait OptionalDisplay {
+    fn write_optional(&self, writer: &mut impl Writer);
+}
+
+impl<T: Display> OptionalDisplay for Option<T> {
+    fn write_optional(&self, writer: &mut impl Writer) {
+        if let Some(value) = self {
+            writer.write_formatted(format_args!("{}", value));
+        }
+    }
+}
+
+impl<T: OptionalDisplay + ?Sized> OptionalDisplay for &T {
+    fn write_optional(&self, writer: &mut impl Writer) {
+        T::write_optional(self, writer);
+    }
+}
+
+impl<T: OptionalDisplay + ?Sized> OptionalDisplay for &mut T {
+    fn write_optional(&self, writer: &mut impl Writer) {
+        T::write_optional(self, writer);
     }
 }
 
@@ -74,6 +80,14 @@ impl WriteTo for String {
 impl WriteTo for bool {
     fn write_to(&self, writer: &mut impl Writer) {
         writer.write(if *self { "true" } else { "false" });
+    }
+}
+
+impl<T: WriteTo> WriteTo for Option<T> {
+    fn write_to(&self, writer: &mut impl Writer) {
+        if let Some(value) = self {
+            value.write_to(writer);
+        }
     }
 }
 
@@ -121,21 +135,5 @@ impl<T: Display> Display for DisplayValue<T> {
 impl<T: Display> WriteTo for DisplayValue<T> {
     fn write_to(&self, writer: &mut impl Writer) {
         writer.write_formatted(format_args!("{}", self.0));
-    }
-}
-
-impl<T: Display + WriteTo> WriteTo for DisplayOption<T> {
-    fn write_to(&self, writer: &mut impl Writer) {
-        if let Some(value) = &self.0 {
-            value.write_to(writer);
-        }
-    }
-}
-
-impl<T: Display + WriteTo> WriteTo for DisplayOptionRef<'_, T> {
-    fn write_to(&self, writer: &mut impl Writer) {
-        if let Some(value) = self.0 {
-            value.write_to(writer);
-        }
     }
 }

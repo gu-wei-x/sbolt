@@ -54,7 +54,7 @@ impl<'a> Template<'a> {
             use sbolt::types::Template as _;
             use sbolt::types::Writer;
             #[allow(unused_imports)]
-            use sbolt::types::{DisplayWriteTo as _, ToStringWriteTo as _};
+            use sbolt::types::{DisplayWriteTo as _, OptionDisplayWriteTo as _};
             #(#imports_content)*
 
             #[derive(Clone, Copy)]

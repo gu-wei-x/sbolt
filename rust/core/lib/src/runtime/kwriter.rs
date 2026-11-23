@@ -27,3 +27,20 @@ impl Writer for KWriter {
         }
     }
 }
+
+impl Writer for &mut KWriter {
+    fn write(&mut self, content: &str) {
+        (**self).write(content);
+    }
+
+    fn write_formatted(&mut self, args: std::fmt::Arguments<'_>) {
+        (**self).write_formatted(args);
+    }
+
+    fn into_string(self) -> String {
+        match self {
+            KWriter::KHtml(writer) => std::mem::take(&mut writer.content),
+            KWriter::KJson(content) | KWriter::KText(content) => std::mem::take(content),
+        }
+    }
+}

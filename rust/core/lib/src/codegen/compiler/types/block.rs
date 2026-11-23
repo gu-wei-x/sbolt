@@ -29,7 +29,7 @@ impl<'a> Block<'a> {
             Block::KFUNCTIONS(_) => todo!(),
             Block::KINLINEDCODE(_) => {
                 context.invalidate_static_context();
-                let ts = self.to_inline_code_token_stream()?;
+                let ts = self.to_inline_code_token_stream(context)?;
                 result.push(ts);
             }
             Block::KINLINEDCONTENT(_) => {

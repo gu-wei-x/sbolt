@@ -151,12 +151,15 @@ Custom views likewise use their own declarations and the context passed to
 
 ## Specialized interpolation
 
-Interpolation selects a renderer using Rust's type system, without a compiler
-option:
+In HTML and text templates, interpolation selects a renderer using Rust's type
+system, without a compiler option:
 
 1. `sbolt::types::WriteTo`, when implemented.
 2. Streaming `std::fmt::Display` formatting.
-3. A legacy `ToString` fallback that creates a temporary string.
+
+Types implementing only `ToString` are no longer supported directly. Implement
+`Display` or `WriteTo` when migrating, or explicitly interpolate
+`@(value.to_string())` if an allocating conversion is intentional.
 
 Built-in `WriteTo` implementations append strings directly, write booleans as
 `true` or `false`, and format integer primitives with an `itoa` stack buffer.
@@ -184,22 +187,116 @@ impl WriteTo for Status {
 ```
 
 `sbolt::types::display(value)` explicitly forces `Display` formatting.
-`DisplayOption` and `DisplayOptionRef` format a present value or emit nothing for
-`None`; an ordinary `Option<T>` does not automatically become renderable:
+An `Option<T>` renders its contained value for `Some` or emits nothing for `None`.
+The contained value uses the same `WriteTo`-then-`Display` priority, including HTML
+escaping. Borrowed options and optional references work directly:
 
 ```text
 @{
     let count: Option<i32> = None;
 }
-@(sbolt::types::DisplayOption(count))
+@(count)
 ```
 
 ### Output safety
 
-All interpolation writes **raw output**. HTML, JSON, and text kinds do not add
-escaping. In particular, interpolating an untrusted string into HTML or between
-JSON quotes is not automatically safe. Escape or serialize values for their
-insertion location. Dynamic JSON output is not validated.
+HTML expressions such as `@(value)` automatically escape `&`, `<`, `>`, `"`, and
+`'`, without a compiler option. Literal
+template markup is unchanged. For example, a value of `<em>Hello</em>` in
+`<p>@(value)</p>` is displayed as text, not interpreted as an element.
+JSON expressions automatically serialize values; text expressions retain ordinary
+formatting. HTML escaping preserves the specialized interpolation priority above
+and streams output.
+
+Use `sbolt::utils::raw(...)` only for explicitly trusted HTML in autoescaped templates:
+
+```text
+<p>@(message)</p>
+@(sbolt::utils::raw("<strong>Trusted markup</strong>"))
+```
+
+The raw wrapper bypasses escaping; it does not sanitize HTML. It is intended for
+HTML expressions, not JSON/text expressions. Raw wrappers can be borrowed and
+reused, including values retrieved from context. Child views and rendered sections
+are already-rendered output and are inserted directly, without escaping their
+markup a second time. Expressions inside HTML child views and sections are escaped.
+
+This changes the previous raw-by-default HTML behavior. When migrating templates,
+remove manual HTML escaping from ordinary expressions to avoid double escaping.
+Replace intentionally interpolated trusted markup with `sbolt::utils::raw(...)`, or
+prefer a child view. `sbolt::utils::escape_html(value)` remains available for explicit
+encoding outside normal HTML interpolation.
+
+#### Insertion contexts
+
+HTML escaping is appropriate for HTML text and quoted attribute values. Always
+quote dynamic attribute values. It does not validate URL schemes or make values
+safe inside scripts, styles, or event-handler attributes. Validate URLs and use
+destination-specific serialization or encoding. Templates execute trusted Rust;
+neither escaping nor a fresh context makes a template a sandbox.
+
+#### JSON templates
+
+In `.rsjson` templates, each expression must implement `serde::Serialize` and
+represents a complete JSON value:
+
+```text
+@{
+    let name = "Tom & Jerry";
+    let items = [1, 2];
+}
+{"name": @(name), "items": @(items)}
+```
+
+Strings are quoted and escaped, arrays and objects retain their structure, and
+`Option::None` becomes `null`. Serialization streams into the output buffer
+without an intermediate JSON string. Serialization failures propagate as rendering
+errors. Closures containing JSON interpolation must return a compatible `Result`;
+use `try_for_each` rather than `for_each`.
+
+Model bindings can be interpolated directly with `@(model)` when the declared type
+implements `Serialize`; their `Arc` wrapper is handled automatically.
+
+When migrating, remove quotes around interpolated values and remove explicit
+`json(...)` calls. For example, replace `"name": "@(name)"` with
+`"name": @(name)`. An interpolated JSON string is still a string, so serializing
+it explicitly first would double-encode it. Interpolate ordinary `Option<T>`
+values directly; no formatting wrapper is needed.
+
+For pre-serialized JSON, use `@(sbolt::utils::raw_json(pre_serialized)?)`, where
+`pre_serialized` is a `&str`. This validates one complete JSON value and inserts it
+without extra quotes. It is distinct from the trusted-HTML `raw` wrapper.
+
+Literal content, rendered sections, and child-view output are not serialized again.
+Individual values are serialized safely, but the complete dynamic JSON document
+is not validated.
+
+#### JSON data in HTML
+
+Use `sbolt::utils::json(&value)` without enabling a Cargo feature. It accepts
+`serde::Serialize` values and returns a rendering error if serialization fails.
+It serializes JSON and replaces `<`, `>`, `&`, `'`, U+2028, and U+2029 with JSON
+Unicode escapes, preserving the original values when parsed.
+
+In an HTML template:
+
+```text
+@model String;
+<script id="page-data" type="application/json">@(sbolt::utils::raw(sbolt::utils::json(model.as_ref())?))</script>
+<script>
+    const data = JSON.parse(document.getElementById("page-data").textContent);
+</script>
+```
+
+Here, the JSON helper handles script-data escaping; `raw` prevents HTML entities
+from corrupting the JSON. Do not add quotes around the serialized value.
+For a quoted HTML attribute, let HTML autoescaping escape the serialized result
+instead of wrapping it in `raw`. Do not interpolate it inside an existing
+JavaScript string or an event handler.
+
+JSON templates apply the same JSON escaping automatically; they do not need this
+helper. Embedding a JSON document in a quoted HTML attribute still requires HTML
+escaping.
 
 ## Named context values
 
@@ -207,7 +304,7 @@ A template without `@model` can read values directly:
 
 ```text
 @{
-    let name = sbolt::types::DisplayOptionRef(context.get_data::<String>("name"));
+    let name = context.get_data::<String>("name");
 }
 <p>@(name)</p>
 ```
@@ -228,7 +325,7 @@ For example, create `src/views/card.rshtml`:
 
 ```text
 @{
-    let title = sbolt::types::DisplayOptionRef(context.get_data::<String>("title"));
+    let title = context.get_data::<String>("title");
 }
 <aside>@(title)</aside>
 ```
