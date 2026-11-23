@@ -5,7 +5,7 @@ use crate::codegen::compiler::optimizer;
 #[test]
 fn optimize_with_no_optimization() {
     let source = "<html>\n  </html>";
-    let options = CompilerOptions::default();
+    let options = CompilerOptions::default().with_optimization(false);
     let optimizer = optimizer::create_optimizer(crate::types::template::Kind::KHTML, &options);
     let output = optimizer.optimize(source).unwrap();
     assert_eq!(output, source)

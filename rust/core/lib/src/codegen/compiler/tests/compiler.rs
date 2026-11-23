@@ -53,4 +53,5 @@ fn compiler_options_set() {
     assert!(option.need_optimization());
     assert_eq!(option.out_dir(), &Some(String::from("temp")));
     assert_eq!(option.source_dirs(), &["views"]);
+    assert!(!option.with_optimization(false).need_optimization());
 }

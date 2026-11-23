@@ -56,7 +56,9 @@ flowchart TD
   stale generated files from causing ambiguous module lookup. Render lookup paths
   retain their original spelling.
 - `CompilerOptions::with_optimization(true)` enables static-write merging and
-  whitespace compaction. HTML compaction assumes normal whitespace/default
+  whitespace compaction. The default is `cfg!(not(debug_assertions))` in sbolt;
+  use `.with_optimization(false)` to disable it explicitly.
+  HTML compaction assumes normal whitespace/default
   display rules and preserves protected or unknown contexts.
 - JSON compaction applies only to fully static standalone templates. Dynamic
   JSON and section/layout fragments retain their whitespace. Invalid static JSON

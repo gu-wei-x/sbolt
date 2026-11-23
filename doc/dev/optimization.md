@@ -74,7 +74,10 @@ merges adjacent static HTML/JSON output before embedding it in generated Rust co
 
 ### Implemented first pass
 
-Enable the pass with `CompilerOptions::with_optimization(true)`. It:
+The pass defaults to `cfg!(not(debug_assertions))` in sbolt: normally disabled
+in debug builds and enabled in release builds. Override it explicitly with
+`CompilerOptions::with_optimization(true)` or `.with_optimization(false)`.
+The pass:
 
 - Combines consecutive static writes, including fragments separated by template
   comments.
