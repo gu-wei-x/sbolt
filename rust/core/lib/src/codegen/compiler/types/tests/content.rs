@@ -92,7 +92,8 @@ fn dynamic_boundaries_preserve_whitespace() -> result::Result<()> {
     let (tokens, _) = generate_content(source, Kind::KHTML, true)?;
     let expected = quote! {
         writer.write("<span>hello</span>\n ");
-        sbolt::types::WriteToRef(&(value)).__sbolt_write_to(&mut writer);
+        sbolt::types::WriteToRef(&(value))
+            .write_to(sbolt::types::HtmlEscapingWriter(&mut writer));
         writer.write("<div>\n  </div>");
     };
     assert_eq!(tokens.to_string(), expected.to_string());
@@ -126,7 +127,8 @@ fn raw_output_and_rust_code_are_html_context_barriers() -> result::Result<()> {
     let (tokens, stats) = generate_content(source, Kind::KHTML, true)?;
     let expected = quote! {
         writer.write("<div title=\"");
-        sbolt::types::WriteToRef(&(value)).__sbolt_write_to(&mut writer);
+        sbolt::types::WriteToRef(&(value))
+            .write_to(sbolt::types::HtmlEscapingWriter(&mut writer));
         writer.write("\"><span   class = 'x'> tail  </span>");
     };
     assert_eq!(tokens.to_string(), expected.to_string());

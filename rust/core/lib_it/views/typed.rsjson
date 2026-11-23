@@ -1,2 +1,2 @@
 @model crate::view_tests::TypedModel;
-{"name":"@(model.name)","count":@(model.count)}
+{"name":@(model.name),"count":@(model.count)}

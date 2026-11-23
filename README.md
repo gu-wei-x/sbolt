@@ -13,11 +13,7 @@ typed models, layouts, and reusable views.
 - **Build-time checks:** template syntax and generated Rust are checked before deployment.
 - **Compiled rendering:** no template-source parsing at runtime.
 - **Flexible output:** HTML, JSON, and plain text, with matching-kind layouts.
-- **Efficient formatting:** stream values into output buffers and reuse resolved templates.
-
-See the [benchmarks](./rust/benchmark) for measured comparisons. Interpolation
-writes raw values without automatic HTML or JSON escaping; escape or serialize
-untrusted values for their output context.
+- **Efficient formatting:** stream values into output buffers and reuse resolved templates, See the [benchmarks](./rust/benchmark) for measured comparisons.
 
 ## Quick start
 

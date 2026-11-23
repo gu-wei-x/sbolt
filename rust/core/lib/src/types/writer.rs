@@ -21,6 +21,10 @@ pub trait Writer {
 
         std::fmt::write(&mut Adapter(self), args).expect("formatting template value failed");
     }
+    /// Writes explicitly trusted formatted output without HTML escaping.
+    fn write_raw_formatted(&mut self, args: std::fmt::Arguments<'_>) {
+        self.write_formatted(args);
+    }
     fn writeln(&mut self, content: &str) {
         self.write(content);
         self.write("\n");

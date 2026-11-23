@@ -35,11 +35,76 @@ fn model_directives_render_through_the_named_api() -> RenderResult<()> {
         let (output, selected_kind) = render(path, Some(kind), &mut context)?;
         assert_eq!(resolve(path, Some(kind))?.render(&mut context)?, output);
         assert_eq!(selected_kind, kind);
-        assert!(output.contains("<b>&team</b>"));
+        let expected_name = match kind {
+            Kind::KHTML => "&lt;b&gt;&amp;team&lt;/b&gt;",
+            Kind::KJSON => "\\u003cb\\u003e\\u0026team\\u003c/b\\u003e",
+            Kind::KTEXT => "<b>&team</b>",
+        };
+        assert!(output.contains(expected_name));
         assert!(output.contains("-42"));
     }
     assert_eq!(Arc::strong_count(&model), 3);
     assert_eq!(model.name, "<b>&team</b>");
+    Ok(())
+}
+
+#[test]
+fn whole_json_models_serialize_without_unwrapping() -> RenderResult<()> {
+    let mut context = sbolt::context!(model: Arc::new("<b>&model</b>".to_string()));
+    let output = resolve("views/json_model", Some(Kind::KJSON))?.render(&mut context)?;
+    assert_eq!(output.trim(), r#""\u003cb\u003e\u0026model\u003c/b\u003e""#);
+    Ok(())
+}
+
+#[test]
+fn json_interpolation_serializes_complete_values_and_preserves_fragments() -> RenderResult<()> {
+    let mut context = sbolt::context!(
+        message: "</script>&'\"\n\u{2028}\u{2029}".to_string(),
+        fragment: "{\"trusted\":\"</script>\"}".to_string()
+    );
+    context.set_capacity_hint(4096);
+    let output = resolve("views/json_values", Some(Kind::KJSON))?.render(&mut context)?;
+    assert_eq!(
+        output.trim(),
+        r#"{
+  "message": "\u003c/script\u003e\u0026\u0027\"\n\u2028\u2029",
+  "number": -42,
+  "float": 1.25,
+  "boolean": true,
+  "none": null,
+  "some": 4,
+  "array": [1,2],
+  "object": {"key":3},
+  "json_string": "{\"nested\":true}",
+  "fragment": {"trusted":"\u003c/script\u003e"},
+  "evaluated_once": 1,
+  "evaluations": 1,
+  "sequence": [1,2]
+}"#
+    );
+    assert!(output.capacity() >= 4096);
+    Ok(())
+}
+
+#[test]
+fn json_interpolation_propagates_serialization_and_fragment_errors() -> RenderResult<()> {
+    let handle = resolve("views/json_values", Some(Kind::KJSON))?;
+    let error = handle.render(&mut sbolt::context!(mode: 1u8)).unwrap_err();
+    assert!(matches!(
+        error,
+        RuntimeError::InvalidInput(ref message, ref detail)
+            if message == "JSON serialization failed" && detail.contains("key must be a string")
+    ));
+    let error = handle
+        .render(&mut sbolt::context!(
+            message: String::new(),
+            fragment: "{\"broken\":".to_string()
+        ))
+        .unwrap_err();
+    assert!(matches!(
+        error,
+        RuntimeError::InvalidInput(ref message, _) if message == "Invalid raw JSON"
+    ));
     Ok(())
 }
 
@@ -145,9 +210,12 @@ fn standard_formatting_and_early_returns_preserve_rendering_contracts() -> Rende
         (0u8, "before|value: 42"),
         (1, "early"),
         (2, "before|"),
-        (4, "before|<em>42</em>|1.25|true|-42"),
-        (5, "before|<legacy>|<legacy>|<legacy>"),
+        (4, "before|&lt;em&gt;42&lt;/em&gt;|1.25|true|-42"),
         (6, "before|specialized"),
+        (
+            7,
+            "before|<p>1:&lt;em&gt;1&lt;/em&gt;</p><p>2:&lt;em&gt;2&lt;/em&gt;</p>",
+        ),
     ] {
         let actual = handle.render(&mut sbolt::context!(mode: mode))?;
         assert_eq!(actual.trim(), expected);
@@ -163,6 +231,20 @@ fn standard_formatting_and_early_returns_preserve_rendering_contracts() -> Rende
         handle.render(&mut sbolt::context!(mode: 3u8)),
         Err(RuntimeError::InvalidInput(_, _))
     ));
+    Ok(())
+}
+
+#[test]
+fn borrowed_raw_values_bypass_only_their_own_escaping() -> RenderResult<()> {
+    let mut context = sbolt::context!(
+        mode: 8u8,
+        markup: sbolt::utils::raw("<strong>context</strong>")
+    );
+    let output = resolve("views/render_regressions", None)?.render(&mut context)?;
+    assert_eq!(
+        output.trim(),
+        "before|<b>&\"trusted\"</b>|<b>&\"trusted\"</b>|<b>&\"trusted\"</b>|<i>mutable</i>|<strong>context</strong>|&lt;u&gt;escaped&lt;/u&gt;"
+    );
     Ok(())
 }
 

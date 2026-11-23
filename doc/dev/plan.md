@@ -16,24 +16,38 @@ Feature tables use the aliases below.
 | Example | `Example` | Runnable CLI and web demonstrations, shared models/templates, standalone compilation, and framework adapters. |
 | Docs | `Docs` | Getting-started guides, syntax and API references, layout guidance, developer documentation, and feature history. |
 
+## Priority
+
+Lower values indicate higher priority.
+
+| Value | Priority | Description |
+| --- | --- | --- |
+| 0 | Highest | Bug that needs to be fixed. |
+| 1 | High | Important feature or improvement to address next. |
+| 2 | Medium | Planned feature or improvement for normal development. |
+| 3 | Low | Optional enhancement to address when time permits. |
+
 ## TODOs
 
-| Area | Feature | Notes |
-| --- | --- | --- |
-| `CodeGen` | HTML escaping and JSON serialization | **Highest priority; next planned work.** Separate HTML text/attribute escaping from JSON string/value serialization, with explicit trusted/raw controls. Define defaults, insertion-context limits, and a migration policy. Test injection-sensitive HTML, JSON quotes/backslashes/control characters, and serialized value types; preserve streaming writes where practical. [Current interpolation is raw](../user/syntax.md#output-safety). |
-| `Parse` | Template-defined functions | Allow functions to be defined in templates. |
-| `Parse` | Direct borrow/dereference syntax | Proposed borrow syntax: `@&EXP`. Reconsider `@*EXP` because `@*` starts template comments. |
-| `CodeGen` | Static CSS/JavaScript optimization | Preserve plain-text output. |
-| `API` | Configurable view variants | Select variants using configuration or context, beyond template kind. |
+| Priority | Area | Feature | Notes |
+| --- | --- | --- | --- |
+| 1 | `CodeGen` | HTML escaping and JSON serialization | **Follow-up work.** Expand regression coverage for injection-sensitive HTML, JSON quotes/backslashes/control characters, and serialized value types. Default HTML escaping, explicit trusted/raw controls, JSON serialization, insertion-context limits, and migration guidance are implemented. [Output safety](../user/syntax.md#output-safety). |
+| 2 | `Parse` | Template-defined functions | Allow functions to be defined in templates. |
+| 2 | `Parse` | Direct borrow/dereference syntax | Proposed borrow syntax: `@&EXP`. Reconsider `@*EXP` because `@*` starts template comments. |
+| 2 | `CodeGen` | Static CSS/JavaScript optimization | Preserve plain-text output. |
+| 2 | `API` | Configurable view variants | Select variants using configuration or context, beyond template kind. |
 
 ## Completed
 
-Entries are sorted newest first by their latest implementation commit.
+Uncommitted entries appear first. Committed entries are sorted newest first by
+their latest implementation commit.
 Within each entry, commits and their corresponding dates are also newest first.
 All dates are Git committer dates.
 
 | Area | Feature | Behavior | Commits | Dates |
 | --- | --- | --- | --- | --- |
+| `CodeGen` | HTML expression escaping | Default streaming HTML autoescaping with explicit `sbolt::utils::raw(...)` output; preserve rendered child/section markup. See [output safety](../user/syntax.md#output-safety) for context limits and migration. | Uncommitted | - |
+| `CodeGen` | JSON serialization | JSON expressions automatically stream `serde::Serialize` values with script-data escapes. `sbolt::utils::json` remains available for HTML; `sbolt::utils::raw_json` validates pre-serialized values. No feature flag is required. | Uncommitted | - |
 | `Parse` | Inline custom views | `@view(name, context[, kind])` renders a child inline with an explicit context, an inherited or overridden kind, the child's layout, and propagated errors. See [custom views](../user/syntax.md#custom-views). | [c209bfd](https://github.com/gu-wei-x/sbolt/commit/c209bfd75031d8c3fe676ffc79e346018657b7f8) - inline custom views and optional kind override | 2026-11-19 |
 | `CodeGen` | Static-write merging | Merge adjacent static HTML/JSON writes. | [abb16af](https://github.com/gu-wei-x/sbolt/commit/abb16afa694e47c166e9860df52fd9f75d058cb2) - JSON optimization integration<br>[b38ef88](https://github.com/gu-wei-x/sbolt/commit/b38ef8844b93a9a498033bf2c68fe2ea356696a7) - context-aware static runs | 2026-11-18<br>2026-11-17 |
 | `CodeGen` | Static JSON validation and compaction | Apply to fully static standalone JSON when optimization is enabled. | [abb16af](https://github.com/gu-wei-x/sbolt/commit/abb16afa694e47c166e9860df52fd9f75d058cb2) - JSON validation, compaction, and source diagnostics | 2026-11-18 |

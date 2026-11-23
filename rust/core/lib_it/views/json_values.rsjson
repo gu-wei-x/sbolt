@@ -1,0 +1,34 @@
+@{
+    let mode = context.get_data::<u8>("mode").copied().unwrap_or(0);
+    if mode == 1 {
+        let invalid = std::collections::BTreeMap::from([(vec![1, 2], 3)]);
+        @{@(invalid)}
+        return Ok(writer.into_string());
+    }
+    let message = context.get_data::<String>("message").unwrap();
+    let fragment = context.get_data::<String>("fragment").unwrap();
+    let mut evaluations = 0;
+}
+{
+  "message": @(message),
+  "number": @(-42),
+  "float": @(1.25),
+  "boolean": @(true),
+  "none": @(None::<u8>),
+  "some": @(Some(4)),
+  "array": @([1, 2]),
+  "object": @(std::collections::BTreeMap::from([("key", 3)])),
+  "json_string": @("{\"nested\":true}"),
+  "fragment": @(sbolt::utils::raw_json(fragment)?),
+  "evaluated_once": @({ evaluations += 1; evaluations }),
+  "evaluations": @(evaluations),
+  "sequence": [@{
+      [1, 2].iter().enumerate().try_for_each(|(index, value)| -> sbolt::types::result::RenderResult<()> {
+          if index > 0 {
+              @{,}
+          }
+          @{@(value)}
+          Ok(())
+      })?;
+  }]
+}

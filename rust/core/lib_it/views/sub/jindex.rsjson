@@ -4,11 +4,11 @@
         Some(str) => str,
         None => "",
     };
-    let age = sbolt::types::DisplayOptionRef(context.get_data::<i32>("age"));
-    let msg = sbolt::types::DisplayOptionRef(context.get_data::<String>("msg"));
+    let age = context.get_data::<i32>("age");
+    let msg = context.get_data::<String>("msg");
 }
 {
-  "name": "@name",
-  "age": @age,
-  "msg": "@msg"
+  "name": @(name),
+  "age": @(age),
+  "msg": @(msg)
 }

@@ -113,7 +113,7 @@ this is @name}
      use sbolt::types::Template as _;
      use sbolt::types::Writer;
      #[allow(unused_imports)]
-     use sbolt::types::{DisplayWriteTo as _, ToStringWriteTo as _};
+     use sbolt::types::DisplayWriteTo as _;
      use test::test1;
      #[derive(Clone, Copy)]
      pub struct TestView;
@@ -170,7 +170,8 @@ this is @name}
                  let mut writer = self.create_writer(None, Some(#section_capacity_hint));
                  let name = "test1";
                  writer.write("this is ");
-                 sbolt::types::WriteToRef(&(name)).__sbolt_write_to(&mut writer);
+                 sbolt::types::WriteToRef(&(name))
+                     .write_to(sbolt::types::HtmlEscapingWriter(&mut writer));
                  writer
              };
              context.add_section(section_name, section_writer.into_string());
@@ -214,7 +215,7 @@ fn to_token_stream_html_without_layout() -> result::Result<()> {
      use sbolt::types::Template as _;
      use sbolt::types::Writer;
      #[allow(unused_imports)]
-     use sbolt::types::{DisplayWriteTo as _, ToStringWriteTo as _};
+     use sbolt::types::DisplayWriteTo as _;
      use test::test1;
      #[derive(Clone, Copy)]
      pub struct TestView;

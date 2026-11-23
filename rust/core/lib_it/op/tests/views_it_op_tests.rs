@@ -127,7 +127,7 @@ fn dynamic_json_keeps_existing_formatting() -> result::RenderResult<()> {
     let (output, _) = lib_it_op_views::render("views/sub/jindex", Some(Kind::KJSON), &mut context)?;
     assert_eq!(
         output.trim(),
-        "{\n  \"name\": \"sbolt\",\n  \"age\": 1,\n  \"msg\": \"Welcome!\"\n}"
+        "{\n  \"name\": \"sbolt\",\n  \"age\": 1,\n  \"msg\": \"Welcome!\"}"
     );
     Ok(())
 }

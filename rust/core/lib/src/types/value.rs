@@ -1,61 +1,31 @@
 use super::{DisplayOption, DisplayOptionRef, Writer};
 use std::fmt::Display;
-use std::ops::Deref;
 
-/// A value that can be streamed into a template without changing its escaping.
+/// A value that can be streamed into a template's writer.
 pub trait WriteTo {
     fn write_to(&self, writer: &mut impl Writer);
 }
 
-// Generated dispatch prefers WriteTo, then Display, then dereferences for ToString.
-// Its internal method name avoids unrelated write_to methods on legacy values.
+// Generated dispatch prefers WriteTo over streaming Display.
 #[doc(hidden)]
 pub struct WriteToRef<'a, T: ?Sized>(pub &'a T);
 
-impl<T: ?Sized> Deref for WriteToRef<'_, T> {
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        self.0
-    }
-}
-
 impl<T: WriteTo + ?Sized> WriteToRef<'_, T> {
-    pub fn write_to(self, writer: &mut impl Writer) {
-        self.0.write_to(writer);
-    }
-
-    pub fn __sbolt_write_to(self, writer: &mut impl Writer) {
-        self.write_to(writer);
+    pub fn write_to<W: Writer>(self, mut writer: W) -> W {
+        self.0.write_to(&mut writer);
+        writer
     }
 }
 
 #[doc(hidden)]
 pub trait DisplayWriteTo {
-    fn write_to(self, writer: &mut impl Writer);
-
-    fn __sbolt_write_to(self, writer: &mut impl Writer)
-    where
-        Self: Sized,
-    {
-        self.write_to(writer);
-    }
+    fn write_to<W: Writer>(self, writer: W) -> W;
 }
 
 impl<T: Display + ?Sized> DisplayWriteTo for WriteToRef<'_, T> {
-    fn write_to(self, writer: &mut impl Writer) {
+    fn write_to<W: Writer>(self, mut writer: W) -> W {
         writer.write_formatted(format_args!("{}", self.0));
-    }
-}
-
-#[doc(hidden)]
-pub trait ToStringWriteTo {
-    fn __sbolt_write_to(self, writer: &mut impl Writer);
-}
-
-impl<T: ToString + ?Sized> ToStringWriteTo for &T {
-    fn __sbolt_write_to(self, writer: &mut impl Writer) {
-        writer.write(&self.to_string());
+        writer
     }
 }
 

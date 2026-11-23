@@ -16,20 +16,28 @@ flowchart TD
 ```
 
 - All template types share the parser for `@` expressions and directives.
-- Inline expressions automatically select `WriteTo` when implemented:
+- By default, inline expressions automatically select `WriteTo` when implemented:
   strings and booleans append directly and integer primitives use an `itoa`
-  stack buffer. Values are borrowed, and output is unchanged (no escaping is
-  added). No compiler option is required.
-- Other `Display` values automatically fall back to
+  stack buffer. Values are borrowed; HTML expressions stream through an escaping
+  writer, while text expressions retain ordinary formatting. JSON expressions
+  stream `serde::Serialize` values into the output buffer and propagate serialization
+  errors. No compiler option is required.
+- In HTML and text templates, other `Display` values automatically fall back to
   `Writer::write_formatted(format_args!("{}", value))` without an intermediate
   `String`. Generated code selects between a conditional inherent method and a
-  fallback traits at each concrete expression, without overlapping trait
+  fallback trait at each concrete expression, without overlapping trait
   implementations or expression-type guessing. The optional
   `sbolt::types::display(value)` adapter forces `Display` formatting.
-  A final `ToString` fallback preserves legacy types, including references and
-  smart pointers, at the cost of their original temporary allocation. Generated
-  dispatch uses an internal `__sbolt_write_to` method to avoid selecting unrelated
-  `write_to` methods on legacy values or affecting template-authored method calls.
+  `ToString`-only values are not supported; implement `Display` or `WriteTo`,
+  or convert explicitly when migrating. Generated dispatch calls `WriteToRef::write_to`
+  without dereferencing into the wrapped value, so unrelated methods on the value
+  do not participate in lookup.
+  The same method takes and returns the output writer for HTML and text templates.
+  Generated calls borrow the output writer, wrapped in an `HtmlEscapingWriter` adapter
+  for HTML, and discard the returned borrow or adapter. The output buffer stays in
+  place, including inside closures. Trusted `raw` values implement `WriteTo` and use
+  `Writer::write_raw_formatted` to bypass the escaping adapter, including when borrowed.
+  No separate HTML formatting dispatch is needed.
   Existing custom writers inherit a streaming formatting adapter over
   `write`; built-in writers format directly into their string buffers.
   A formatting error panics, as it did with `to_string()`.
@@ -192,6 +200,31 @@ for lookup and context semantics.
 Argument boundaries are scanned in a single pass, respecting Rust identifiers,
 literal suffixes, and nested comments before expression validation. Line comments
 end at LF; a bare carriage return remains part of the comment.
+
+## Dynamic output safety
+
+HTML expressions automatically stream through an escaping writer, preserving
+`WriteTo` and `Display` dispatch. `sbolt::utils::raw(value)` explicitly
+bypasses escaping for trusted markup. No compiler option is required.
+Text expressions, literal markup, rendered sections, and child-view output
+are not additionally escaped. JSON expressions automatically serialize complete
+values rather than using `WriteTo`/`Display` formatting. Escaping is independent of static-write
+optimization; it is not HTML insertion-context analysis. This replaces legacy
+raw-by-default HTML interpolation; remove manual escaping and explicitly mark
+trusted interpolated markup when migrating.
+
+JSON expressions and the built-in `sbolt::utils::json` helper share a streaming
+serializer that escapes characters unsafe for script-data embedding. Generated
+JSON expressions serialize directly into the output writer; the helper returns a
+string for use outside JSON templates. Serialization errors propagate as
+`InvalidInput` rather than returning partial output. `sbolt::utils::raw_json`
+validates pre-serialized JSON and returns a borrowed `RawValue` that serializes
+without extra quotes. Migration requires removing explicit serialization and
+surrounding quotes from JSON-template expressions.
+
+See [output safety](../user/syntax.md#output-safety) for usage and limitations.
+
+## Web integration
 
 Each web example owns a local `ResponseFormat` wrapper around `Option<Kind>` and implements its
 framework's request guard/extractor traits for that wrapper. This satisfies the

@@ -4,9 +4,6 @@ use crate::types::{HtmlWriter, KWriter, WriteTo, Writer, display};
 
 #[test]
 fn automatic_rendering_prefers_specialization_and_falls_back_to_display() {
-    #[allow(unused_imports)]
-    use crate::types::ToStringWriteTo as _;
-
     struct Specialized;
     impl WriteTo for Specialized {
         fn write_to(&self, writer: &mut impl Writer) {
@@ -27,52 +24,18 @@ fn automatic_rendering_prefers_specialization_and_falls_back_to_display() {
     }
 
     let mut output = String::new();
-    WriteToRef(&Specialized).__sbolt_write_to(&mut output);
-    WriteToRef(&RenderOnly).__sbolt_write_to(&mut output);
-    WriteToRef(&FragmentedDisplay).__sbolt_write_to(&mut output);
+    output = WriteToRef(&Specialized).write_to(output);
+    output = WriteToRef(&RenderOnly).write_to(output);
+    output = WriteToRef(&FragmentedDisplay).write_to(output);
     let dynamic: &dyn std::fmt::Display = &FragmentedDisplay;
-    WriteToRef(dynamic).__sbolt_write_to(&mut output);
-    WriteToRef(&1.25).__sbolt_write_to(&mut output);
-    WriteToRef(&'&').__sbolt_write_to(&mut output);
+    output = WriteToRef(dynamic).write_to(output);
+    output = WriteToRef(&1.25).write_to(output);
+    output = WriteToRef(&'&').write_to(output);
     assert_eq!(output, "specializedrender-only<em>42</em><em>42</em>1.25&");
 }
 
 #[test]
-fn legacy_to_string_values_support_borrowing_and_dereferencing() {
-    use crate::types::ToStringWriteTo as _;
-
-    struct LegacyValue;
-    impl ToString for LegacyValue {
-        fn to_string(&self) -> String {
-            "<legacy>".to_owned()
-        }
-    }
-    impl LegacyValue {
-        fn write_to(&self, writer: &mut impl Writer) {
-            writer.write("inherent");
-        }
-    }
-
-    let value = LegacyValue;
-    let borrowed = &value;
-    let shared = std::sync::Arc::new(LegacyValue);
-    let dynamic: &dyn ToString = &value;
-    let mut output = String::new();
-    WriteToRef(&value).__sbolt_write_to(&mut output);
-    WriteToRef(&borrowed).__sbolt_write_to(&mut output);
-    WriteToRef(&shared).__sbolt_write_to(&mut output);
-    WriteToRef(dynamic).__sbolt_write_to(&mut output);
-    assert_eq!(output, "<legacy>".repeat(4));
-    output.clear();
-    value.write_to(&mut output);
-    assert_eq!(output, "inherent");
-}
-
-#[test]
-fn display_streaming_precedes_the_legacy_to_string_fallback() {
-    #[allow(unused_imports)]
-    use crate::types::ToStringWriteTo as _;
-
+fn display_fallback_uses_writer_formatting() {
     struct StreamingWriter {
         output: String,
         formatted: bool,
@@ -96,9 +59,34 @@ fn display_streaming_precedes_the_legacy_to_string_fallback() {
         output: String::new(),
         formatted: false,
     };
-    WriteToRef(&FragmentedDisplay).__sbolt_write_to(&mut writer);
+    writer = WriteToRef(&FragmentedDisplay).write_to(writer);
     assert!(writer.formatted);
     assert_eq!(writer.into_string(), "<em>42</em>");
+}
+
+#[test]
+fn json_helpers_stream_unicode_and_preserve_validated_fragments()
+-> crate::types::result::RenderResult<()> {
+    use crate::utils::{json, raw_json};
+
+    let value = "\"\\\n\r\t\0<>&'\u{2028}\u{2029}\u{e9}\u{1f642}";
+    assert_eq!(
+        json(&value)?,
+        concat!(
+            r#""\"\\\n\r\t\u0000\u003c\u003e\u0026\u0027\u2028\u2029"#,
+            "\u{e9}\u{1f642}",
+            "\""
+        )
+    );
+    let fragment = raw_json(r#"{"text":"</script>"}"#)?;
+    assert_eq!(json(fragment)?, r#"{"text":"\u003c/script\u003e"}"#);
+    for invalid in ["{", "true false"] {
+        assert!(matches!(
+            raw_json(invalid),
+            Err(crate::types::error::RuntimeError::InvalidInput(_, _))
+        ));
+    }
+    Ok(())
 }
 
 #[test]
@@ -171,6 +159,15 @@ fn formatted_output_preserves_values_for_all_builtin_writers() {
     assert_formatted_output(String::new());
     assert_formatted_output(KWriter::KJson(String::new()));
     assert_formatted_output(KWriter::KText(String::new()));
+    for mut writer in [
+        KWriter::KHtml(HtmlWriter::new(None)),
+        KWriter::KJson(String::new()),
+        KWriter::KText(String::new()),
+    ] {
+        assert_formatted_output(&mut writer);
+        writer.write("reused");
+        assert_eq!(writer.into_string(), "reused");
+    }
 }
 
 #[test]

@@ -13,15 +13,27 @@ use quote::quote;
 fn default_interpolation_borrows_the_whole_expression() -> result::Result<()> {
     let options = CompilerOptions::default();
     let source = "@(values[index + 1])";
-    let template = Template::from(source, None, Kind::KTEXT, &options)?;
-    let mut context = CodeGenContext::new(Kind::KTEXT, &options);
-    let tokens = template
-        .block()
-        .to_token_stream(Some(template.block()), &mut context)?;
-    let expected = quote! {
-        sbolt::types::WriteToRef(&(values[index + 1])).__sbolt_write_to(&mut writer);
-    };
-    assert_eq!(quote! { #(#tokens)* }.to_string(), expected.to_string());
+    for (kind, expected) in [
+        (
+            Kind::KTEXT,
+            quote! {
+                sbolt::types::WriteToRef(&(values[index + 1])).write_to(&mut writer);
+            },
+        ),
+        (
+            Kind::KJSON,
+            quote! {
+                sbolt::types::write_json(&(values[index + 1]), &mut writer)?;
+            },
+        ),
+    ] {
+        let template = Template::from(source, None, kind, &options)?;
+        let mut context = CodeGenContext::new(kind, &options);
+        let tokens = template
+            .block()
+            .to_token_stream(Some(template.block()), &mut context)?;
+        assert_eq!(quote! { #(#tokens)* }.to_string(), expected.to_string());
+    }
     Ok(())
 }
 
