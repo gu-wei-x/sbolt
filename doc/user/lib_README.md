@@ -1,72 +1,64 @@
 # sbolt
 
-sbolt compiles templates into Rust during your Cargo build. Templates combine
-literal content with Rust expressions and code, using Razor-inspired `@` syntax.
-At runtime, your application calls the generated renderer rather than parsing
-template source.
+sbolt is a Rust template engine that compiles templates during your Cargo build.
+Its Razor-inspired `@` syntax combines literal content with Rust expressions,
+typed models, layouts, and reusable views.
 
-## What it supports
+## Why sbolt?
 
-- HTML, JSON, and plain-text templates.
-- Typed models with ordinary Rust field access.
-- Named context values for templates without a model.
-- Layouts, named sections, and reusable child views.
-- Resolve-once rendering for repeatedly used templates.
-- Streaming value formatting and output-capacity hints.
+- **Build-time checks:** template syntax and generated Rust are checked before deployment.
+- **Compiled rendering:** no template-source parsing at runtime.
+- **Flexible output:** HTML, JSON, and plain text, with matching-kind layouts.
+- **Efficient formatting:** stream values into output buffers and reuse resolved templates, See the [benchmarks](https://github.com/gu-wei-x/sbolt/tree/main/rust/benchmark) for measured comparisons.
 
-Template syntax and generated Rust are checked during the build. Missing
-templates, missing sections, and incorrectly typed context values can still
-produce runtime errors.
+## Quick start
 
-## A template with a model
+Add sbolt for both runtime use and build-time compilation:
+
+```shell
+cargo add sbolt
+cargo add sbolt --build
+```
+
+Create `src/views/welcome.rshtml`:
 
 ```text
-@model crate::view_models::WelcomeModel;
+@model crate::WelcomeModel;
 <p>Welcome, @(model.name)!</p>
 ```
 
-The model is a normal Rust type:
+Compile the templates in `build.rs`:
 
 ```rust
-pub struct WelcomeModel {
-    pub name: String,
+fn main() {
+    let option = sbolt::codegen::CompilerOptions::default()
+        .with_source_dir("src/views")
+        .with_mod_name("compiled_views");
+    sbolt::codegen::Compiler::new(option).compile();
 }
 ```
 
-Create the context with `sbolt::context!(model_value)`. The macro wraps the model
-in `Arc` and stores it under `"model"`. Explicit named entries remain available,
-for example `sbolt::context!(name: String::from("Rocket"))`.
+Define the model and render from `src/main.rs`:
 
-See [Get started](./get_started.md) for a complete project, including its build
-script and rendering call.
+```rust
+sbolt::include_views!();
 
-## Output safety
+pub struct WelcomeModel {
+    pub name: String,
+}
 
-HTML expressions are escaped automatically for HTML text and quoted attributes.
-Use `sbolt::utils::raw(...)` only for trusted markup. HTML escaping does not make script,
-style, event-handler, or URL insertion safe. JSON-template expressions automatically
-serialize `serde::Serialize` values; use `sbolt::utils::json(...)` explicitly when
-embedding JSON in HTML. `sbolt::utils::raw_json(...)` validates pre-serialized JSON
-for insertion without double encoding. Text expressions retain ordinary formatting.
-Complete dynamic JSON documents are not validated automatically.
-See [output safety](./syntax.md#output-safety) for details.
+fn main() -> sbolt::types::result::RenderResult<()> {
+    let mut context = sbolt::context!(WelcomeModel {
+        name: "sbolt".into(),
+    });
+    let (output, _) = compiled_views::render("views/welcome", None, &mut context)?;
+    println!("{output}");
+    Ok(())
+}
+```
 
-## Documentation
+Run with `cargo run`.
 
-| Guide | Contents |
-| --- | --- |
-| [Get started](./get_started.md) | Project setup, contexts, rendering APIs, compiler options, and examples |
-| [Syntax](./syntax.md) | Expressions, Rust code, models, formatting, and custom views |
-| [Keywords](./keywords.md) | The six supported template keywords and their arguments |
-| [Layouts and sections](./layout.md) | Layout resolution, section rendering, and independent layout models |
+## License
 
-## Repository examples
-
-- [CLI using the shared view crate](../../rust/examples/cli)
-- [CLI compiling templates directly](../../rust/examples/cli_standalone)
-- [Actix Web](../../rust/examples/web/actix), [Axum](../../rust/examples/web/axum),
-  and [Rocket](../../rust/examples/web/rocket)
-
-The [shared example crate](../../rust/examples/shared/example_views) owns both
-the model definitions and the compiled templates. HTTP dependencies and
-response handling remain in the web examples.
+This crate is licensed under [LICENSE](https://github.com/gu-wei-x/sbolt/blob/main/LICENSE)
