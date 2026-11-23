@@ -113,7 +113,7 @@ this is @name}
      use sbolt::types::Template as _;
      use sbolt::types::Writer;
      #[allow(unused_imports)]
-     use sbolt::types::DisplayWriteTo as _;
+     use sbolt::types::{DisplayWriteTo as _, OptionDisplayWriteTo as _};
      use test::test1;
      #[derive(Clone, Copy)]
      pub struct TestView;
@@ -215,7 +215,7 @@ fn to_token_stream_html_without_layout() -> result::Result<()> {
      use sbolt::types::Template as _;
      use sbolt::types::Writer;
      #[allow(unused_imports)]
-     use sbolt::types::DisplayWriteTo as _;
+     use sbolt::types::{DisplayWriteTo as _, OptionDisplayWriteTo as _};
      use test::test1;
      #[derive(Clone, Copy)]
      pub struct TestView;

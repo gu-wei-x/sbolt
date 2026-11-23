@@ -38,6 +38,9 @@ flowchart TD
   place, including inside closures. Trusted `raw` values implement `WriteTo` and use
   `Writer::write_raw_formatted` to bypass the escaping adapter, including when borrowed.
   No separate HTML formatting dispatch is needed.
+  `Option<T>` forwards specialized writes for `Some` and emits nothing for `None`.
+  An optional-value fallback formats `Display`-only contents, including through
+  borrowed options, without changing specialized-rendering priority.
   Existing custom writers inherit a streaming formatting adapter over
   `write`; built-in writers format directly into their string buffers.
   A formatting error panics, as it did with `to_string()`.

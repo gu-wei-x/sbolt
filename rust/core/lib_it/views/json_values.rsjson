@@ -5,7 +5,7 @@
         @{@(invalid)}
         return Ok(writer.into_string());
     }
-    let message = context.get_data::<String>("message").unwrap();
+    let message = context.get_data::<String>("message");
     let fragment = context.get_data::<String>("fragment").unwrap();
     let mut evaluations = 0;
 }

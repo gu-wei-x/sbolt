@@ -31,7 +31,6 @@ Lower values indicate higher priority.
 
 | Priority | Area | Feature | Notes |
 | --- | --- | --- | --- |
-| 1 | `CodeGen` | HTML escaping and JSON serialization | **Follow-up work.** Expand regression coverage for injection-sensitive HTML, JSON quotes/backslashes/control characters, and serialized value types. Default HTML escaping, explicit trusted/raw controls, JSON serialization, insertion-context limits, and migration guidance are implemented. [Output safety](../user/syntax.md#output-safety). |
 | 2 | `Parse` | Template-defined functions | Allow functions to be defined in templates. |
 | 2 | `Parse` | Direct borrow/dereference syntax | Proposed borrow syntax: `@&EXP`. Reconsider `@*EXP` because `@*` starts template comments. |
 | 2 | `CodeGen` | Static CSS/JavaScript optimization | Preserve plain-text output. |
@@ -46,8 +45,9 @@ All dates are Git committer dates.
 
 | Area | Feature | Behavior | Commits | Dates |
 | --- | --- | --- | --- | --- |
-| `CodeGen` | HTML expression escaping | Default streaming HTML autoescaping with explicit `sbolt::utils::raw(...)` output; preserve rendered child/section markup. See [output safety](../user/syntax.md#output-safety) for context limits and migration. | Uncommitted | - |
-| `CodeGen` | JSON serialization | JSON expressions automatically stream `serde::Serialize` values with script-data escapes. `sbolt::utils::json` remains available for HTML; `sbolt::utils::raw_json` validates pre-serialized values. No feature flag is required. | Uncommitted | - |
+| `CodeGen` | Optional-value interpolation | HTML/text expressions render `Some` values using specialized writes or streaming `Display`, including borrowed options; `None` emits nothing. JSON options retain normal serialization (`None` becomes `null`). | Uncommitted | - |
+| `CodeGen` | HTML expression escaping | Default streaming HTML autoescaping with explicit `sbolt::utils::raw(...)` output; preserve rendered child/section markup. See [output safety](../user/syntax.md#output-safety) for context limits and migration. | [1b34c25](https://github.com/gu-wei-x/sbolt/commit/1b34c252d58efe7ac106b10430e7e87555047af5) - default HTML escaping and automatic JSON serialization | 2026-11-23 |
+| `CodeGen` | JSON serialization | JSON expressions automatically stream `serde::Serialize` values, including shared models, with script-data escapes. `sbolt::utils::json` remains available for HTML; `sbolt::utils::raw_json` validates pre-serialized values. No feature flag is required. | [1b34c25](https://github.com/gu-wei-x/sbolt/commit/1b34c252d58efe7ac106b10430e7e87555047af5) - default HTML escaping and automatic JSON serialization | 2026-11-23 |
 | `Parse` | Inline custom views | `@view(name, context[, kind])` renders a child inline with an explicit context, an inherited or overridden kind, the child's layout, and propagated errors. See [custom views](../user/syntax.md#custom-views). | [c209bfd](https://github.com/gu-wei-x/sbolt/commit/c209bfd75031d8c3fe676ffc79e346018657b7f8) - inline custom views and optional kind override | 2026-11-19 |
 | `CodeGen` | Static-write merging | Merge adjacent static HTML/JSON writes. | [abb16af](https://github.com/gu-wei-x/sbolt/commit/abb16afa694e47c166e9860df52fd9f75d058cb2) - JSON optimization integration<br>[b38ef88](https://github.com/gu-wei-x/sbolt/commit/b38ef8844b93a9a498033bf2c68fe2ea356696a7) - context-aware static runs | 2026-11-18<br>2026-11-17 |
 | `CodeGen` | Static JSON validation and compaction | Apply to fully static standalone JSON when optimization is enabled. | [abb16af](https://github.com/gu-wei-x/sbolt/commit/abb16afa694e47c166e9860df52fd9f75d058cb2) - JSON validation, compaction, and source diagnostics | 2026-11-18 |

@@ -187,14 +187,15 @@ impl WriteTo for Status {
 ```
 
 `sbolt::types::display(value)` explicitly forces `Display` formatting.
-`DisplayOption` and `DisplayOptionRef` format a present value or emit nothing for
-`None`; an ordinary `Option<T>` does not automatically become renderable:
+An `Option<T>` renders its contained value for `Some` or emits nothing for `None`.
+The contained value uses the same `WriteTo`-then-`Display` priority, including HTML
+escaping. Borrowed options and optional references work directly:
 
 ```text
 @{
     let count: Option<i32> = None;
 }
-@(sbolt::types::DisplayOption(count))
+@(count)
 ```
 
 ### Output safety
@@ -259,8 +260,8 @@ implements `Serialize`; their `Arc` wrapper is handled automatically.
 When migrating, remove quotes around interpolated values and remove explicit
 `json(...)` calls. For example, replace `"name": "@(name)"` with
 `"name": @(name)`. An interpolated JSON string is still a string, so serializing
-it explicitly first would double-encode it. Use ordinary `Option<T>` values
-instead of the HTML/text formatting wrappers `DisplayOption` and `DisplayOptionRef`.
+it explicitly first would double-encode it. Interpolate ordinary `Option<T>`
+values directly; no formatting wrapper is needed.
 
 For pre-serialized JSON, use `@(sbolt::utils::raw_json(pre_serialized)?)`, where
 `pre_serialized` is a `&str`. This validates one complete JSON value and inserts it
@@ -303,7 +304,7 @@ A template without `@model` can read values directly:
 
 ```text
 @{
-    let name = sbolt::types::DisplayOptionRef(context.get_data::<String>("name"));
+    let name = context.get_data::<String>("name");
 }
 <p>@(name)</p>
 ```
@@ -324,7 +325,7 @@ For example, create `src/views/card.rshtml`:
 
 ```text
 @{
-    let title = sbolt::types::DisplayOptionRef(context.get_data::<String>("title"));
+    let title = context.get_data::<String>("title");
 }
 <aside>@(title)</aside>
 ```

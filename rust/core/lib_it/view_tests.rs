@@ -83,6 +83,9 @@ fn json_interpolation_serializes_complete_values_and_preserves_fragments() -> Re
 }"#
     );
     assert!(output.capacity() >= 4096);
+    let output = resolve("views/json_values", Some(Kind::KJSON))?
+        .render(&mut sbolt::context!(fragment: "null".to_string()))?;
+    assert!(output.contains("\"message\": null,"));
     Ok(())
 }
 
@@ -245,6 +248,73 @@ fn borrowed_raw_values_bypass_only_their_own_escaping() -> RenderResult<()> {
         output.trim(),
         "before|<b>&\"trusted\"</b>|<b>&\"trusted\"</b>|<b>&\"trusted\"</b>|<i>mutable</i>|<strong>context</strong>|&lt;u&gt;escaped&lt;/u&gt;"
     );
+    let output =
+        resolve("views/render_regressions", None)?.render(&mut sbolt::context!(mode: 8u8))?;
+    assert_eq!(
+        output.trim(),
+        "before|<b>&\"trusted\"</b>|<b>&\"trusted\"</b>|<b>&\"trusted\"</b>|<i>mutable</i>||&lt;u&gt;escaped&lt;/u&gt;"
+    );
+    Ok(())
+}
+
+#[test]
+fn quoted_html_attributes_escape_specialized_and_display_values() -> RenderResult<()> {
+    let handle = resolve("views/render_regressions", Some(Kind::KHTML))?;
+    for (value, escaped) in [
+        (
+            r#""' data-extra="unexpected"><b>&</b>"#,
+            "&quot;&#39; data-extra=&quot;unexpected&quot;&gt;&lt;b&gt;&amp;&lt;/b&gt;",
+        ),
+        (
+            "&quot;&#39; \u{e9}\u{1f642}",
+            "&amp;quot;&amp;#39; \u{e9}\u{1f642}",
+        ),
+        ("", ""),
+    ] {
+        let mut context = sbolt::context!(mode: 9u8, attribute: value.to_string());
+        let output = handle.render(&mut context)?;
+        assert_eq!(
+            output.trim(),
+            format!("before|<p title=\"{escaped}\" data-note='{escaped}{escaped}'>{escaped}</p>")
+        );
+    }
+    let output = handle.render(&mut sbolt::context!(mode: 9u8))?;
+    assert_eq!(output.trim(), "before|<p title=\"\" data-note=''></p>");
+    Ok(())
+}
+
+#[test]
+fn optional_values_render_directly_in_html_and_text() -> RenderResult<()> {
+    for (path, kind) in [
+        ("views/render_regressions", Kind::KHTML),
+        ("views/optional_values", Kind::KTEXT),
+    ] {
+        let (message, formatted) = if kind == Kind::KHTML {
+            (
+                "&lt;b&gt;&amp;&quot;&#39;&lt;/b&gt;",
+                "&lt;em&gt;42&lt;/em&gt;",
+            )
+        } else {
+            ("<b>&\"'</b>", "<em>42</em>")
+        };
+        let handle = resolve(path, Some(kind))?;
+        for (mut context, expected) in [
+            (
+                sbolt::context!(
+                    mode: 10u8,
+                    message: "<b>&\"'</b>".to_string(),
+                    score: 1.25f64
+                ),
+                format!("before|{message}|1.25|{formatted}||"),
+            ),
+            (
+                sbolt::context!(mode: 10u8),
+                format!("before|||{formatted}||"),
+            ),
+        ] {
+            assert_eq!(handle.render(&mut context)?.trim(), expected);
+        }
+    }
     Ok(())
 }
 
@@ -357,6 +427,7 @@ fn resolved_templates_preserve_kind_layouts_and_reborrow_contexts() -> RenderRes
             format!("[{count}]\n")
         );
     }
+    assert_eq!(handle.render(&mut sbolt::context!())?, "[]\n");
     Ok(())
 }
 
@@ -450,6 +521,12 @@ fn custom_view_uses_dynamic_name_and_explicit_isolated_context() -> RenderResult
     );
     let (output, _) = render("views/custom/properties", Some(Kind::KTEXT), &mut context)?;
     assert_eq!(output.trim(), "[<a), @b>|true|]\n|parent|");
+    let (output, _) = render(
+        "views/custom/card",
+        Some(Kind::KTEXT),
+        &mut sbolt::context!(),
+    )?;
+    assert_eq!(output.trim(), "[<>|true|]");
     Ok(())
 }
 

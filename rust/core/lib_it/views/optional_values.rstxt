@@ -1,0 +1,5 @@
+@{
+    let message = context.get_data::<String>("message");
+    let score = context.get_data::<f64>("score");
+}
+before|@(message)|@(score)|@(Some(format_args!("<em>{}</em>", 42)))|@(None::<String>)|@(None::<f64>)
