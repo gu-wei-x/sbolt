@@ -37,7 +37,10 @@ impl FromRequest for ResponseFormat {
         ready(match resolve_kind(preferences.as_deref()) {
             Ok(kind) => Ok(Self(Some(kind))),
             Err(RuntimeError::InvalidInput(..) | RuntimeError::NotFound(..)) => Ok(Self(None)),
-            Err(error) => Err(error::ErrorInternalServerError(error)),
+            Err(error) => {
+                eprintln!("Response format resolution failed: {error}");
+                Err(error::ErrorInternalServerError("Internal server error"))
+            }
         })
     }
 }
@@ -65,9 +68,12 @@ impl Responder for TemplateResult {
                     Kind::KTEXT => ContentType::plaintext(),
                 })
                 .body(output),
-            RenderResult::Err(e) => HttpResponse::InternalServerError()
-                .content_type(ContentType::plaintext())
-                .body(format!("Render Error: {}", e)),
+            RenderResult::Err(e) => {
+                eprintln!("Template render failed: {e}");
+                HttpResponse::InternalServerError()
+                    .content_type(ContentType::plaintext())
+                    .body("Internal server error")
+            }
         };
         response.headers_mut().insert(
             actix_web::http::header::VARY,

@@ -36,7 +36,10 @@ impl<'r> FromRequest<'r> for ResponseFormat {
             Err(RuntimeError::InvalidInput(..) | RuntimeError::NotFound(..)) => {
                 Outcome::Success(Self(None))
             }
-            Err(error) => Outcome::Error((Status::InternalServerError, error)),
+            Err(error) => {
+                eprintln!("Response format resolution failed: {error}");
+                Outcome::Error((Status::InternalServerError, error))
+            }
         }
     }
 }
@@ -66,9 +69,11 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for TemplateResult {
                 })
                 .ok(),
             RenderResult::Err(e) => {
-                let error_message = e.to_string();
+                eprintln!("Template render failed: {e}");
+                let error_message = "Internal server error";
                 Response::build()
                     .status(Status::InternalServerError)
+                    .header(ContentType::Plain)
                     .sized_body(error_message.len(), std::io::Cursor::new(error_message))
                     .ok()
             }
