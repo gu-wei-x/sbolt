@@ -14,13 +14,13 @@ impl Default for CompilerOptions {
         let options = CompilerOptions {
             extensions: HashMap::<String, template::Kind>::new(),
             mod_name: String::from(consts::TEMP_GENERATED_DIR),
-            need_optimization: false,
+            need_optimization: cfg!(not(debug_assertions)),
             out_dir: None,
             source_dirs: Vec::new(),
         };
 
         // add default extensions and their kinds
-        let options = options
+        options
             .with_extension(
                 consts::DEFAULT_HTML_TEMPLATE_FILE_EXTENSION,
                 template::Kind::KHTML,
@@ -32,15 +32,7 @@ impl Default for CompilerOptions {
             .with_extension(
                 consts::DEFAULT_TEXT_TEMPLATE_FILE_EXTENSION,
                 template::Kind::KTEXT,
-            );
-        options
-        // todo: uncomment to turn on in release build.
-        /*if cfg!(not(debug_assertions)) {
-            let options = options.with_optimization(true);
-            return options;
-        } else {
-            options
-        }*/
+            )
     }
 }
 
@@ -71,6 +63,7 @@ impl CompilerOptions {
     /// HTML assumes default whitespace/display rules, not CSS overrides.
     /// JSON compaction validates fully static templates and preserves value spelling.
     /// Protected content, dynamic JSON, and unknown insertion contexts are preserved.
+    /// Defaults to enabled when sbolt is compiled without debug assertions.
     pub fn with_optimization(mut self, need_optimization: bool) -> Self {
         self.need_optimization = need_optimization;
         self

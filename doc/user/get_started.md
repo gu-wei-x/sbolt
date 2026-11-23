@@ -208,14 +208,16 @@ hint. Section buffers retain their own static estimates.
 ## Compiler options
 
 `CompilerOptions::default()` registers the three extensions above, uses module
-name `generated_views`, and leaves whitespace optimization disabled.
+name `generated_views`, and sets whitespace optimization to
+`cfg!(not(debug_assertions))` in sbolt: normally disabled in debug builds and
+enabled in release builds.
 
 | Builder | Effect |
 | --- | --- |
 | `with_source_dir(path)` | Add a template source directory; may be called more than once |
 | `with_mod_name(name)` | Set the generated rendering module's Rust identifier |
 | `with_extension("html", Kind::KHTML)` | Add or replace an extension mapping, without a leading dot |
-| `with_optimization(true)` | Enable static-write merging and conservative whitespace compaction |
+| `with_optimization(bool)` | Override static-write merging and conservative whitespace compaction; defaults to `cfg!(not(debug_assertions))` in sbolt |
 | `with_out_dir(path)` | Override the generated output directory |
 
 Optimization can change whitespace where the compiler considers it safe under
