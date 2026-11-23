@@ -25,7 +25,7 @@ impl<'a> Block<'a> {
             true => {
                 // simple is content section.
                 let content = Block::new_content(span.clone());
-                let write = content.to_content_token_stream(context)?;
+                let write = content.to_content_token_stream(false, context)?;
                 let capacity_hint = context.capacity_hint();
                 quote! {
                     let section_name = #name;
@@ -38,7 +38,12 @@ impl<'a> Block<'a> {
                 }
             }
             false => {
-                let tsv = Self::content_blocks_to_token_stream(span.blocks(), Some(self), context)?;
+                let tsv = Self::content_blocks_to_token_stream(
+                    span.blocks(),
+                    Some(self),
+                    false,
+                    context,
+                )?;
                 let capacity_hint = context.capacity_hint();
                 quote! {
                     let section_name = #name;

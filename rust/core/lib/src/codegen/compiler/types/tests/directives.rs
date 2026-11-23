@@ -22,7 +22,7 @@ fn to_layout_token_stream_from_layout_block() {
     assert!(matches!(layout_block, Block::KLAYOUT(_)));
     let mut context = CodeGenContext::new(Kind::KHTML, &options);
     layout_block
-        .to_token_stream(Some(block), &mut context)
+        .to_token_stream(Some(block), false, &mut context)
         .unwrap();
 }
 
@@ -137,7 +137,7 @@ fn to_token_stream() -> result::Result<()> {
     let use_block = &root_span.blocks()[0];
     assert!(matches!(use_block, Block::KUSE(_)));
     let mut context = CodeGenContext::new(Kind::KHTML, &options);
-    let ts = &use_block.to_token_stream(Some(block), &mut context)?[0];
+    let ts = &use_block.to_token_stream(Some(block), false, &mut context)?[0];
     let expected = quote! {
        use test::test1;
     };

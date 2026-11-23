@@ -116,7 +116,7 @@ fn to_code_token_stream_with_block() -> result::Result<()> {
     let code_block = &root_span.blocks()[0];
     assert!(matches!(code_block, Block::KCODE(_)));
     let mut context = CodeGenContext::new(Kind::KHTML, &options);
-    let ts = block.to_token_stream(Some(block), &mut context)?;
+    let ts = block.to_token_stream(Some(block), false, &mut context)?;
     let ts = quote! { #(#ts)* };
     let expected = quote! {
         for i in 0..5 {
@@ -147,7 +147,7 @@ fn to_code_token_stream_with_complex_nested_block() -> result::Result<()> {
     let code_block = &root_span.blocks()[0];
     assert!(matches!(code_block, Block::KCODE(_)));
     let mut context = CodeGenContext::new(Kind::KHTML, &options);
-    let ts = block.to_token_stream(Some(block), &mut context)?;
+    let ts = block.to_token_stream(Some(block), false, &mut context)?;
     let ts = quote! { #(#ts)* };
     let expected = quote! {
         for i in 0..5 {
@@ -197,7 +197,7 @@ fn to_inline_code_token_stream_from_content_block() -> result::Result<()> {
     assert!(matches!(code_block, Block::KCODE(_)));
 
     let mut context = CodeGenContext::new(Kind::KHTML, &options);
-    let ts = code_block.to_token_stream(Some(&block), &mut context)?;
+    let ts = code_block.to_token_stream(Some(&block), false, &mut context)?;
     let expected = quote! {
        testcode;
        sbolt::types::WriteToRef(&(name))

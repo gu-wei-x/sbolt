@@ -1,4 +1,7 @@
-pub(in crate::codegen) fn compact_html_whitespace(source: &str) -> String {
+pub(in crate::codegen) fn compact_html_whitespace(
+    source: &str,
+    at_template_end: bool,
+) -> (String, bool) {
     let mut output = String::with_capacity(source.len());
     let mut remaining = source;
     let mut previous_is_block = None;
@@ -18,7 +21,7 @@ pub(in crate::codegen) fn compact_html_whitespace(source: &str) -> String {
         let Some((length, tag, is_block)) = compact_tag(tag_source) else {
             // Unsupported syntax and raw-text containers end the known static region.
             output.push_str(remaining);
-            return output;
+            return (output, false);
         };
         match previous_is_block {
             Some(previous) if text.bytes().all(is_space) => {
@@ -32,8 +35,10 @@ pub(in crate::codegen) fn compact_html_whitespace(source: &str) -> String {
         remaining = &tag_source[length..];
         previous_is_block = Some(is_block);
     }
-    output.push_str(remaining);
-    output
+    if !at_template_end || previous_is_block != Some(true) || !remaining.bytes().all(is_space) {
+        output.push_str(remaining);
+    }
+    (output, true)
 }
 
 fn is_space(byte: u8) -> bool {
@@ -100,6 +105,35 @@ fn is_block_tag(name: &str) -> bool {
     .any(|block| name.eq_ignore_ascii_case(block))
 }
 
+fn is_text_element(name: &str) -> bool {
+    [
+        "title", "textarea", "style", "xmp", "iframe", "noembed", "noframes",
+    ]
+    .iter()
+    .any(|element| name.eq_ignore_ascii_case(element))
+}
+
+fn text_element_end(source: &str, name: &str) -> Option<usize> {
+    let name_end = 2 + name.len();
+    for (start, _) in source.match_indices("</") {
+        let candidate = &source[start..];
+        if !candidate
+            .get(2..name_end)
+            .is_some_and(|closing_name| closing_name.eq_ignore_ascii_case(name))
+        {
+            continue;
+        }
+        let bytes = candidate.as_bytes();
+        let boundary = *bytes.get(name_end)?;
+        if !is_space(boundary) && !matches!(boundary, b'>' | b'/') {
+            continue;
+        }
+        let end = skip_space(bytes, name_end);
+        return (bytes.get(end) == Some(&b'>')).then_some(start + end + 1);
+    }
+    None
+}
+
 fn compact_tag(source: &str) -> Option<(usize, String, bool)> {
     let bytes = source.as_bytes();
     let closing = bytes.get(1) == Some(&b'/');
@@ -116,18 +150,15 @@ fn compact_tag(source: &str) -> Option<(usize, String, bool)> {
     }
     let name = &source[name_start..index];
     let is_block = is_block_tag(name);
+    let text_element = is_text_element(name);
+    if text_element && closing {
+        return None;
+    }
     if [
         "pre",
         "listing",
         "dialog",
-        "textarea",
         "script",
-        "style",
-        "title",
-        "xmp",
-        "iframe",
-        "noembed",
-        "noframes",
         "plaintext",
         "noscript",
         "svg",
@@ -145,10 +176,18 @@ fn compact_tag(source: &str) -> Option<(usize, String, bool)> {
         index = skip_space(bytes, index);
         match *bytes.get(index)? {
             b'>' => {
+                if text_element {
+                    // RCDATA and raw text are opaque, not nested HTML.
+                    let length = index + 1 + text_element_end(&source[index + 1..], name)?;
+                    return Some((length, source[..length].to_string(), is_block));
+                }
                 output.push('>');
                 return Some((index + 1, output, is_block));
             }
             b'/' if !closing && bytes.get(index + 1) == Some(&b'>') => {
+                if text_element {
+                    return None;
+                }
                 if unquoted_value {
                     // Without this separator, '/' becomes part of the unquoted value.
                     output.push(' ');

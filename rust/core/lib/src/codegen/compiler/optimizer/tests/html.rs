@@ -65,6 +65,74 @@ fn optimize_removes_formatting_between_block_tags() {
 }
 
 #[test]
+fn optimize_compacts_whitespace_around_complete_titles() {
+    let options = CompilerOptions::default().with_optimization(true);
+    let optimizer = optimizer::create_optimizer(crate::types::template::Kind::KHTML, &options);
+    for (source, expected) in [
+        (
+            "<html><head>\n        <title>Welcome</title>\n    </head>\n    <body>\n        <div>",
+            "<html><head><title>Welcome</title></head><body><div>",
+        ),
+        (
+            "<head>\n<TiTlE data-name='a > b'> a  b\n&lt; <span> x </span></tItLe \t>\n</head>\n<body>\n</body>",
+            "<head><TiTlE data-name='a > b'> a  b\n&lt; <span> x </span></tItLe \t></head><body></body>",
+        ),
+        (
+            "<head>\n<title>a </title-like>\n b</title>\n</head>",
+            "<head><title>a </title-like>\n b</title></head>",
+        ),
+        (
+            "<span>one</span>\n<title> a  b </title>\n<span>two</span>",
+            "<span>one</span> <title> a  b </title> <span>two</span>",
+        ),
+    ] {
+        assert_eq!(optimizer.optimize(source).unwrap(), expected);
+    }
+}
+
+#[test]
+fn optimize_resumes_after_complete_rcdata_and_raw_text_elements() {
+    let options = CompilerOptions::default().with_optimization(true);
+    let optimizer = optimizer::create_optimizer(crate::types::template::Kind::KHTML, &options);
+    for name in [
+        "title", "textarea", "style", "xmp", "iframe", "noembed", "noframes",
+    ] {
+        let element = format!(
+            "<{name} data-label='a > b'> a  b\n&lt; <span> x </span></{} \t>",
+            name.to_ascii_uppercase()
+        );
+        let source = format!("<div>\n{element}\n</div>\n<p>\n</p>");
+        let expected = format!("<div>{element}</div><p></p>");
+        assert_eq!(optimizer.optimize(&source).unwrap(), expected, "{name}");
+
+        for element in [
+            format!("<{name}> a  b\n<div>literal content</div>"),
+            format!("<{name}> a  b</{name} extra><div>\n</div></{name}>"),
+            format!("<{name}/>\n<div> a  b </div>"),
+        ] {
+            let source = format!("<div>\n{element}");
+            assert_eq!(optimizer.optimize(&source).unwrap(), source, "{name}");
+        }
+    }
+}
+
+#[test]
+fn optimize_preserves_incomplete_or_unsupported_titles() {
+    let options = CompilerOptions::default().with_optimization(true);
+    let optimizer = optimizer::create_optimizer(crate::types::template::Kind::KHTML, &options);
+    for source in [
+        "<head>\n<title> a  b\n<div>literal content</div>",
+        "<head>\n<title> a  b</title",
+        "<head>\n<title> a  b</title extra><div>\n</div></title>",
+        "<head>\n<title> a  b</title/><div>\n</div></title>",
+        "<head>\n<title/>\n<div> a  b </div>",
+        "<head>\n<title hidden> a  b </title>\n<div>\n</div>",
+    ] {
+        assert_eq!(optimizer.optimize(source).unwrap(), source);
+    }
+}
+
+#[test]
 fn optimize_keeps_inline_word_separators() {
     let options = CompilerOptions::default().with_optimization(true);
     let optimizer = optimizer::create_optimizer(crate::types::template::Kind::KHTML, &options);
@@ -190,6 +258,7 @@ fn optimize_preserves_protected_and_unsupported_regions() {
         "<pre><span   class='x'> a  b\n</span></pre>",
         "<TEXTAREA><div   class='x'> a  b </div></TEXTAREA>",
         "<script>const text = '<div   class=\"x\">';</script>",
+        "<script><!--<script></script>\n<div> a  b </div></script>\n<div   id='x'>\n</div>",
         "<style>div::before { content: '<div   class=\"x\">'; }</style>",
         "<svg><foreignObject><div   class='x'></div></foreignObject></svg>",
         "<math><mtext><span   class='x'> a  b </span></mtext></math>",

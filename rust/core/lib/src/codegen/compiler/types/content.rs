@@ -29,6 +29,13 @@ impl<'a> Block<'a> {
         }
     }
 
+    pub(in crate::codegen::compiler::types) fn static_html_source(&self) -> String {
+        let mut tokens = Vec::new();
+        self.collect_static_tokens(&mut tokens);
+        let source = self.span().source();
+        tokens.iter().map(|token| &source[token.range()]).collect()
+    }
+
     pub(in crate::codegen::compiler::types) fn remap_static_error(
         &self,
         error: error::CompileError,
@@ -99,6 +106,7 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn content_blocks_to_token_stream<'b>(
         blocks: impl IntoIterator<Item = &'b Block<'a>>,
         from: Option<&Block<'a>>,
+        default_render_known: bool,
         context: &mut CodeGenContext<'_>,
     ) -> result::Result<Vec<TokenStream>>
     where
@@ -115,15 +123,21 @@ impl<'a> Block<'a> {
                     continue;
                 }
                 if writes > 0 {
-                    result.push(Self::static_write(&pending, writes, context)?);
+                    result.push(Self::static_write(&pending, writes, false, context)?);
                     pending.clear();
                     writes = 0;
                 }
             }
-            result.extend(block.to_token_stream(from, context)?);
+            result.extend(block.to_token_stream(from, default_render_known, context)?);
         }
         if writes > 0 {
-            result.push(Self::static_write(&pending, writes, context)?);
+            let at_template_end = matches!(from, Some(Block::KROOT(_)));
+            result.push(Self::static_write(
+                &pending,
+                writes,
+                at_template_end,
+                context,
+            )?);
         }
         Ok(result)
     }
@@ -131,16 +145,20 @@ impl<'a> Block<'a> {
     fn static_write(
         content: &str,
         writes: usize,
+        at_template_end: bool,
         context: &mut CodeGenContext<'_>,
     ) -> result::Result<TokenStream> {
-        Ok(match context.static_content(content, writes)? {
-            Some(content) => quote! { writer.write(#content); },
-            None => TokenStream::new(),
-        })
+        Ok(
+            match context.static_content(content, writes, at_template_end)? {
+                Some(content) => quote! { writer.write(#content); },
+                None => TokenStream::new(),
+            },
+        )
     }
 
     pub(in crate::codegen::compiler::types) fn to_content_token_stream(
         &self,
+        default_render_known: bool,
         context: &mut CodeGenContext<'_>,
     ) -> result::Result<TokenStream> {
         if !matches!(self, Block::KCONTENT(_)) {
@@ -152,10 +170,14 @@ impl<'a> Block<'a> {
 
         let content_span = self.span();
         if content_span.is_simple() {
-            Self::static_write(&content_span.content(), 1, context)
+            Self::static_write(&content_span.content(), 1, false, context)
         } else {
-            let result =
-                Self::content_blocks_to_token_stream(content_span.blocks(), Some(self), context)?;
+            let result = Self::content_blocks_to_token_stream(
+                content_span.blocks(),
+                Some(self),
+                default_render_known,
+                context,
+            )?;
             Ok(quote! {
                 #(#result)*
             })
@@ -176,7 +198,7 @@ impl<'a> Block<'a> {
 
         let content_span = self.span();
         if content_span.is_simple() {
-            Self::static_write(&content_span.content(), 1, context)
+            Self::static_write(&content_span.content(), 1, false, context)
         } else {
             Err(error::CompileError::from_codegen(
                 &self,

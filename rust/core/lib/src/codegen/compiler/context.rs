@@ -9,6 +9,7 @@ pub(in crate::codegen::compiler) struct CodeGenContext<'a> {
     template_kind: template::Kind,
     options: &'a CompilerOptions,
     static_context_known: bool,
+    html_interpolations_safe: bool,
     stats: Rc<RefCell<StaticOutputStats>>,
     capacity_hint: usize,
 }
@@ -22,6 +23,7 @@ impl<'a> CodeGenContext<'a> {
             template_kind: template_kind,
             options: options,
             static_context_known: true,
+            html_interpolations_safe: true,
             stats: Rc::default(),
             capacity_hint: 0,
         }
@@ -43,6 +45,17 @@ impl<'a> CodeGenContext<'a> {
         self.static_context_known = false;
     }
 
+    pub(in crate::codegen::compiler) fn prepare_html_interpolations(&mut self, source: &str) {
+        self.html_interpolations_safe =
+            crate::codegen::parser::html::compact_html_whitespace(source, false).1;
+    }
+
+    pub(in crate::codegen::compiler) fn visit_interpolation(&mut self) {
+        if self.template_kind != template::Kind::KHTML || !self.html_interpolations_safe {
+            self.invalidate_static_context();
+        }
+    }
+
     pub(in crate::codegen::compiler) fn prepare_root(&mut self, fully_static: bool) {
         if self.template_kind == template::Kind::KJSON && !fully_static {
             self.invalidate_static_context();
@@ -54,6 +67,7 @@ impl<'a> CodeGenContext<'a> {
             template_kind: self.template_kind,
             options: self.options,
             static_context_known: false,
+            html_interpolations_safe: false,
             stats: Rc::clone(&self.stats),
             capacity_hint: 0,
         }
@@ -63,10 +77,17 @@ impl<'a> CodeGenContext<'a> {
         &mut self,
         content: &str,
         input_writes: usize,
+        at_template_end: bool,
     ) -> result::Result<Option<String>> {
         let optimize = self.optimize_static_output();
         let unknown_context = optimize && !self.static_context_known;
-        let output = if optimize && !unknown_context {
+        let output = if optimize && !unknown_context && self.template_kind == template::Kind::KHTML
+        {
+            let (output, context_known) =
+                crate::codegen::parser::html::compact_html_whitespace(content, at_template_end);
+            self.static_context_known = context_known;
+            output
+        } else if optimize && !unknown_context {
             optimizer::create_optimizer(self.template_kind, self.options).optimize(content)?
         } else {
             content.into()

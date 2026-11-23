@@ -91,19 +91,42 @@ The pass:
   `<span>Hello</span>\n  <span>world</span>` becomes
   `<span>Hello</span> <span>world</span>`.
 - Preserves non-whitespace text and leading/trailing whitespace at static-run
-  boundaries, where a dynamic continuation might follow.
+  boundaries, where a dynamic continuation might follow. At the end of a
+  template in a known HTML context, removes trailing HTML whitespace after a
+  known block boundary. Inline, protected, and unknown-context endings retain
+  their whitespace.
+- Preserves complete static RCDATA and raw-text elements byte-for-byte while
+  compacting surrounding whitespace. Shared handling covers `title`, `textarea`,
+  `style`, `xmp`, `iframe`, `noembed`, and `noframes`; their contents, entities,
+  and tag spelling remain unchanged. Incomplete or unsupported element syntax
+  still ends compaction. Scripts remain barriers because their escaped and
+  double-escaped parsing states require different handling.
 - Preserves incomplete tags and the remainder of a static run once it reaches
   unsupported syntax, comments, or protected containers such as `<pre>`,
-  `<listing>`, `<dialog>`, `<script>`, `<style>`, SVG, and MathML. An element
+  `<listing>`, `<dialog>`, `<script>`, SVG, and MathML. An element
   with a `hidden` attribute also ends compaction, preserving the preceding
   whitespace and remaining static output so invisible elements cannot join
   surrounding words. The ordinary `<!DOCTYPE html>`
   declaration is recognized case-insensitively and preserved.
-- Treats dynamic expressions, arbitrary Rust code, section creation, and
-  `@render` as context barriers. Later static output remains unmodified, though
-  adjacent static writes can still be merged.
-- Starts section buffers and templates with a layout in an unknown insertion
-  context.
+- Continues compacting static HTML after expressions in a known HTML text
+  context, entirely at compile time. Leading and trailing whitespace at each
+  static-run boundary is still preserved. The compiler scans the template's
+  static markup before allowing this continuation. Unsupported or protected
+  regions, including a closing `</pre>` whose opener may be dynamic, prevent
+  compaction after expressions in that template. There are no runtime context
+  flags or alternate literals.
+- Treats arbitrary Rust code, expressions accessing `writer`, section creation,
+  child views, and unresolved `@render` contexts as barriers. Protected or
+  incomplete static HTML also prevents compaction across subsequent expressions.
+  Later static output remains unmodified, though adjacent static writes can
+  still be merged.
+- Resolves HTML layouts at compile time using the same paths, fallback order,
+  and output kind as runtime resolution. A static layout with exactly one default
+  `@render` in normal HTML text context allows compaction of its child and its own
+  suffix, including safe terminal whitespace removal. Every ancestor layout must
+  satisfy the same check. Protected, dynamic, missing, or cyclic layouts retain
+  the conservative behavior; missing layouts still produce runtime errors.
+  Section buffers and other layout insertion contexts remain unknown.
 - Compacts fully static standalone JSON templates by removing only the four JSON
   whitespace characters (space, tab, CR, and LF) outside strings. It validates
   the complete JSON value, including object/array structure, numbers, literals,
@@ -128,6 +151,16 @@ The scanner assumes a standalone HTML template starts in normal HTML text
 context. If rendered HTML is embedded into another language or a raw-text
 container by application code, disable this optimization for that compilation.
 Code generation cannot infer arbitrary callers' insertion contexts.
+
+Dynamic raw HTML must preserve the surrounding parsing context unless protected
+boundaries are visible in the static template. Complete raw fragments such as
+`<pre> a  b </pre>` preserve their own contents and allow compaction afterwards.
+An opening `<pre>` returned by one expression and a closing `</pre>` returned by
+another cannot be detected at compile time; disable optimization for such
+templates. This contract also applies to custom values that bypass HTML escaping.
+Default-section content inserted into a statically analyzed HTML layout must
+likewise preserve the surrounding parsing context. If application code supplies
+an unclosed raw-text or protected element as a default section, disable optimization.
 
 Whitespace reduction uses the normal HTML whitespace and default element-display
 contract. It does not evaluate CSS. Disable optimization if application styles
@@ -186,7 +219,8 @@ The [HTML optimizer](../../rust/core/lib/src/codegen/compiler/optimizer/html.rs)
 previously parsed and reserialized each fragment independently. The
 [code-generation context](../../rust/core/lib/src/codegen/compiler/context.rs)
 now tracks whether HTML context is known and shares static-output measurements
-with section contexts.
+with section contexts. Layout and default-render safety decisions are passed
+directly into code generation rather than stored in that mutable context.
 
 Consider this template:
 
