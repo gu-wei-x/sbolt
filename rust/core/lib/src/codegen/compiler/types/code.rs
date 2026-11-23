@@ -1,8 +1,17 @@
 use crate::codegen::compiler::context::CodeGenContext;
 use crate::codegen::types::Block;
 use crate::types::{error, result, template::Kind};
-use proc_macro2::TokenStream;
+use proc_macro2::{TokenStream, TokenTree};
 use quote::quote;
+use syn::ext::IdentExt;
+
+fn references_writer(tokens: TokenStream) -> bool {
+    tokens.into_iter().any(|token| match token {
+        TokenTree::Ident(ident) => ident.unraw() == "writer",
+        TokenTree::Group(group) => references_writer(group.stream()),
+        _ => false,
+    })
+}
 
 impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_code_token_stream(
@@ -34,7 +43,7 @@ impl<'a> Block<'a> {
                     let raw_content = block.content();
                     code_content.push_str(&raw_content);
                 } else {
-                    for ts in block.to_token_stream(from, context)? {
+                    for ts in block.to_token_stream(from, false, context)? {
                         code_content.push_str(&ts.to_string());
                     }
                 }
@@ -61,18 +70,24 @@ impl<'a> Block<'a> {
         if code_span.is_simple() {
             let raw_content = code_span.content();
             match raw_content.parse::<TokenStream>() {
-                Ok(ts) => Ok(match context.template_kind() {
-                    Kind::KHTML => quote! {
-                        sbolt::types::WriteToRef(&(#ts))
-                            .write_to(sbolt::types::HtmlEscapingWriter(&mut writer));
-                    },
-                    Kind::KJSON => quote! {
-                        sbolt::types::write_json(&(#ts), &mut writer)?;
-                    },
-                    Kind::KTEXT => quote! {
-                        sbolt::types::WriteToRef(&(#ts)).write_to(&mut writer);
-                    },
-                }),
+                Ok(ts) => {
+                    if references_writer(ts.clone()) {
+                        context.invalidate_static_context();
+                    }
+                    context.visit_interpolation();
+                    Ok(match context.template_kind() {
+                        Kind::KHTML => quote! {
+                            sbolt::types::WriteToRef(&(#ts))
+                                .write_to(sbolt::types::HtmlEscapingWriter(&mut writer));
+                        },
+                        Kind::KJSON => quote! {
+                            sbolt::types::write_json(&(#ts), &mut writer)?;
+                        },
+                        Kind::KTEXT => quote! {
+                            sbolt::types::WriteToRef(&(#ts)).write_to(&mut writer);
+                        },
+                    })
+                }
                 Err(err) => Err(error::CompileError::from_lex(&self, err)),
             }
         } else {

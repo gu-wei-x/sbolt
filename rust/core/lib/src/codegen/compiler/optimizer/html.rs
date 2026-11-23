@@ -19,7 +19,7 @@ impl<'a> Optimizer for HtmlOptimizer<'a> {
     fn optimize(&self, source: &str) -> result::Result<String> {
         Ok(match self.compiler_options.need_optimization() {
             false => source.into(),
-            true => crate::codegen::parser::html::compact_html_whitespace(source),
+            true => crate::codegen::parser::html::compact_html_whitespace(source, false).0,
         })
     }
 }

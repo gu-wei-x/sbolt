@@ -29,10 +29,34 @@ fn default_interpolation_borrows_the_whole_expression() -> result::Result<()> {
     ] {
         let template = Template::from(source, None, kind, &options)?;
         let mut context = CodeGenContext::new(kind, &options);
-        let tokens = template
-            .block()
-            .to_token_stream(Some(template.block()), &mut context)?;
+        let tokens =
+            template
+                .block()
+                .to_token_stream(Some(template.block()), false, &mut context)?;
         assert_eq!(quote! { #(#tokens)* }.to_string(), expected.to_string());
+    }
+    Ok(())
+}
+
+#[test]
+fn default_render_requires_a_known_static_html_context() -> result::Result<()> {
+    let options = CompilerOptions::default().with_optimization(true);
+    for (source, expected) in [
+        ("<main>@render</main>", true),
+        ("<div><title>Page</title>@render</div>", true),
+        ("<pre>@render</pre>", false),
+        ("<div title='@render'></div>", false),
+        ("<textarea>@render</textarea>", false),
+        ("<main>@render</pre></main>", false),
+        ("<main>@render@render</main>", false),
+        ("<main>@(value)@render</main>", false),
+    ] {
+        let template = Template::from(source, None, Kind::KHTML, &options)?;
+        assert_eq!(
+            crate::codegen::compiler::layout::default_render_context_known(template.block()),
+            expected,
+            "{source}"
+        );
     }
     Ok(())
 }
@@ -45,7 +69,7 @@ fn layout_content_preserves_unknown_insertion_context() -> result::Result<()> {
     let mut context = CodeGenContext::new(Kind::KHTML, &options);
     let tokens = template
         .block()
-        .generate_render_token_stream(&mut context)?;
+        .generate_render_token_stream(false, false, &mut context)?;
     let write = quote! { writer.write("<div   id='x'>text</div>"); };
     assert!(tokens.to_string().contains(&write.to_string()));
     assert_eq!(context.static_output_stats().unknown_context_writes(), 1);
@@ -61,7 +85,7 @@ fn to_token_stream_from_empty() {
     let options = CompilerOptions::default();
     let mut context = CodeGenContext::new(Kind::KHTML, &options);
     root_block
-        .to_token_stream(Some(&root_block), &mut context)
+        .to_token_stream(Some(&root_block), false, &mut context)
         .expect("Root block is empty, should panic");
 }
 
@@ -79,7 +103,7 @@ fn generate_render_token_stream_from_non_root() {
     assert_eq!(root_span.blocks().len(), 1);
     let mut context = CodeGenContext::new(Kind::KHTML, &options);
     root_span.blocks()[0]
-        .generate_render_token_stream(&mut context)
+        .generate_render_token_stream(false, false, &mut context)
         .expect("Expect Root block here");
 }
 
@@ -92,7 +116,7 @@ fn to_token_stream_from_function() {
     let options = CompilerOptions::default();
     let mut context = CodeGenContext::new(Kind::KHTML, &options);
     root_block
-        .to_token_stream(Some(&root_block), &mut context)
+        .to_token_stream(Some(&root_block), false, &mut context)
         .expect("Not implemented yet, should panic");
 }
 
@@ -107,6 +131,6 @@ fn to_token_stream_from_comments() -> result::Result<()> {
 
     let options = CompilerOptions::default();
     let mut context = CodeGenContext::new(Kind::KHTML, &options);
-    block.to_token_stream(Some(&block), &mut context)?;
+    block.to_token_stream(Some(&block), false, &mut context)?;
     Ok(())
 }

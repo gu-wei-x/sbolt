@@ -10,6 +10,7 @@ impl<'a> Block<'a> {
     pub(in crate::codegen::compiler::types) fn to_token_stream(
         &self,
         from: Option<&Block<'a>>,
+        default_render_known: bool,
         context: &mut CodeGenContext<'_>,
     ) -> result::Result<Vec<TokenStream>> {
         let mut result = vec![];
@@ -23,12 +24,11 @@ impl<'a> Block<'a> {
                 // ignore the comment block
             }
             Block::KCONTENT(_) => {
-                let ts = self.to_content_token_stream(context)?;
+                let ts = self.to_content_token_stream(default_render_known, context)?;
                 result.push(ts);
             }
             Block::KFUNCTIONS(_) => todo!(),
             Block::KINLINEDCODE(_) => {
-                context.invalidate_static_context();
                 let ts = self.to_inline_code_token_stream(context)?;
                 result.push(ts);
             }
@@ -39,6 +39,12 @@ impl<'a> Block<'a> {
             Block::KROOT(span) => {
                 let fully_static = span.blocks().iter().all(Self::is_static_output);
                 context.prepare_root(fully_static);
+                if !fully_static
+                    && context.optimize_static_output()
+                    && context.template_kind() == crate::types::template::Kind::KHTML
+                {
+                    context.prepare_html_interpolations(&self.static_html_source());
+                }
                 // filter out layout and use was called before this.
                 if span.blocks().is_empty() {
                     // todo: write the pure content
@@ -50,19 +56,26 @@ impl<'a> Block<'a> {
                     let blocks = span.blocks().iter().filter(|b| {
                         !matches!(b, Block::KLAYOUT(_) | Block::KMODEL(_) | Block::KUSE(_))
                     });
-                    let tokens = Self::content_blocks_to_token_stream(blocks, from, context)
-                        .map_err(|error| {
-                            if fully_static {
-                                self.remap_static_error(error)
-                            } else {
-                                error
-                            }
-                        })?;
+                    let tokens = Self::content_blocks_to_token_stream(
+                        blocks,
+                        from,
+                        default_render_known,
+                        context,
+                    )
+                    .map_err(|error| {
+                        if fully_static {
+                            self.remap_static_error(error)
+                        } else {
+                            error
+                        }
+                    })?;
                     result.extend(tokens);
                 }
             }
-            Block::KRENDER(_) => {
-                context.invalidate_static_context();
+            Block::KRENDER(span) => {
+                if !default_render_known || !span.blocks().is_empty() {
+                    context.invalidate_static_context();
+                }
                 let ts = self.to_render_token_stream()?;
                 result.push(ts);
             }
@@ -122,6 +135,8 @@ impl<'a> Block<'a> {
 
     pub(in crate::codegen::compiler::types) fn generate_render_token_stream(
         &self,
+        layout_known: bool,
+        default_render_known: bool,
         context: &mut CodeGenContext<'_>,
     ) -> result::Result<TokenStream> {
         if !matches!(self, Block::KROOT(_)) {
@@ -157,10 +172,10 @@ impl<'a> Block<'a> {
             .blocks()
             .iter()
             .any(|b| matches!(b, Block::KLAYOUT(_)));
-        if has_layout {
+        if has_layout && !layout_known {
             context.invalidate_static_context();
         }
-        let ts = self.to_token_stream(Some(self), context)?;
+        let ts = self.to_token_stream(Some(self), default_render_known, context)?;
         let capacity_hint = context.capacity_hint();
         let get_model = match model {
             Some(declaration) => {

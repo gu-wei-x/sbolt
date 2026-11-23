@@ -48,7 +48,26 @@ impl<'a> Template<'a> {
         };
         // a view must have render method.
         let mut context = CodeGenContext::new(self.kind(), compiler_options);
-        let render_content = self.block().generate_render_token_stream(&mut context)?;
+        let (layout_known, default_render_known) = if self.kind()
+            == crate::types::template::Kind::KHTML
+            && compiler_options.need_optimization()
+        {
+            let layout_known = crate::codegen::compiler::layout::layout_context_known(
+                self.block(),
+                full_view_name,
+                compiler_options,
+            )?;
+            let default_render_known = layout_known
+                && crate::codegen::compiler::layout::default_render_context_known(self.block());
+            (layout_known, default_render_known)
+        } else {
+            (false, false)
+        };
+        let render_content = self.block().generate_render_token_stream(
+            layout_known,
+            default_render_known,
+            &mut context,
+        )?;
         let code = quote! {
             use #template_type_ts;
             use sbolt::types::Template as _;

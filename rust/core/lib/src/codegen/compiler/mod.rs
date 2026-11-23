@@ -2,6 +2,7 @@ mod compiler;
 mod context;
 mod error;
 mod fsutil;
+mod layout;
 mod module;
 mod name;
 mod optimizer;

@@ -1,0 +1,2 @@
+@layout pre_layout;
+<section>@render</section>

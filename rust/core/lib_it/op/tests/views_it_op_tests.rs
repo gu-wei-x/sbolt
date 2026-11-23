@@ -9,9 +9,27 @@ use lib_it_op_views::resolve as resolve_custom_view;
 mod view_tests;
 
 #[test]
+fn static_html_compaction_renders_exact_output() -> result::RenderResult<()> {
+    let model = view_tests::TypedModel {
+        name: "<pre>".into(),
+        count: 42,
+    };
+    let (output, _) = lib_it_op_views::render(
+        "views/html_compaction",
+        Some(Kind::KHTML),
+        &mut sbolt::context!(model),
+    )?;
+    assert_eq!(
+        output,
+        "<html><head><title>Welcome</title></head><body><div>&lt;pre&gt;|42</div></body></html>"
+    );
+    Ok(())
+}
+
+#[test]
 fn render_selects_kind_and_matching_layout() -> result::RenderResult<()> {
     for (kind, expected) in [
-        (Kind::KHTML, "<main><p>html</p>\n</main>"),
+        (Kind::KHTML, "<main><p>html</p></main>"),
         (Kind::KJSON, "{\"wrapped\":{\"format\":\"json\"}\n}"),
         (Kind::KTEXT, "text-layout:text value"),
     ] {
@@ -37,7 +55,7 @@ fn single_dynamic_sections_preserve_execution() -> result::RenderResult<()> {
 #[test]
 fn template_modules_do_not_collide_with_sibling_directories() -> result::RenderResult<()> {
     for (path, expected) in [
-        ("views/formats/page", "<main><p>html</p>\n</main>"),
+        ("views/formats/page", "<main><p>html</p></main>"),
         (
             "views/formats/page_html/child",
             "<p>nested HTML directory</p>",
@@ -59,13 +77,43 @@ fn render_defaults_to_html_without_cross_kind_fallback() -> result::RenderResult
     let (output, kind) =
         lib_it_op_views::render("views/formats/page", None, &mut sbolt::context!())?;
     assert_eq!(kind, Kind::KHTML);
-    assert_eq!(output.trim(), "<main><p>html</p>\n</main>");
+    assert_eq!(output.trim(), "<main><p>html</p></main>");
     let error =
         lib_it_op_views::render("views/json_static", None, &mut sbolt::context!()).unwrap_err();
     assert!(matches!(
         error,
         sbolt::types::error::RuntimeError::NotFound(..)
     ));
+    Ok(())
+}
+
+#[test]
+fn html_layouts_compact_only_known_insertion_contexts() -> result::RenderResult<()> {
+    for (path, default_section, expected) in [
+        ("views/formats/page", None, "<main><p>html</p></main>"),
+        (
+            "views/formats/case_sensitive/page",
+            None,
+            "<main><section><p>html</p></section></main>",
+        ),
+        (
+            "views/formats/pre_layout",
+            Some("<p>html</p>\n"),
+            "<pre><p>html</p>\n</pre>\n",
+        ),
+        (
+            "views/formats/inside_pre_page",
+            None,
+            "<pre><section><p>html</p>\n</section>\n</pre>\n",
+        ),
+    ] {
+        let mut context = sbolt::context!();
+        if let Some(content) = default_section {
+            sbolt::types::Context::set_default_section(&mut context, content.to_string());
+        }
+        let (output, _) = lib_it_op_views::render(path, Some(Kind::KHTML), &mut context)?;
+        assert_eq!(output, expected, "{path}");
+    }
     Ok(())
 }
 
@@ -157,13 +205,8 @@ fn static_compaction_respects_sections_and_loops() -> result::RenderResult<()> {
 #[test]
 fn default_view() -> result::RenderResult<()> {
     let (result, _) = lib_it_op_views::render("views/default", None, &mut sbolt::context!())?;
-    let expected = r#"<html><head>
-        <title>Default</title>
-    </head>
-    <body>
-        <div>Hello Default!</div>
-    </body>
-</html>"#;
+    let expected =
+        "<html><head><title>Default</title></head><body><div>Hello Default!</div></body></html>";
     assert_eq!(result.trim(), expected);
 
     Ok(())

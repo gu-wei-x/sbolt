@@ -221,6 +221,11 @@ reused, including values retrieved from context. Child views and rendered sectio
 are already-rendered output and are inserted directly, without escaping their
 markup a second time. Expressions inside HTML child views and sections are escaped.
 
+With template optimization enabled, raw expressions must preserve the surrounding
+HTML parsing context unless protected boundaries are visible in static markup.
+For example, return a complete `<pre>...</pre>` fragment rather than opening and
+closing it in separate dynamic expressions, or disable optimization for that template.
+
 This changes the previous raw-by-default HTML behavior. When migrating templates,
 remove manual HTML escaping from ordinary expressions to avoid double escaping.
 Replace intentionally interpolated trusted markup with `sbolt::utils::raw(...)`, or

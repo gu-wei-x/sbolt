@@ -17,7 +17,7 @@ fn generate_content(
     let template = Template::from(source, None, kind, &options)?;
     let mut context = CodeGenContext::new(kind, &options);
     let root = template.block();
-    let tokens = root.to_token_stream(Some(root), &mut context)?;
+    let tokens = root.to_token_stream(Some(root), false, &mut context)?;
     Ok((quote! { #(#tokens)* }, context.static_output_stats()))
 }
 
@@ -87,16 +87,118 @@ fn block_whitespace_reduction_saves_embedded_literal_bytes() -> result::Result<(
 }
 
 #[test]
-fn dynamic_boundaries_preserve_whitespace() -> result::Result<()> {
-    let source = "<span>hello</span>\n @value<div>\n  </div>";
+fn template_end_removes_only_safe_block_boundary_whitespace() -> result::Result<()> {
+    for (source, expected) in [
+        ("<div>\n</div>\r\n \t", "<div></div>"),
+        ("<span>one</span>\n", "<span>one</span>\n"),
+        ("<div>one</div> tail\n", "<div>one</div> tail\n"),
+        ("<pre> one\n two </pre>\n", "<pre> one\n two </pre>\n"),
+    ] {
+        let (tokens, stats) = generate_content(source, Kind::KHTML, true)?;
+        assert_eq!(
+            tokens.to_string(),
+            quote! { writer.write(#expected); }.to_string(),
+            "{source:?}"
+        );
+        assert_eq!(stats.output_bytes(), expected.len());
+
+        let (tokens, _) = generate_content(source, Kind::KHTML, false)?;
+        assert_eq!(
+            tokens.to_string(),
+            quote! { writer.write(#source); }.to_string()
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn block_boundary_whitespace_before_dynamic_values_is_preserved() -> result::Result<()> {
+    let (tokens, _) = generate_content("<div></div>\n@(value)", Kind::KHTML, true)?;
+    let expected = quote! {
+        writer.write("<div></div>\n");
+        sbolt::types::WriteToRef(&(value))
+            .write_to(sbolt::types::HtmlEscapingWriter(&mut writer));
+    };
+    assert_eq!(tokens.to_string(), expected.to_string());
+    Ok(())
+}
+
+#[test]
+fn dynamic_boundaries_preserve_edge_whitespace_and_compact_static_interiors() -> result::Result<()>
+{
+    let source = "<span>hello</span>\n @value<div>\n  </div>\n";
     let (tokens, _) = generate_content(source, Kind::KHTML, true)?;
     let expected = quote! {
         writer.write("<span>hello</span>\n ");
         sbolt::types::WriteToRef(&(value))
             .write_to(sbolt::types::HtmlEscapingWriter(&mut writer));
-        writer.write("<div>\n  </div>");
+        writer.write("<div></div>");
     };
     assert_eq!(tokens.to_string(), expected.to_string());
+    Ok(())
+}
+
+#[test]
+fn protected_static_contexts_remain_barriers_across_interpolations() -> result::Result<()> {
+    for (prefix, suffix) in [
+        ("<pre>", "<div>\n  </div></pre>"),
+        ("<script>", "<div>\n  </div></script>"),
+        ("<title>", "<div>\n  </div></title>"),
+        ("<!--", "--><div>\n  </div>"),
+        ("<div hidden>", "</div><div>\n  </div>"),
+    ] {
+        let source = format!("{prefix}@(value){suffix}");
+        let (tokens, stats) = generate_content(&source, Kind::KHTML, true)?;
+        let expected = quote! {
+            writer.write(#prefix);
+            sbolt::types::WriteToRef(&(value))
+                .write_to(sbolt::types::HtmlEscapingWriter(&mut writer));
+            writer.write(#suffix);
+        };
+        assert_eq!(tokens.to_string(), expected.to_string(), "{source}");
+        assert_eq!(stats.unknown_context_writes(), 1);
+    }
+    Ok(())
+}
+
+#[test]
+fn protected_end_tags_detect_dynamic_openers_at_compile_time() -> result::Result<()> {
+    for (closing, emitted) in [
+        ("</pre>", "</pre>"),
+        ("</TEXTAREA>", "</TEXTAREA>"),
+        ("</script>", "</script>"),
+        ("</p@* join *@re>", "</pre>"),
+    ] {
+        let source = format!("@(open)<div>\n  </div>@(value){closing}");
+        let (tokens, stats) = generate_content(&source, Kind::KHTML, true)?;
+        let expected = quote! {
+            sbolt::types::WriteToRef(&(open))
+                .write_to(sbolt::types::HtmlEscapingWriter(&mut writer));
+            writer.write("<div>\n  </div>");
+            sbolt::types::WriteToRef(&(value))
+                .write_to(sbolt::types::HtmlEscapingWriter(&mut writer));
+            writer.write(#emitted);
+        };
+        assert_eq!(tokens.to_string(), expected.to_string(), "{source}");
+        assert_eq!(stats.unknown_context_writes(), 2);
+    }
+    Ok(())
+}
+
+#[test]
+fn expressions_accessing_writer_remain_context_barriers() -> result::Result<()> {
+    for name in ["writer", "r#writer"] {
+        let source = format!("@({{{name}.write(\"<pre>\"); 42}})<div>\n  </div>");
+        let (tokens, stats) = generate_content(&source, Kind::KHTML, true)?;
+        let writer_ident = syn::parse_str::<syn::Ident>(name).unwrap();
+        let expected = quote! {
+            sbolt::types::WriteToRef(&({#writer_ident.write("<pre>"); 42}))
+                .write_to(sbolt::types::HtmlEscapingWriter(&mut writer));
+            writer.write("<div>\n  </div>");
+        };
+        assert_eq!(tokens.to_string(), expected.to_string(), "{name}");
+        assert_eq!(stats.unknown_context_writes(), 1, "{name}");
+    }
     Ok(())
 }
 
@@ -268,7 +370,7 @@ fn to_content_token_stream_from_wrong_block() {
     assert!(matches!(block, Block::KLAYOUT(_)));
     let mut context = CodeGenContext::new(Kind::KHTML, &options);
     block
-        .to_content_token_stream(&mut context)
+        .to_content_token_stream(false, &mut context)
         .expect("wrong block type");
 }
 
@@ -284,7 +386,7 @@ fn to_content_token_stream_from_simple_content() -> result::Result<()> {
     let block = &root_span.blocks()[0];
     assert!(matches!(block, Block::KCONTENT(_)));
     let mut context = CodeGenContext::new(Kind::KHTML, &options);
-    let ts = &block.to_content_token_stream(&mut context)?;
+    let ts = &block.to_content_token_stream(false, &mut context)?;
     let expected = quote! {
         writer.write("test::test1");
     };
@@ -325,7 +427,7 @@ fn to_inline_content_token_stream_from_code_block() -> result::Result<()> {
     assert!(matches!(code_block, Block::KCODE(_)));
 
     let mut context = CodeGenContext::new(Kind::KHTML, &options);
-    let ts = code_block.to_token_stream(Some(&block), &mut context)?;
+    let ts = code_block.to_token_stream(Some(&block), false, &mut context)?;
     let expected = quote! {
         123;
         writer.write("test");

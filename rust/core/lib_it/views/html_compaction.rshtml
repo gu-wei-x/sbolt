@@ -1,0 +1,7 @@
+@model crate::view_tests::TypedModel;
+<html>
+    <head><title>Welcome</title></head>
+    <body>
+        <div>@(model.name)|@(model.count)</div>
+    </body>
+</html>
