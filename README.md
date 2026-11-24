@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./doc/user/images/sbolt.png" alt="sbolt icon" width="64" height="64">
+  <img src="./doc/user/images/sbolt.png" alt="sbolt icon" title="A folded ribbon evokes template layers; its lightning-bolt shape symbolizes fast, compiled rendering." width="64" height="64">
 </p>
 
 <h1 align="center">sbolt</h1>
