@@ -14,6 +14,7 @@ Feature tables use the aliases below.
 | Code generation | `CodeGen` | Generated Rust, template modules, layouts, and output optimization. |
 | Public interface | `API` | Rendering APIs, configuration, kind resolution, and framework integration. |
 | Example | `Example` | Runnable CLI and web demonstrations, shared models/templates, standalone compilation, and framework adapters. |
+| Benchmark | `Benchmark` | Rendering-time benchmarks, heap-allocation measurements, benchmark fixtures, and CI benchmark checks. |
 | Docs | `Docs` | Getting-started guides, syntax and API references, layout guidance, developer documentation, and feature history. |
 
 ## Priority

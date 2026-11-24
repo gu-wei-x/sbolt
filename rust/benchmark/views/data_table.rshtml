@@ -1,4 +1,4 @@
-@model crate::TableModel;
+@model crate::view_models::TableModel;
 <table>@{
     for row in &model.rows {
         @{<tr>}

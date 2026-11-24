@@ -45,7 +45,7 @@ jobs:
       run: cargo test --workspace --verbose --profile ${{ matrix.profile }}
       working-directory: ./rust/examples
 
-    - name: Validate rendering allocations
+    - name: Run benchmark checks
       if: matrix.profile == 'release' && matrix.platforms.name == 'Linux'
-      run: cargo bench -p lib_bench --bench render_allocations
+      run: cargo bench -p lib_bench --bench memory_benches --bench template_benches -- --test
       working-directory: ./rust
