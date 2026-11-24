@@ -1,8 +1,15 @@
-# sbolt
-[<img alt="github" src="https://img.shields.io/badge/github-guweix/sbolt-8da0cb?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/gu-wei-x/sbolt)
-[<img alt="crates.io" src="https://img.shields.io/crates/v/sbolt.svg?style=for-the-badge&color=fc8d62&logo=rust" height="20">](https://crates.io/crates/sbolt)
-[<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-sbolt-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" height="20">](https://docs.rs/sbolt)
-[<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/gu-wei-x/sbolt/ci.yml?branch=main&style=for-the-badge" height="20">](https://github.com/gu-wei-x/sbolt/actions?query=branch%3Amain)
+<p align="center">
+  <img src="./doc/user/images/sbolt.png" alt="sbolt icon" title="A folded ribbon evokes template layers; its lightning-bolt shape symbolizes fast, compiled rendering." width="64" height="64">
+</p>
+
+<h1 align="center">sbolt</h1>
+
+<p align="center">
+  <a href="https://github.com/gu-wei-x/sbolt"><img alt="github" src="https://img.shields.io/badge/github-guweix/sbolt-8da0cb?style=for-the-badge&amp;labelColor=555555&amp;logo=github" height="20"></a>
+  <a href="https://crates.io/crates/sbolt"><img alt="crates.io" src="https://img.shields.io/crates/v/sbolt.svg?style=for-the-badge&amp;color=fc8d62&amp;logo=rust" height="20"></a>
+  <a href="https://docs.rs/sbolt"><img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-sbolt-66c2a5?style=for-the-badge&amp;labelColor=555555&amp;logo=docs.rs" height="20"></a>
+  <a href="https://github.com/gu-wei-x/sbolt/actions?query=branch%3Amain"><img alt="build status" src="https://img.shields.io/github/actions/workflow/status/gu-wei-x/sbolt/ci.yml?branch=main&amp;style=for-the-badge" height="20"></a>
+</p>
 
 sbolt is a Rust template engine that compiles templates during your Cargo build.
 Its Razor-inspired `@` syntax combines literal content with Rust expressions,
