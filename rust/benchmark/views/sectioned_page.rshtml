@@ -1,4 +1,4 @@
-@layout layout;
+@layout sectioned_layout;
 @section title{
   @{
     let title = "Home";

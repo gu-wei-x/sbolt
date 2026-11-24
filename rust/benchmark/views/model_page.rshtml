@@ -1,4 +1,4 @@
-@model crate::PageModel;
+@model crate::view_models::PageModel;
 <html>
     <head>
         <title>Index</title>

@@ -9,18 +9,16 @@ workspace = true
 
 [dependencies]
 sbolt = { path = "../core/lib" }
+criterion = {version = "0.7.0", features = ["html_reports"]}
+stats_alloc = "0.1.10"
 
 [build-dependencies]
 sbolt = { path = "../core/lib", features = ["pretty"] }
-
-[dev-dependencies]
-criterion = {version = "0.7.0", features = ["html_reports"]}
-stats_alloc = "0.1"
 
 [[bench]]
 name = "template_benches"
 harness = false
 
 [[bench]]
-name = "render_allocations"
+name = "memory_benches"
 harness = false

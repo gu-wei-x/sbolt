@@ -1,148 +1,88 @@
 # Optimization
 
-Optimize three separate metrics: binary size, rendered output size, and rendering
-cost. Improving one can worsen another.
+Focus on two areas: binary size and rendering cost.
+Measure them separately; improving one can worsen the other.
 
-For runtime value specialization, resolved-template handles, capacity hints, and
-typed models, see [template compilation](./template-compilation.md).
+| Area | Focus | Measurement |
+| --- | --- | --- |
+| Binary size | Embedded static strings and generated code | Release executable bytes and data-section size |
+| Rendering cost | Rendering time, heap allocations, and buffer growth | Criterion timings and allocation statistics |
 
-## Measuring runtime rendering costs
+Rendered output size is a related metric, but smaller output does not necessarily
+mean a smaller executable or faster rendering.
 
-Run these commands from the `rust` workspace:
+## 1. Binary size
 
-```shell
-cargo test -p lib_bench
-cargo bench -p lib_bench --bench render_allocations
-cargo bench -p lib_bench --bench template_benches -- "^(teams|big_table)/"
-```
-
-The allocation executable uses `stats_alloc` with the system allocator.
-Inputs, contexts, model `Arc`s, and resolver initialization
-are prepared before measurement; each workload is warmed once. It reports
-allocation calls, reallocation calls, and allocated bytes separately, and
-asserts one allocation and zero reallocations for estimated-capacity fresh output.
-Counts include output destruction but exclude fixture setup. They are not
-peak live memory.
-Estimated-capacity cases set `context.set_capacity_hint(...)` before measurement
-and use separate contexts so the estimate does not affect the baseline cases.
-
-Criterion timing runs separately without the allocation-counting allocator.
-The new Big table fixture has 100 rows and 100 integer cells per row. Teams has
-three owned team names and integer scores. The `named/fresh` and `resolved/fresh`
-comparisons keep setup outside timed iterations and consume results with `black_box`.
-Each render returns a fresh string.
-Tests compare all variants' output, including every cell.
-All data-driven benchmark templates use `@model` declarations with `Arc<Model>`
-stored under context key `"model"`. Static templates and layouts need no model.
-The page benchmarks use a [standalone page](../../rust/benchmark/views/page.rshtml)
-with `PageModel` and a
-[layout-backed page](../../rust/benchmark/views/page_with_layout.rshtml).
-The `*/named/fresh_with_setup` cases cover Big table and both pages, including
-context creation inside each timed iteration.
-
-Keep the named/fresh results separate from resolved/fresh, estimated-capacity,
-and concrete-model-view results. Model rendering is reported
-separately for named, resolved, and concrete entry points. All model entry points
-retrieve the model from its declared context key; none accepts a borrowed model.
-The Teams entry points all reuse the same
-[Teams template](../../rust/benchmark/views/teams.rshtml), including the concrete
-model-view benchmarks.
-`resolution_only` measures warmed path
-normalization and registry lookup, not rendering or lazy registry construction.
-`formatting_only` and `specialized_formatting_only` both write the integers
-0 through 9,999 into a fresh 40,000-byte buffer, without markup, context access,
-or resolution. The specialized case uses the exact `WriteToRef` dispatch
-emitted by the generator; the other uses `Writer::write_formatted`.
-These isolated timings help attribution but are not an additive profile of a
-complete render.
-
-In a short local Windows run before migrating the benchmark fixtures to `@model`
-(20 samples, 1 s warmup, 2 s measurement), changing
-only value specialization reduced Big table named/fresh from about 158 us to
-102 us. Both versions already avoided per-cell heap allocations. Before capacity
-changes, resolving once removed 3 allocation calls and 3 reallocation calls per
-render. Estimated-capacity fresh output measured one allocation and zero
-reallocations.
-Static hints alone reduced growth but did not eliminate it or guarantee lower
-allocated bytes. Machine load affects these timings; rerun on a quiet machine
-before drawing small-workload or typed-versus-dynamic timing conclusions.
-
-## 1. Code generation: reduce embedded static strings
+### Current compile-time optimization
 
 The [content generator](../../rust/core/lib/src/codegen/compiler/types/content.rs)
-merges adjacent static HTML/JSON output before embedding it in generated Rust code.
-
-### Implemented first pass
-
-The pass defaults to `cfg!(not(debug_assertions))` in sbolt: normally disabled
-in debug builds and enabled in release builds. Override it explicitly with
+merges adjacent static writes and compacts whitespace where context is known.
+The default is `cfg!(not(debug_assertions))` in sbolt: normally disabled in debug
+builds and enabled in release builds. Override it with
 `CompilerOptions::with_optimization(true)` or `.with_optimization(false)`.
-The pass:
 
-- Combines consecutive static writes, including fragments separated by template
-  comments.
-- Compacts redundant HTML tag-syntax whitespace, without changing attribute
-  values, quote delimiters, entities, or comment contents.
-- Removes whitespace-only runs between understood tags when either adjacent tag
-  is a standard block-level element. For example, `<div>\n  </div>` becomes
-  `<div></div>`, retaining the required closing tag.
-- Collapses whitespace-only runs between inline tags to one space, without
-  introducing a separator where none existed. For example,
-  `<span>Hello</span>\n  <span>world</span>` becomes
-  `<span>Hello</span> <span>world</span>`.
-- Preserves non-whitespace text and leading/trailing whitespace at static-run
-  boundaries, where a dynamic continuation might follow.
-- Preserves incomplete tags and the remainder of a static run once it reaches
-  unsupported syntax, comments, or protected containers such as `<pre>`,
-  `<listing>`, `<dialog>`, `<script>`, `<style>`, SVG, and MathML. An element
-  with a `hidden` attribute also ends compaction, preserving the preceding
-  whitespace and remaining static output so invisible elements cannot join
-  surrounding words. The ordinary `<!DOCTYPE html>`
-  declaration is recognized case-insensitively and preserved.
-- Treats dynamic expressions, arbitrary Rust code, section creation, and
-  `@render` as context barriers. Later static output remains unmodified, though
-  adjacent static writes can still be merged.
-- Starts section buffers and templates with a layout in an unknown insertion
-  context.
-- Compacts fully static standalone JSON templates by removing only the four JSON
-  whitespace characters (space, tab, CR, and LF) outside strings. It validates
-  the complete JSON value, including object/array structure, numbers, literals,
-  and string escapes. Invalid static JSON produces a compile error when this
-  optimization is enabled. Diagnostics refer to the original template locations,
-  including after removed template comments and escaped `@@` characters.
-- Preserves JSON string contents and escape spelling, number spelling/precision,
-  object-member order, and duplicate keys. It accepts any JSON root value and
-  supports up to 128 nested containers, reporting an error beyond that limit.
-- Leaves all dynamic JSON templates unminified, including static output before
-  the first dynamic operation. Sections and layout-backed JSON fragments also
-  remain unminified: compaction must not guess whether a fragment is inside a
-  string or next to a partial token. Static writes can still be merged.
-- Leaves optimization-disabled generation and plain-text output unchanged.
+| Content | Behavior |
+| --- | --- |
+| Adjacent static writes | Merge when no runtime operation separates them, including across template comments |
+| Known HTML tag syntax | Compact redundant whitespace without rewriting attribute values or quotes |
+| Whitespace between understood HTML tags | Remove at standard block boundaries; collapse to one space between inline tags |
+| Unknown or protected HTML context | Preserve content rather than guessing |
+| Fully static standalone JSON | Validate the complete value and remove JSON whitespace outside strings |
+| Dynamic JSON, sections, and layout-backed JSON | Preserve whitespace; adjacent static writes can still merge |
+| Plain text or optimization disabled | Leave output unchanged |
 
-For example, static JSON `{ "text" : " a  b ", "items" : [ 1, true ] }`
-becomes `{"text":" a  b ","items":[1,true]}`. This does not add JSON escaping
-to dynamic interpolation or validate the JSON produced by runtime Rust code;
-those behaviors are unchanged.
+For example:
 
-The scanner assumes a standalone HTML template starts in normal HTML text
-context. If rendered HTML is embedded into another language or a raw-text
-container by application code, disable this optimization for that compilation.
-Code generation cannot infer arbitrary callers' insertion contexts.
+```html
+<div>
+  </div>
+```
 
-Whitespace reduction uses the normal HTML whitespace and default element-display
-contract. It does not evaluate CSS. Disable optimization if application styles
-make ordinary tag-boundary whitespace significant, for example with inherited
-`white-space: pre-wrap` or block elements styled as inline. Whitespace-only DOM
-text nodes can change, so code that depends on those nodes or whitespace-sensitive
-selectors must also opt out.
+becomes `<div></div>`, while whitespace between inline elements remains a
+separator. Static JSON `{ "items" : [ 1, true ] }` becomes `{"items":[1,true]}`.
 
-Compared with the old DOM-round-trip optimizer, non-whitespace text and fragment
-edges are no longer trimmed, comments are no longer removed, and attribute
-quoting is no longer rewritten. Invalid markup is preserved rather than repaired.
-Runtime minification, compression, string pooling, and control-flow analysis are
-not part of this pass.
+JSON compaction preserves string contents, escape spelling, number precision,
+member order, and duplicate keys. Invalid static JSON is a compile error when
+optimization is enabled. Any JSON root value is supported, with a nesting limit
+of 128 containers. Diagnostics retain original template locations.
 
-Compilation exposes measurements through `CompileResult::static_output_stats()`:
+### Safety boundaries
+
+HTML optimization assumes normal whitespace and default element-display rules;
+it does not evaluate CSS. Disable it when whitespace-only DOM nodes matter,
+when styles such as `white-space: pre-wrap` make spacing significant, or when
+output is embedded in an unknown language or raw-text context.
+
+The optimizer preserves:
+
+- Non-whitespace text and leading/trailing whitespace at static-run boundaries.
+- Attribute values, quote delimiters, entities, and HTML comments.
+- Paired closing tags for non-void elements, such as `<div></div>`.
+- Incomplete or unsupported syntax instead of repairing it.
+
+Compaction stops at protected containers such as `<pre>`, `<listing>`,
+`<dialog>`, `<script>`, `<style>`, SVG, and MathML. A `hidden` attribute also
+ends compaction, preserving preceding whitespace and the remaining static run.
+The ordinary `<!DOCTYPE html>` declaration is recognized and preserved.
+
+Dynamic expressions, arbitrary Rust code, section creation, and `@render` are
+context barriers. Later static output remains unmodified, though adjacent
+static writes can still merge. Sections and templates with layouts start in
+an unknown insertion context.
+
+For example, the static fragments around `@value` in:
+
+```html
+<div title="@value">hello</div>
+```
+
+are not independent HTML documents. The second fragment starts inside an
+attribute. Do not optimize fragments as standalone markup or assume normal text
+context after a dynamic operation.
+
+### Measure actual size
+
+Use `CompileResult::static_output_stats()` to inspect generated static content:
 
 ```rust
 let result = sbolt::codegen::Compiler::new(options).compile();
@@ -158,325 +98,106 @@ eprintln!(
 );
 ```
 
-These are generated static-output measurements, not counts of writes executed
-by loops or arbitrary user-written Rust. Distinct literal bytes are aggregated
-across compiled templates; they are not a prediction of linker storage.
-
-### Define what "smaller" means
-
-Measure these separately:
-
-- Total UTF-8 bytes in generated output literals.
-- Distinct output-literal bytes, to estimate the benefit of exact deduplication.
-- Generated write-call count.
-- Data-section size and total size of a representative release executable.
-
-Shorter generated Rust source does not necessarily mean a smaller executable.
-For example, writing a newline as `\n` changes the source representation, not the
-one byte stored in the string. Likewise, replacing a literal with a `const`
-does not inherently save bytes.
-
-Compile the same application with the same target, profile, features, linker,
-and debug-information settings for before/after comparisons. Measure an actual
+These are compile-time counts, not writes executed by loops or predictions of
+linker storage. Also measure the data section and total size of an actual release
 executable that uses the templates, not just the library archive.
 
-### Why fragment context matters
+Keep the target, features, linker, and debug-information settings unchanged.
+Fewer generated writes or shorter Rust source do not guarantee a smaller binary.
+Rust and the linker may already share identical literals.
 
-The [HTML optimizer](../../rust/core/lib/src/codegen/compiler/optimizer/html.rs)
-previously parsed and reserialized each fragment independently. The
-[code-generation context](../../rust/core/lib/src/codegen/compiler/context.rs)
-now tracks whether HTML context is known and shares static-output measurements
-with section contexts.
+## 2. Rendering cost
 
-Consider this template:
+### Measuring rendering cost
 
-```html
-<div title="@value">hello</div>
+Run from the [Rust workspace](../../rust):
+
+```shell
+# Rendering time
+cargo bench -p lib_bench --bench template_benches
+
+# Heap allocations for the large data table
+cargo bench -p lib_bench --bench memory_benches
 ```
 
-Its output is split around the dynamic expression:
+Both compare resolving once with looking up the template on every render.
+Setup is excluded.
 
-```text
-Static:  <div title="
-Dynamic: value
-Static:  ">hello</div>
+For the quick execution check used by [CI](../../.github/workflows/ci.yml):
+
+```shell
+cargo bench -p lib_bench --bench memory_benches --bench template_benches -- --test
 ```
 
-The second static fragment starts inside a quoted attribute, not at the start of
-an HTML document. Parsing it as standalone HTML cannot reliably determine what
-is safe to change.
+`--test` skips Criterion timing statistics; allocation measurements still run.
+Neither target enforces performance thresholds. See [benchmarks](./benchmark.md)
+for workloads, metrics, and limitations.
 
-Simply concatenating the static fragments while omitting the expression is not
-safe either: the dynamic value can contain markup or quote characters under the
-current raw-output behavior.
+### Implemented behavior
 
-### Implemented pipeline
+- **Direct output:** HTML and text expressions use specialized `WriteTo`
+  implementations where available, with streaming `Display` formatting as a
+  fallback. This avoids intermediate interpolation strings. HTML expressions
+  use an escaping adapter; JSON expressions stream serialized values.
+- **Resolved templates:** resolve the entry template once and reuse its handle
+  to avoid repeated name lookup. Layouts and nested views still resolve their
+  own dependencies.
+- **Capacity estimates:** generated static-literal counts seed output-buffer
+  capacity. A context hint can supply a larger estimate for dynamic content.
+- **Fresh output:** each render returns a new `String`. Sections and layouts
+  retain intermediate buffers needed for composition.
 
-Perform optimization before converting output blocks into Rust token streams:
-
-```text
-Parsed template blocks, retaining source locations
-    -> identify ordered output regions and dynamic barriers
-    -> combine adjacent static output within each region
-    -> optimize regions whose HTML context is known
-    -> emit Rust literals and write calls
-```
-
-The pass uses the existing
-[block representation](../../rust/core/lib/src/codegen/types/block.rs), not a new
-general-purpose intermediate language. It keeps original source spans for
-diagnostics rather than replacing parser input with minified text.
-
-The [content generator](../../rust/core/lib/src/codegen/compiler/types/content.rs)
-and [section generator](../../rust/core/lib/src/codegen/compiler/types/section.rs)
-use the same static-output machinery. Section buffers are separate output
-streams; their eventual insertion context may be unknown.
-
-#### Merge adjacent static output
-
-Conceptually, these writes can become one:
+For a known workload, supply an estimated output size in bytes:
 
 ```rust
-writer.write("<div>");
-writer.write("hello");
-writer.write("</div>");
+context.set_capacity_hint(140_000);
+let output = template.render(&mut context)?;
 ```
 
-```rust
-writer.write("<div>hello</div>");
-```
+Rendering uses the larger of the static estimate and the context hint, not their
+sum. The hint persists across renders; setting it to zero restores static-only
+estimates. Loop counts and runtime value lengths are not known at compile time,
+so hints are neither output-size bounds nor guarantees against reallocation.
+Overestimating can waste memory.
 
-Only merge consecutive writes to the same destination when nothing between them
-has runtime effects. Do not move output across expressions, Rust statements,
-branches, loops, section creation, or layout rendering.
+See [template compilation](./template-compilation.md) for dispatch, escaping,
+typed models, resolved handles, and capacity-hint details.
 
-This primarily reduces write calls and generated code. It does not necessarily
-reduce literal bytes, and joining literals can reduce opportunities for sharing
-repeated substrings. Benchmark both executable size and render time.
+### Future options
 
-#### Carry context, but stop making assumptions at dynamic barriers
+These are not part of the current optimization pass:
 
-For continuous, known static output, retain enough parser state to distinguish:
-
-- Text from tag syntax.
-- Tag names, attribute names, and quoted or unquoted attribute values.
-- Comments and declarations.
-- Raw-text and whitespace-sensitive content, including relevant ancestor context.
-- Incomplete tokens split across static blocks.
-
-A lexical state alone is not a complete HTML parser. Transformations that depend
-on tree structure need HTML-aware parsing, including special handling for
-foreign content such as SVG.
-
-For the first implementation, treat arbitrary Rust code, raw interpolation, and
-rendered sections as barriers:
-
-1. Emit preceding static content without transformations that require knowing
-   the missing continuation.
-2. Mark the subsequent HTML context as unknown.
-3. Preserve later content wherever a transformation requires that context.
-
-Do not reset to "normal HTML text" after a barrier without proof. A dynamic value
-could open a tag, close a quote, or start a whitespace-sensitive element. Arbitrary
-Rust code can also write directly to the writer.
-
-A future distinction between escaped text and explicitly raw HTML could allow
-more optimization. It would require a separately designed, context-appropriate
-escaping contract; it must not be assumed or silently introduced here.
-
-Branches and loops need the same caution. If later work analyzes them, optimize
-their outputs separately and only propagate a known exit state when every path
-supports it. Initially, keeping them as barriers is simpler and safer.
-
-### Choose transformations by their safety requirements
-
-| Transformation | Conservative policy |
-| --- | --- |
-| Redundant whitespace between attributes | Reduce only when parsing proves it is tag syntax, outside values, with required separators retained |
-| Whitespace-only runs between understood tags | Remove at standard block boundaries; collapse to one space between inline tags under normal HTML whitespace rules |
-| Non-whitespace text and fragment edges | Preserve; dynamic continuations can need separators |
-| Whitespace inside attribute values | Preserve; it can be application data |
-| Empty non-void elements | Keep paired tags, such as `<div></div>`, rather than emitting `<div/>` |
-| Attribute quote changes | Preserve value semantics and existing entities; escape any newly conflicting delimiter |
-| HTML comments | Preserve by default; removal requires an explicit policy for application/tool directives |
-| Script/style content | Preserve unless a dedicated language-aware optimizer is explicitly enabled |
-| Partial or unknown-context fragments | Preserve bytes when safety cannot be established |
-
-These constraints also guide future extensions. The scanner compacts supported
-tag syntax and inter-tag whitespace, and preserves the rest once context is
-uncertain.
-
-For example, do not remove the space between these elements:
-
-```html
-<span>Hello</span> <span>world</span>
-```
-
-Removing the space changes the displayed text.
-
-Likewise, preserve the trailing space in this fragment:
-
-```text
-<div att1="a">test 
-```
-
-If dynamic output later supplies `world</div>`, removing that space would join
-the words. Even reducing multiple spaces to one requires a whitespace policy:
-CSS such as `white-space: pre-wrap` can preserve those spaces.
-
-### Deduplication and compression come later
-
-First inspect whether identical literals actually occupy duplicate storage in
-the release executable. Rust and the linker may already share them.
-
-If measurement shows substantial duplication, consider sharing exact literals
-before attempting substring pooling. Substring pooling needs offsets, extra
-metadata, and UTF-8-safe boundaries. Neither technique guarantees a smaller
-executable after code and metadata overhead.
-
-Avoid embedded-string compression initially. It reduces stored bytes but adds
-decompression code, CPU cost, and possibly allocations. It is most plausible for
-large, rarely used static templates, not as the default rendering path.
-
-### Incremental delivery and acceptance checks
-
-1. Add literal-byte and write-count measurements alongside executable-size
-   baselines.
-2. Implement adjacent static-write merging without changing output bytes.
-3. Make unknown-context fragments and dynamic barriers explicit. Preserve source
-   diagnostics and expose skipped-optimization reasons in optional diagnostics.
-4. Add narrowly scoped HTML transformations with focused correctness tests.
-5. Consider more advanced context analysis only after measuring the remaining
-   opportunities.
-
-Keep the optimization-disabled path unchanged. Before tightening existing
-optimization behavior, document the affected output differences.
-
-Regression cases should include:
-
-- Quoted attributes and tag tokens split across output blocks.
-- Leading and trailing spaces around dynamic expressions and inline elements.
-- `<pre>`, `<textarea>`, script/style content, and CSS-sensitive whitespace.
-- Empty ordinary elements, void elements, and custom-element closing tags.
-- Attribute values containing quotes and existing character references.
-- Dynamic raw markup, branch/loop output, and sections inserted through layouts.
-- Unchanged JSON/text templates.
-
-For output-preserving passes, assert exact byte equality. For intentional
-minification, assert exact expected output and use an HTML parser/browser to
-check affected structure and text behavior. Browser checks should include
-relevant whitespace CSS; DOM structure alone is not sufficient.
-
-Accept an optimization only when the intended metric improves on representative
-templates without unacceptable build-time or runtime regressions. Do not infer
-binary-size wins solely from fewer source characters or write calls.
-
-### Initial tag-syntax-only measurements
-
-Before the inter-tag whitespace extension, local Windows release builds compared
-the same probe executable with code generation disabled and enabled, keeping the
-target and profile unchanged:
-
-| Input | Static literal bytes | Static write calls | Executable bytes | `.rdata` virtual bytes |
-| --- | --- | --- | --- | --- |
-| Synthetic tag-whitespace fixture | 2,749 -> 589 | 2 -> 1 | 160,768 -> 158,208 | 42,610 -> 40,434 |
-| Existing benchmark templates | 768 -> 768 | 22 -> 22 | 183,808 -> 183,808 | 45,132 -> 45,132 |
-
-The synthetic fixture deliberately contained twenty ordinary `div` tags with
-redundant spaces around attributes and a template comment splitting static
-output. It demonstrates a possible reduction, not a typical application result.
-At that stage, the existing benchmark templates had no savings; their dynamic
-regions and formatting were preserved. Rendering the existing large benchmark
-template produced 139,047 bytes with either setting. These historical figures
-do not measure the subsequent inter-tag whitespace reduction.
-
-Focused tests check exact generated literals and output boundaries. Browser
-checks of representative tag compactions also confirmed identical DOM
-serialization and text, including quoted values, entities, unquoted values
-followed by slashes, inline spacing, and unchanged text with
-`white-space: pre-wrap`. Inter-tag whitespace reduction instead follows the
-normal-whitespace contract described above.
-
-## 2. Runtime: reduce rendered output
-
-The current [HTML writer](../../rust/core/lib/src/runtime/html_writer.rs) simply
-appends content.
-
-Two possible approaches:
-
-| Approach | Benefit | Cost |
+| Option | Potential benefit | Trade-off |
 | --- | --- | --- |
-| Minify completed output | Sees the complete document; simplest integration | Extra parsing and typically another allocation |
-| Stateful streaming minifier | Can avoid a full second buffer | Much harder to handle boundaries and arbitrary dynamic markup |
+| Final-output HTML minification | Sees the complete rendered document | Extra parsing and typically another allocation |
+| Streaming HTML minification | Can avoid a second full buffer | Complex handling of dynamic boundaries and insertion context |
+| Literal pooling | May reduce repeated embedded data | Extra metadata; the linker may already deduplicate it |
+| Embedded-string compression | May reduce storage for large static content | Decompression code, CPU cost, and possible allocations |
 
-Start with optional final-output minification using an HTML-aware implementation.
-Add streaming only if measurements justify the complexity.
+Only add these after measurements justify them. Runtime HTML minification must
+preserve whitespace-sensitive content, scripts, styles, and CSS-dependent
+spacing, with an opt-out. It must not apply HTML rules to JSON or plain text.
 
-Constraints:
+For web applications, HTTP Brotli or gzip can reduce transferred bytes without
+changing HTML semantics. That reduces wire size, not the rendered string or
+executable size.
 
-- Preserve whitespace-sensitive content, including `<pre>` and `<textarea>`.
-- Handle scripts and styles using their own parsing rules, not generic HTML
-  whitespace rules.
-- CSS can make whitespace significant elsewhere, so provide conservative behavior
-  and an opt-out.
-- Do not modify JSON or text output with HTML rules.
+## Validating optimizations
 
-For web applications, HTTP Brotli or gzip compression often saves more transfer
-bytes without changing HTML semantics. This reduces wire size, not the
-uncompressed rendered string.
+Compare before and after changes using the same machine, toolchain, profile,
+and fixtures.
 
-## 3. String operations: reduce allocations and copies
+1. Establish timing, allocation, output-size, and executable-size baselines.
+2. Change one optimization at a time and rerun representative workloads.
+3. Check output correctness separately; benchmarks do not replace tests.
+4. Accept changes only when the intended metric improves without unacceptable
+   regressions in the others.
 
-This is the best first optimization target.
+For output-preserving changes, assert exact byte equality. For intentional
+whitespace compaction, assert expected output and check browser behavior where
+DOM structure, text spacing, or CSS matters.
 
-### Eliminate temporary interpolation strings
-
-Current [inline code generation](../../rust/core/lib/src/codegen/compiler/types/code.rs)
-emits:
-
-```rust
-writer.write(&value.to_string());
-```
-
-Add a formatting operation to the
-[writer interface](../../rust/core/lib/src/types/writer.rs), allowing values to
-format directly into the destination buffer. For example, a proposed API is:
-
-```rust
-writer.write_display(&value)?;
-```
-
-Preserve existing error reporting and HTML-escaping behavior. Formatting is not
-escaping. This API is a proposal, not an existing method.
-
-### Reserve output capacity
-
-Generate an initial capacity estimate from unconditional static content:
-
-```rust
-String::with_capacity(static_size_estimate)
-```
-
-Avoid summing every branch or assuming loop iteration counts: that can
-substantially overallocate.
-
-### Reduce intermediate buffers
-
-- Keep sections buffered where layouts require deferred placement.
-- Avoid repeatedly constructing complete intermediate strings when composition
-  permits direct writing.
-
-## Suggested implementation order
-
-1. Establish benchmarks for render time, allocation count and bytes, output bytes,
-   and release binary size.
-2. Implement direct formatting and capacity reservation.
-3. Merge static writes and make compile-time optimization context-aware.
-4. Add optional runtime minification.
-5. Consider string pooling or compression only if binary-size measurements justify
-   it.
-
-Extend the existing
-[benchmarks](../../rust/benchmark/benches/template_benches.rs) with
-interpolation-heavy loops, many small fragments, and nested layouts, not just
-large static templates.
+Regression cases should cover quoted attributes, split tags, fragment-edge
+spaces, inline elements, protected containers, custom elements, dynamic
+expressions, branches, loops, sections, layouts, and JSON/text behavior.
+Preserve source diagnostics and document intentional output differences.
