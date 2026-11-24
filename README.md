@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./doc/user/images/sbolt.png" alt="sbolt icon" width="144" height="144">
+  <img src="./doc/user/images/sbolt.png" alt="sbolt icon" width="64" height="64">
 </p>
 
 <h1 align="center">sbolt</h1>
