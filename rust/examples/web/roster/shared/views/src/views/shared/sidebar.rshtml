@@ -1,0 +1,45 @@
+@model crate::models::Sidebar;
+<header class="sidebar">
+    <a class="brand" href="/">
+        <img class="brand-mark" src="/assets/images/favicon.svg" alt="" width="36" height="36">Roster
+    </a>
+    <button
+        class="navigation-toggle"
+        type="button"
+        aria-controls="main-navigation"
+        aria-expanded="false"
+        hidden
+    >
+        <svg class="icon" aria-hidden="true">
+            <use href="/assets/images/icons.svg#icon-menu"/>
+        </svg>
+        Menu
+    </button>
+    <p class="nav-label">Workspace</p>
+    <nav id="main-navigation" aria-label="Main navigation">
+        @{
+            for item in &model.items {
+                if item.active {
+                    @{
+                        <a href="@(item.href)" aria-current="page">
+                            <svg class="icon" aria-hidden="true">
+                                <use href="/assets/images/icons.svg@(item.icon)"/>
+                            </svg>
+                            @(item.label)
+                        </a>
+                    }
+                } else {
+                    @{
+                        <a href="@(item.href)">
+                            <svg class="icon" aria-hidden="true">
+                                <use href="/assets/images/icons.svg@(item.icon)"/>
+                            </svg>
+                            @(item.label)
+                        </a>
+                    }
+                }
+            }
+        }
+    </nav>
+    <p class="sidebar-note">Your companies.<br>Your people. One place.</p>
+</header>

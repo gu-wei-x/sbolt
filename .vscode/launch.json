@@ -4,10 +4,10 @@
              {
                  "type":  "cppvsdbg", // winconfig: Or "cppdbg" for C++
                  "request": "launch",
-                 "name": "Debug example cli",
-                 "program": "${workspaceRoot}/rust/target/debug/cli",
+                 "name": "Debug example cli-basic",
+                 "program": "${workspaceRoot}/target/examples/cli/debug/cli-basic",
                  "args": [],
-                 "cwd": "${workspaceRoot}/rust/examples/cli"
+                 "cwd": "${workspaceRoot}/rust/examples/cli/basic"
              }
          ]
      }

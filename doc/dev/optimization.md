@@ -110,14 +110,14 @@ Rust and the linker may already share identical literals.
 
 ### Measuring rendering cost
 
-Run from the [Rust workspace](../../rust):
+Run from the [core workspace](../../rust/core):
 
 ```shell
 # Rendering time
-cargo bench -p lib_bench --bench template_benches
+cargo bench -p lib_benchmark --bench template_benches
 
 # Heap allocations for the large data table
-cargo bench -p lib_bench --bench memory_benches
+cargo bench -p lib_benchmark --bench memory_benches
 ```
 
 Both compare resolving once with looking up the template on every render.
@@ -126,7 +126,7 @@ Setup is excluded.
 For the quick execution check used by [CI](../../.github/workflows/ci.yml):
 
 ```shell
-cargo bench -p lib_bench --bench memory_benches --bench template_benches -- --test
+cargo bench -p lib_benchmark --bench memory_benches --bench template_benches -- --test
 ```
 
 `--test` skips Criterion timing statistics; allocation measurements still run.

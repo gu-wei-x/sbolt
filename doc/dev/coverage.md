@@ -12,35 +12,35 @@ rustup component add llvm-tools
 cargo install grcov
 ```
 
-- cd to `$rust` directory and run test with instrument
+- Change to the [core workspace](../../rust/core) and run tests with instrumentation.
 
 ```cmd
-cmd> set RUSTFLAGS=-Cinstrument-coverage & set LLVM_PROFILE_FILE=..\\..\\..\\target\debug\sbolt\coverage\sblot-%p-%m.profraw & cargo test
+cmd> set RUSTFLAGS=-Cinstrument-coverage & set LLVM_PROFILE_FILE=..\\..\\..\\target\core\debug\sbolt\coverage\sblot-%p-%m.profraw & cargo test
 ```
 
 ```PS
-PS> $Env:RUSTFLAGS="-Cinstrument-coverage"; $Env:LLVM_PROFILE_FILE="..\\..\\..\\target\debug\sbolt\coverage\sblot-%p-%m.profraw"; cargo test
+PS> $Env:RUSTFLAGS="-Cinstrument-coverage"; $Env:LLVM_PROFILE_FILE="..\\..\\..\\target\core\debug\sbolt\coverage\sblot-%p-%m.profraw"; cargo test
 ```
 
 ```shell
-shell> RUSTFLAGS="-C instrument-coverage" && LLVM_PROFILE_FILE="../../../target/debug/sbolt/coverage/sblot-%p-%m.profraw" && cargo test
+shell> RUSTFLAGS="-C instrument-coverage" && LLVM_PROFILE_FILE="../../../target/core/debug/sbolt/coverage/sblot-%p-%m.profraw" && cargo test
 ```
 
 - Generate code coverage report
 
 ```cmd
-cmd> grcov ..\\target\\debug\\sbolt\\coverage -s .\\core\\lib --binary-path ..\\target\\debug -t html --branch --ignore-not-existing -o ..\\target\\debug\\sbolt\\coverage --ignore *tests\\* --ignore *test*.rs
+cmd> grcov ..\\..\\target\\core\\debug\\sbolt\\coverage -s .\\lib --binary-path ..\\..\\target\\core\\debug -t html --branch --ignore-not-existing -o ..\\..\\target\\core\\debug\\sbolt\\coverage --ignore *tests\\* --ignore *test*.rs
 ```
 
 ```PS
-PS> grcov ..\\target\\debug\\sbolt\\coverage -s .\\core\\lib --binary-path ..\\target\\debug -t html --branch --ignore-not-existing -o ..\\target\\debug\\sbolt\\coverage --ignore '*tests\\*' --ignore '*test*.rs'
+PS> grcov ..\\..\\target\\core\\debug\\sbolt\\coverage -s .\\lib --binary-path ..\\..\\target\\core\\debug -t html --branch --ignore-not-existing -o ..\\..\\target\\core\\debug\\sbolt\\coverage --ignore '*tests\\*' --ignore '*test*.rs'
 ```
 
 ```shell
-shell> grcov ../target/debug/sbolt/coverage/ -s ./core/lib --binary-path ../target/debug/ -t html --branch --ignore-not-existing -o ../target/debug/sbolt/coverage/ --ignore '*tests/*' --ignore '*test*.rs'
+shell> grcov ../../target/core/debug/sbolt/coverage/ -s ./lib --binary-path ../../target/core/debug/ -t html --branch --ignore-not-existing -o ../../target/core/debug/sbolt/coverage/ --ignore '*tests/*' --ignore '*test*.rs'
 ```
 
-- Report will be generated at: `../target/debug/sbolt/coverage/index.html`
+- Report will be generated at: `../../target/core/debug/sbolt/coverage/index.html`
 >> <img src="./images/cc_report.png">
 
 **note:**  fuctions cc are not accurate with stable `rust`, follow [grcov](https://github.com/mozilla/grcov) instructions to use **nightly** `rust` to generate full report.

@@ -1,0 +1,11 @@
+[package]
+name = "roster-actix-it"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dev-dependencies]
+roster-actix = { path = "../../app" }
+roster-data = { path = "../../../../shared/data" }
+actix-web.workspace = true
+actix-files.workspace = true

@@ -16,6 +16,12 @@ Cargo.lock
 
 # Cargo config directory
 .cargo/
+!rust/core/.cargo/
+!rust/core/.cargo/config.toml
+!rust/examples/cli/.cargo/
+!rust/examples/cli/.cargo/config.toml
+!rust/examples/web/.cargo/
+!rust/examples/web/.cargo/config.toml
 
 # Backup files.
 *.bak

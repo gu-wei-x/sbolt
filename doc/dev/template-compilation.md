@@ -200,7 +200,7 @@ renderer; omitting the override inherits the caller's kind rather than using the
 renderer's `None` default of HTML. The child's layout uses the selected kind,
 its output is
 written directly, and rendering errors propagate. Custom-view output is a dynamic
-boundary for static-write optimization. See [custom views](../user/syntax.md#custom-views)
+boundary for static-write optimization. See [custom views](../guides/user/syntax.md#custom-views)
 for lookup and context semantics.
 Argument boundaries are scanned in a single pass, respecting Rust identifiers,
 literal suffixes, and nested comments before expression validation. Line comments
@@ -227,7 +227,7 @@ validates pre-serialized JSON and returns a borrowed `RawValue` that serializes
 without extra quotes. Migration requires removing explicit serialization and
 surrounding quotes from JSON-template expressions.
 
-See [output safety](../user/syntax.md#output-safety) for usage and limitations.
+See [output safety](../guides/user/syntax.md#output-safety) for usage and limitations.
 
 ## Web integration
 

@@ -1,11 +1,11 @@
 # Benchmarks
 
-Run these commands from the [Rust workspace](../../rust).
+Run these commands from the [core workspace](../../rust/core).
 
 ## Rendering time
 
 ```shell
-cargo bench -p lib_bench --bench template_benches
+cargo bench -p lib_benchmark --bench template_benches
 ```
 
 Criterion measures the large table, team list, model page, and layout page.
@@ -19,7 +19,7 @@ Setup is outside timed iterations. These benchmarks do not verify rendered outpu
 ## Heap allocations
 
 ```shell
-cargo bench -p lib_bench --bench memory_benches
+cargo bench -p lib_benchmark --bench memory_benches
 ```
 
 Measures only the 100-by-100 large table, comparing resolved and lookup rendering.
@@ -37,7 +37,7 @@ not enforced as thresholds.
 [CI](../../.github/workflows/ci.yml) runs both targets in the Linux release job:
 
 ```shell
-cargo bench -p lib_bench --bench memory_benches --bench template_benches -- --test
+cargo bench -p lib_benchmark --bench memory_benches --bench template_benches -- --test
 ```
 
 `--` forwards `--test` to the executables. Criterion runs smoke tests without

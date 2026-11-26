@@ -1,0 +1,108 @@
+@model crate::models::Page;
+@layout shared/layout;
+@section title {
+    <title>@(model.title)</title>
+}
+
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">Your directory</p>
+        <h1>@(model.title)</h1>
+        <p class="intro">Manage company details and keep your directory up to date.</p>
+    </div>
+    <a class="button" href="/companies/new">+ Add company</a>
+</div>
+@{
+    if !model.message.is_empty() {
+        @{
+            <p class="notice" role="status">@(model.message)</p>
+        }
+    }
+}
+<div class="table-wrap" role="region" aria-label="Companies directory" tabindex="0">
+    <table>
+        <caption>Companies</caption>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Company name</th>
+                <th>Company address</th>
+                <th>Contact number</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                if model.companies.is_empty() {
+                    @{
+                        <tr>
+                            <td colspan="5">No data for this request!</td>
+                        </tr>
+                    }
+                }
+                for (index, company) in model.companies.iter().enumerate() {
+                    @{
+                        <tr>
+                            <td>@(index + 1)</td>
+                            <td>@(company.name)</td>
+                            <td>@(company.address)</td>
+                            <td>@(company.contact_no)</td>
+                            <td class="actions">
+                                <a href="/companies/@(company.id)/edit" aria-label="Edit @(company.name)">Edit</a>
+                                <form
+                                    method="post"
+                                    action="/companies/@(company.id)/delete"
+                                    data-confirm="Delete this company and all its employees?"
+                                >
+                                    <input type="hidden" name="csrf" value="@(model.csrf)">
+                                    <button class="danger" type="submit">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+            }
+        </tbody>
+    </table>
+</div>
+@{
+    if let Some(company) = &model.company {
+        let editing = company.id != 0;
+        let action = if editing {
+            format!("/companies/{}", company.id)
+        } else {
+            "/companies".into()
+        };
+        @{
+            <dialog open aria-labelledby="form-title" data-close="/companies">
+                <h2 id="form-title">@(if editing { "View / Update a Company" } else { "Add New Company" })</h2>
+                <form method="post" action="@(action)">
+                    <input type="hidden" name="csrf" value="@(model.csrf)">
+                    <label>
+                        Company name
+                        <input name="name" value="@(company.name)" maxlength="80" required autofocus>
+                    </label>
+                    <label>
+                        Company address
+                        <input name="address" value="@(company.address)" maxlength="80" required>
+                    </label>
+                    <label>
+                        Contact number
+                        <input name="contact_no" value="@(company.contact_no)" maxlength="20" required>
+                    </label>
+                    @{
+                        if !model.error.is_empty() {
+                            @{
+                                <p class="error" role="alert">@(model.error)</p>
+                            }
+                        }
+                    }
+                    <div class="form-actions">
+                        <button type="submit">@(if editing { "Update Company" } else { "Add Company" })</button>
+                        <a href="/companies">Close</a>
+                    </div>
+                </form>
+            </dialog>
+        }
+    }
+}
