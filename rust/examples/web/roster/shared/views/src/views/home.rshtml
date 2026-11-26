@@ -1,0 +1,43 @@
+@model crate::models::Page;
+@layout shared/layout;
+@section title {
+    <title>@(model.title)</title>
+}
+
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">Your workspace</p>
+        <h1>@(model.title)</h1>
+        <p class="intro">Your companies and people, at a glance.</p>
+    </div>
+</div>
+<div class="cards">
+    <a href="/companies">
+        <span class="stat-icon">
+            <svg class="icon" aria-hidden="true">
+                <use href="/assets/images/icons.svg#icon-company"/>
+            </svg>
+        </span>
+        <h2>Companies</h2>
+        <p class="stat-value" id="company-count">@(model.company_count)</p>
+        <span class="card-link">View companies &rarr;</span>
+    </a>
+    <a href="/employees">
+        <span class="stat-icon people">
+            <svg class="icon" aria-hidden="true">
+                <use href="/assets/images/icons.svg#icon-people"/>
+            </svg>
+        </span>
+        <h2>Employees</h2>
+        <p class="stat-value" id="employee-count">@(model.employee_count)</p>
+        <span class="card-link">View employees &rarr;</span>
+    </a>
+</div>
+<section class="quick-actions" aria-labelledby="quick-actions-title">
+    <h2 id="quick-actions-title">Quick actions</h2>
+    <p class="intro">Keep your workspace growing. Add a company or welcome someone new.</p>
+    <div class="action-links">
+        <a class="button" href="/companies/new">+ Add company</a>
+        <a class="button secondary" href="/employees/new">+ Add employee</a>
+    </div>
+</section>

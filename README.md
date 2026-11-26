@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./doc/user/images/sbolt.png" alt="sbolt icon" title="A folded ribbon evokes template layers; its lightning-bolt shape symbolizes fast, compiled rendering." width="64" height="64">
+  <img src="./doc/guides/user/images/sbolt.png" alt="sbolt icon" title="A folded ribbon evokes template layers; its lightning-bolt shape symbolizes fast, compiled rendering." width="64" height="64">
 </p>
 
 <h1 align="center">sbolt</h1>
@@ -20,7 +20,7 @@ typed models, layouts, and reusable views.
 - **Build-time checks:** template syntax and generated Rust are checked before deployment.
 - **Compiled rendering:** no template-source parsing at runtime.
 - **Flexible output:** HTML, JSON, and plain text, with matching-kind layouts.
-- **Efficient formatting:** stream values into output buffers and reuse resolved templates, See the [benchmarks](./rust/benchmark) for measured comparisons.
+- **Efficient formatting:** stream values into output buffers and reuse resolved templates, See the [benchmarks](./rust/core/lib_benchmark) for measured comparisons.
 
 ## Quick start
 
@@ -73,7 +73,8 @@ Run with `cargo run`.
 
 ## Documentation
 
-- [Get started](./doc/user/get_started.md): Setup and usage.
+- [Get started](./doc/guides/user/get_started.md): Setup and usage.
+- [Examples](./doc/guides/examples/README.md): CLI and web applications.
 - [Development](./doc/dev/README.md): Architecture and roadmap.
 
 ## License

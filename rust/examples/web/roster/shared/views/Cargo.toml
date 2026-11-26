@@ -1,0 +1,12 @@
+[package]
+name = "roster-views"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+roster-data = { path = "../data" }
+sbolt.workspace = true
+
+[build-dependencies]
+sbolt.workspace = true

@@ -1,0 +1,134 @@
+@model crate::models::Page;
+@layout shared/layout;
+@section title {
+    <title>@(model.title)</title>
+}
+
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">Your directory</p>
+        <h1>@(model.title)</h1>
+        <p class="intro">A place for your people and the companies they belong to.</p>
+    </div>
+    <a class="button" href="/employees/new">+ Add employee</a>
+</div>
+@{
+    if !model.message.is_empty() {
+        @{
+            <p class="notice" role="status">@(model.message)</p>
+        }
+    }
+}
+<div class="table-wrap" role="region" aria-label="Employees directory" tabindex="0">
+    <table>
+        <caption>Employees</caption>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Employee name</th>
+                <th>Contact number</th>
+                <th>Email</th>
+                <th>Company</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                if model.employees.is_empty() {
+                    @{
+                        <tr>
+                            <td colspan="6">No data for this request!</td>
+                        </tr>
+                    }
+                }
+                for (index, employee) in model.employees.iter().enumerate() {
+                    @{
+                        <tr>
+                            <td>@(index + 1)</td>
+                            <td>@(employee.name)</td>
+                            <td>@(employee.contact_no)</td>
+                            <td>@(employee.email)</td>
+                            <td>@(employee.company_name)</td>
+                            <td class="actions">
+                                <a href="/employees/@(employee.id)/edit" aria-label="Edit @(employee.name)">Edit</a>
+                                <form
+                                    method="post"
+                                    action="/employees/@(employee.id)/delete"
+                                    data-confirm="Are you sure you want to delete this employee?"
+                                >
+                                    <input type="hidden" name="csrf" value="@(model.csrf)">
+                                    <button class="danger" type="submit">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+            }
+        </tbody>
+    </table>
+</div>
+@{
+    if let Some(employee) = &model.employee {
+        let editing = employee.id != 0;
+        let action = if editing {
+            format!("/employees/{}", employee.id)
+        } else {
+            "/employees".into()
+        };
+        @{
+            <dialog open aria-labelledby="form-title" data-close="/employees">
+                <h2 id="form-title">@(if editing { "View / Update an Employee" } else { "Add New Employee" })</h2>
+                <form method="post" action="@(action)">
+                    <input type="hidden" name="csrf" value="@(model.csrf)">
+                    <label>
+                        Employee name
+                        <input name="name" value="@(employee.name)" maxlength="80" required autofocus>
+                    </label>
+                    <label>
+                        Contact number
+                        <input name="contact_no" value="@(employee.contact_no)" maxlength="20" required>
+                    </label>
+                    <label>
+                        Email
+                        <input name="email" value="@(employee.email)" maxlength="80" required>
+                    </label>
+                    <label>
+                        Company
+                        <select name="comp_id" required>
+                            <option value="">-- Select Company --</option>
+                            @{
+                                for company in &model.companies {
+                                    if employee.comp_id == Some(company.id) {
+                                        @{
+                                            <option value="@(company.id)" selected>@(company.name)</option>
+                                        }
+                                    } else {
+                                        @{
+                                            <option value="@(company.id)">@(company.name)</option>
+                                        }
+                                    }
+                                }
+                            }
+                        </select>
+                    </label>
+                    @{
+                        if model.companies.is_empty() {
+                            @{
+                                <p class="notice">Create a company before adding an employee.</p>
+                            }
+                        }
+                        if !model.error.is_empty() {
+                            @{
+                                <p class="error" role="alert">@(model.error)</p>
+                            }
+                        }
+                    }
+                    <div class="form-actions">
+                        <button type="submit">@(if editing { "Update Employee" } else { "Add Employee" })</button>
+                        <a href="/employees">Close</a>
+                    </div>
+                </form>
+            </dialog>
+        }
+    }
+}

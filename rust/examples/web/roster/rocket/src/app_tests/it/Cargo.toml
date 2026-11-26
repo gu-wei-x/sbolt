@@ -1,0 +1,10 @@
+[package]
+name = "roster-rocket-it"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dev-dependencies]
+roster-rocket = { path = "../../app" }
+roster-data = { path = "../../../../shared/data" }
+rocket.workspace = true

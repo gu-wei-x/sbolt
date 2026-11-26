@@ -1,0 +1,24 @@
+[package]
+name = "lib_benchmark"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+sbolt = { path = "../lib" }
+criterion = {version = "0.7.0", features = ["html_reports"]}
+stats_alloc = "0.1.10"
+
+[build-dependencies]
+sbolt = { path = "../lib", features = ["pretty"] }
+
+[[bench]]
+name = "template_benches"
+harness = false
+
+[[bench]]
+name = "memory_benches"
+harness = false

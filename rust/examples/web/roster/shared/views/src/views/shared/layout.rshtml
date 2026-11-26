@@ -1,0 +1,23 @@
+@model crate::models::Page;
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        @render(title)
+        <link rel="icon" href="/assets/images/favicon.svg" type="image/svg+xml">
+        <link rel="stylesheet" href="/assets/styles/style.css">
+        <script src="/assets/scripts/app.js" defer></script>
+    </head>
+    <body>
+        <a class="skip-link" href="#main-content">Skip to content</a>
+        @view("views/shared/sidebar", sbolt::context!(model.sidebar))
+        <div class="main-panel">
+            <div class="main-header">
+                Workspace <span aria-hidden="true">/</span> <span>@(model.title)</span>
+            </div>
+            <main id="main-content" tabindex="-1">@render</main>
+            <footer>Built with @(model.framework), <strong>Sbolt</strong>, and SQLite.</footer>
+        </div>
+    </body>
+</html>

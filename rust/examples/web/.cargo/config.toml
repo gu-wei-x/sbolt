@@ -1,0 +1,8 @@
+[build]
+target-dir = "../../../target/examples/web"
+
+[alias]
+bundle = "run --manifest-path ../../tools/app-bundle/Cargo.toml --"
+
+[env]
+ROSTER_ASSETS_DIR = { value = "roster/shared/assets", relative = true }

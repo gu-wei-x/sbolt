@@ -31,21 +31,33 @@ jobs:
 
     - name: Build core
       run: cargo build --workspace --verbose --profile ${{ matrix.profile }}
-      working-directory: ./rust
+      working-directory: ./rust/core
       
     - name: Run core tests
       run: cargo test --workspace --verbose --profile ${{ matrix.profile }}
-      working-directory: ./rust
-      
-    - name: Build examples
-      run: cargo build --workspace --verbose --profile ${{ matrix.profile }}
-      working-directory: ./rust/examples
+      working-directory: ./rust/core
 
-    - name: Run example tests
+    - name: Build bundle tool
+      run: cargo build --verbose --profile ${{ matrix.profile }}
+      working-directory: ./rust/tools/app-bundle
+      
+    - name: Build CLI examples
+      run: cargo build --workspace --verbose --profile ${{ matrix.profile }}
+      working-directory: ./rust/examples/cli
+
+    - name: Run CLI example tests
       run: cargo test --workspace --verbose --profile ${{ matrix.profile }}
-      working-directory: ./rust/examples
+      working-directory: ./rust/examples/cli
+
+    - name: Build web examples
+      run: cargo build --workspace --verbose --profile ${{ matrix.profile }}
+      working-directory: ./rust/examples/web
+
+    - name: Run web example tests
+      run: cargo test --workspace --verbose --profile ${{ matrix.profile }}
+      working-directory: ./rust/examples/web
 
     - name: Run benchmark checks
       if: matrix.profile == 'release' && matrix.platforms.name == 'Linux'
-      run: cargo bench -p lib_bench --bench memory_benches --bench template_benches -- --test
-      working-directory: ./rust
+      run: cargo bench -p lib_benchmark --bench memory_benches --bench template_benches -- --test
+      working-directory: ./rust/core
